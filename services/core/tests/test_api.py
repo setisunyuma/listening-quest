@@ -457,7 +457,10 @@ def test_invalidation_recomputes_but_keeps_history(db, user):
     db.commit()
     c = login()
     plan = c.post("/api/plans/today", json={"kind": "quest"}).json()
-    pending_unit = plan["slots"][0]["unit"]["id"]
+    first_slot = next(
+        sl for sl in plan["slots"] if sl["unit"]["id"] != units[0].id
+    )  # the plan may hold units[0] as a due review
+    pending_unit = first_slot["unit"]["id"]
     out = c.post(f"/api/admin/units/{units[0].id}/invalidate", json={"reason": "正答が誤っていた"}).json()
     assert out["recomputed"][0]["band"] == 3  # only 9 valid results remain -> the earlier step up is undone
     c.post(f"/api/admin/units/{pending_unit}/invalidate", json={"reason": "音声破損"})
@@ -474,7 +477,9 @@ def test_invalidation_recomputes_but_keeps_history(db, user):
     ids = {u["id"] for u in c.get("/api/library").json()["units"]}
     assert units[0].id not in ids and pending_unit not in ids
     after = c.get(f"/api/plans/{plan['id']}").json()
-    assert after["total_slots"] == plan["total_slots"] and after["slots"][0]["unit"]["id"] != pending_unit
+    assert after["total_slots"] == plan["total_slots"] and all(
+        sl["unit"]["id"] != pending_unit for sl in after["slots"]
+    )
     assert c.post("/api/attempts", json={"attempt_id": eid(), "unit_id": units[0].id}).status_code == 422
 
 

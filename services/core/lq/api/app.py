@@ -620,7 +620,9 @@ def admin_system(
             realm=user.realm, actor=user.username, action="system_settings_changed", target="system", details=patch
         )
     )
-    queue.release_blocked(session, user.realm, ("paid_disabled", "budget", "job_cap", "no_provider"))
+    queue.release_blocked(
+        session, user.realm, ("paid_disabled", "budget", "job_cap", "no_provider", "missing_audio")
+    )  # re-check with the new settings
     session.commit()
     return out
 
