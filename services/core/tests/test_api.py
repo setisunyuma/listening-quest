@@ -29,7 +29,10 @@ def login(username="demo", password="demo-password-123") -> TestClient:
 def secrets_of(unit):
     content = C.load_content(unit)
     q = content.questions[0]
-    return [q.feedback.explanation_ja, q.feedback.answer_en, q.feedback.distractors[0].reason_ja, content.segments[0].utterances[0].text, '"answer"', "evidence", "explanation_ja", "correct_answer"]
+    out = [q.feedback.explanation_ja, q.feedback.distractors[0].reason_ja, content.segments[0].utterances[0].text, '"answer"', "evidence", "explanation_ja", "correct_answer"]
+    if q.feedback.answer_en not in [c.text for c in q.choices]:  # the answer sentence may legitimately equal a printed choice
+        out.append(q.feedback.answer_en)
+    return out
 
 
 # ---- auth
