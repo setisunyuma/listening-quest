@@ -137,7 +137,7 @@ DEMO_PLAN = {  # extra procedurally generated demo units per mode: (part, skill,
 }  # fmt: skip
 
 
-def seed_demo(session, *, username: str = "demo", password: str | None = None, with_mock: bool = True) -> dict:
+def seed_demo(session, *, username: str = "demo", password: str | None = None, with_mock: bool = True, mock_modes: tuple[str, ...] = ("common_test", "cefr_c1")) -> dict:
     """Create / refresh the demo data area. Never touches the live area."""
     out: dict = {"password_created": None}
     user = session.execute(select(m.User).where(m.User.username == username)).scalar_one_or_none()
@@ -157,9 +157,9 @@ def seed_demo(session, *, username: str = "demo", password: str | None = None, w
             _, created = queue.enqueue(session, "demo", "generate", params, dedupe_key=f"demoseed:{mode}:{i}")
             queued += 1 if created else 0
     if with_mock:
-        has_set = session.execute(select(m.MockSet).where(m.MockSet.realm == "demo", m.MockSet.mode == "common_test")).first()
+        has_set = session.execute(select(m.MockSet).where(m.MockSet.realm == "demo", m.MockSet.mode == mock_modes[0])).first() if mock_modes else True
         if not has_set:
-            for mode in ("common_test", "cefr_c1"):
+            for mode in mock_modes:
                 prof = current_profile(mode)
                 for p in prof["parts"]:
                     for i in range(p["units"]):
@@ -167,7 +167,7 @@ def seed_demo(session, *, username: str = "demo", password: str | None = None, w
                         params = {"mode": mode, "part": p["part"], "template_type": p["template_type"], "primary_skill": skill, "band": 3, "seed": f"demomock-{mode}-{p['part']}-{i}", "source": "demo-generated", "pool": "assessment"}
                         _, created = queue.enqueue(session, "demo", "generate", params, dedupe_key=f"demomock:{mode}:{p['part']}:{i}")
                         queued += 1 if created else 0
-            out["mock_modes"] = ["common_test", "cefr_c1"]
+            out["mock_modes"] = list(mock_modes)
     out["jobs_queued"] = queued
     out["username"] = username
     return out

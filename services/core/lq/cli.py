@@ -141,7 +141,7 @@ def seed(realm: str = "live") -> None:
 
 
 @app.command()
-def demo(username: str = "demo", password_env: str = "", mock: bool = True) -> None:
+def demo(username: str = "demo", password_env: str = "", mock: bool = True, mock_modes: str = typer.Option("common_test,cefr_c1", help="modes to prepare an assessment set for")) -> None:
     """Build the demo data area with free demo providers and run all its jobs. Tone audio only
     (音声動作確認用); nothing is added to the live area."""
     from lq.jobs import worker
@@ -149,7 +149,7 @@ def demo(username: str = "demo", password_env: str = "", mock: bool = True) -> N
 
     with session_scope() as s:
         seed_mod.seed_profiles(s)
-        out = seed_mod.seed_demo(s, username=username, password=os.environ.get(password_env) if password_env else None, with_mock=mock)
+        out = seed_mod.seed_demo(s, username=username, password=os.environ.get(password_env) if password_env else None, with_mock=mock, mock_modes=tuple(x for x in mock_modes.split(",") if x))
     outcomes = worker.drain("demo-cli")
     with session_scope() as s:
         out["mock_sets_assembled"] = len(seed_mod.assemble_demo_mocks(s))
