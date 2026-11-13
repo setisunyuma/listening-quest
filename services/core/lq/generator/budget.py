@@ -73,7 +73,11 @@ def _counted(e: m.CostEntry) -> float:
 
 def spent_today(session, realm: str, day=None) -> dict:
     day = day or datetime.now(UTC).date()
-    rows = session.execute(select(m.CostEntry).where(m.CostEntry.realm == realm, m.CostEntry.budget_day == day)).scalars().all()
+    rows = (
+        session.execute(select(m.CostEntry).where(m.CostEntry.realm == realm, m.CostEntry.budget_day == day))
+        .scalars()
+        .all()
+    )
     out = {"settled_usd": 0.0, "reserved_usd": 0.0, "unknown_usd": 0.0, "counted_usd": 0.0, "day": day.isoformat()}
     for e in rows:
         out["counted_usd"] += _counted(e)
@@ -106,7 +110,10 @@ class BudgetMeter:
             day = datetime.now(UTC).date()
             used = spent_today(s, self.realm, day)["counted_usd"]
             if used + estimated_usd > float(cfg["daily_budget_usd"]) + 1e-9:
-                raise BudgetBlocked("budget", f"daily budget {cfg['daily_budget_usd']} USD would be exceeded (used {used:.4f}, need {estimated_usd:.4f})")
+                raise BudgetBlocked(
+                    "budget",
+                    f"daily budget {cfg['daily_budget_usd']} USD would be exceeded (used {used:.4f}, need {estimated_usd:.4f})",
+                )
             if self.job_id:
                 rows = s.execute(select(m.CostEntry).where(m.CostEntry.job_id == self.job_id)).scalars().all()
                 job_used = sum(_counted(e) for e in rows)
@@ -165,7 +172,11 @@ def job_cost(session, job_id: str) -> dict:
 
 def running_jobs(session, realm: str, now) -> int:
     return session.execute(
-        select(func.count()).select_from(m.GenerationJob).where(m.GenerationJob.realm == realm, m.GenerationJob.status == "RUNNING", m.GenerationJob.lease_expires_at > now)
+        select(func.count())
+        .select_from(m.GenerationJob)
+        .where(
+            m.GenerationJob.realm == realm, m.GenerationJob.status == "RUNNING", m.GenerationJob.lease_expires_at > now
+        )
     ).scalar_one()
 
 
@@ -194,14 +205,22 @@ def est_tts(kind: str, model: str, text: str) -> float | None:
         return None
     a = t["assumptions"]
     seconds = max(1.0, len(text) / a["speech_chars_per_second"]) * 1.3
-    return (len(text) / a["chars_per_text_token"] * 1.5 * p["text_input"] + seconds * a["audio_output_tokens_per_second"] * p["audio_output"]) / 1e6 + 0.0005
+    return (
+        len(text) / a["chars_per_text_token"] * 1.5 * p["text_input"]
+        + seconds * a["audio_output_tokens_per_second"] * p["audio_output"]
+    ) / 1e6 + 0.0005
 
 
 def cost_realtime(model: str, usage: dict) -> float | None:
     p = price_table()["realtime"].get(model)
     try:
         i, o = usage["input_token_details"], usage["output_token_details"]
-        return (i.get("text_tokens", 0) * p["text_input"] + i.get("audio_tokens", 0) * p["audio_input"] + o.get("text_tokens", 0) * p["text_output"] + o.get("audio_tokens", 0) * p["audio_output"]) / 1e6
+        return (
+            i.get("text_tokens", 0) * p["text_input"]
+            + i.get("audio_tokens", 0) * p["audio_input"]
+            + o.get("text_tokens", 0) * p["text_output"]
+            + o.get("audio_tokens", 0) * p["audio_output"]
+        ) / 1e6
     except (KeyError, TypeError):
         return None
 

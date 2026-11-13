@@ -74,11 +74,17 @@ class LocalStorage:
         base = self.root / prefix
         if not base.exists():
             return []
-        return [(str(p.relative_to(self.root)), p.stat().st_mtime) for p in base.rglob("*") if p.is_file() and not p.name.startswith(".tmp-")]
+        return [
+            (str(p.relative_to(self.root)), p.stat().st_mtime)
+            for p in base.rglob("*")
+            if p.is_file() and not p.name.startswith(".tmp-")
+        ]
 
 
 class S3Storage:
-    def __init__(self, bucket: str, endpoint_url: str | None, access_key: str | None, secret_key: str | None, region: str):
+    def __init__(
+        self, bucket: str, endpoint_url: str | None, access_key: str | None, secret_key: str | None, region: str
+    ):
         import boto3
         from botocore.config import Config
 
@@ -105,7 +111,9 @@ class S3Storage:
         return self.client.get_object(Bucket=self.bucket, Key=check_key(key))["Body"].read()
 
     def get_range(self, key, start, end):
-        return self.client.get_object(Bucket=self.bucket, Key=check_key(key), Range=f"bytes={start}-{end}")["Body"].read()
+        return self.client.get_object(Bucket=self.bucket, Key=check_key(key), Range=f"bytes={start}-{end}")[
+            "Body"
+        ].read()
 
     def exists(self, key):
         try:

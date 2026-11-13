@@ -29,14 +29,46 @@ EVENTS = [
     ("garden clean-up", "rooftop garden", "environment"), ("film night", "student lounge", "culture"), ("coding meetup", "computer lab", "technology"),
     ("language exchange", "city cafe", "language"), ("museum tour", "history museum", "culture"), ("volunteer briefing", "town hall", "community"),
 ]  # fmt: skip
-PLACES = ["library", "science room", "riverside park", "community kitchen", "old town square", "lecture hall", "rooftop garden", "student lounge", "computer lab", "city cafe", "history museum", "town hall", "gymnasium", "music room"]
+PLACES = [
+    "library",
+    "science room",
+    "riverside park",
+    "community kitchen",
+    "old town square",
+    "lecture hall",
+    "rooftop garden",
+    "student lounge",
+    "computer lab",
+    "city cafe",
+    "history museum",
+    "town hall",
+    "gymnasium",
+    "music room",
+]
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 TIMES = ["8:45", "9:15", "9:30", "10:20", "11:40", "1:15", "2:30", "3:45", "4:10", "5:50", "6:30", "7:15"]
 PRICES = [5, 8, 12, 15, 18, 25, 30, 40]
-FEELINGS = [("excited", "the guest speaker is someone I admire"), ("nervous", "I have never tried anything like it"), ("doubtful", "the last one was badly organized"), ("relieved", "it was finally rescheduled")]
-STEPS = ["introduce ourselves", "watch a short demonstration", "work in small groups", "share our results", "fill in a feedback form", "tidy up the room"]
+FEELINGS = [
+    ("excited", "the guest speaker is someone I admire"),
+    ("nervous", "I have never tried anything like it"),
+    ("doubtful", "the last one was badly organized"),
+    ("relieved", "it was finally rescheduled"),
+]
+STEPS = [
+    "introduce ourselves",
+    "watch a short demonstration",
+    "work in small groups",
+    "share our results",
+    "fill in a feedback form",
+    "tidy up the room",
+]
 CLUBS = ["drama club", "chess club", "hiking club", "choir", "astronomy club", "pottery club"]
-FEEL_JA = {"excited": "わくわくしている", "nervous": "緊張している", "doubtful": "疑っている", "relieved": "ほっとしている"}
+FEEL_JA = {
+    "excited": "わくわくしている",
+    "nervous": "緊張している",
+    "doubtful": "疑っている",
+    "relieved": "ほっとしている",
+}
 
 
 def _ordinal(i: int) -> str:
@@ -46,7 +78,14 @@ def _ordinal(i: int) -> str:
 class _Builder:
     def __init__(self, spec: GenSpec):
         self.spec = spec
-        self.rng = random.Random(int(hashlib.sha256(f"{spec.mode}|{spec.part}|{spec.primary_skill}|{spec.band}|{spec.seed}".encode()).hexdigest()[:16], 16))
+        self.rng = random.Random(
+            int(
+                hashlib.sha256(
+                    f"{spec.mode}|{spec.part}|{spec.primary_skill}|{spec.band}|{spec.seed}".encode()
+                ).hexdigest()[:16],
+                16,
+            )
+        )
         self.profile = current_profile(spec.mode)
         self.part = part_spec(self.profile, spec.part)
         r = self.rng
@@ -59,7 +98,8 @@ class _Builder:
         self.name = r.choice(NAMES)
         n_sp = max(1, self.part["min_speakers"])
         self.speakers = [{"id": "narrator", "role": "narrator", "label": "Narrator", "voice_hint": "neutral"}] + [
-            {"id": f"sp{i + 1}", "role": "speaker", "label": chr(65 + i), "voice_hint": "female" if i % 2 else "male"} for i in range(n_sp)
+            {"id": f"sp{i + 1}", "role": "speaker", "label": chr(65 + i), "voice_hint": "female" if i % 2 else "male"}
+            for i in range(n_sp)
         ]
         self.n_sp = n_sp
         self.utts: list[dict] = []
@@ -75,7 +115,9 @@ class _Builder:
             if u["key"] == key:
                 return u["id"]
         uid = f"u{len(self.utts) + 1}"
-        self.utts.append({"key": key, "id": uid, "speaker_id": f"sp{len(self.utts) % self.n_sp + 1}", "lang": "en", "text": text})
+        self.utts.append(
+            {"key": key, "id": uid, "speaker_id": f"sp{len(self.utts) % self.n_sp + 1}", "lang": "en", "text": text}
+        )
         return uid
 
     def _choices(self, correct: str, pool: list[str], n: int = 4) -> tuple[list[dict], str]:
@@ -85,7 +127,18 @@ class _Builder:
         choices = [{"id": f"c{i + 1}", "text": t} for i, t in enumerate(opts)]
         return choices, next(c["id"] for c in choices if c["text"] == correct)
 
-    def _q(self, skill: str, prompt: str, choices, cid: str, evidence: list[dict], answer_en: str, ja: str, wrong_ja: str, figure_ids=()) -> dict:
+    def _q(
+        self,
+        skill: str,
+        prompt: str,
+        choices,
+        cid: str,
+        evidence: list[dict],
+        answer_en: str,
+        ja: str,
+        wrong_ja: str,
+        figure_ids=(),
+    ) -> dict:
         return {
             "prompt_en": prompt, "type": "single_choice", "choices": choices, "items": [], "figure_ids": list(figure_ids),
             "answer": {"type": "single_choice", "choice_id": cid}, "skill_tags": [skill], "evidence": evidence,
@@ -96,7 +149,9 @@ class _Builder:
     # ---- question makers (each adds the utterance that decides its answer)
     def q_time(self) -> dict:
         u = self.say("time", f"It starts at {self.time}, not at {self.old_time} as the old poster said.")
-        ch, cid = self._choices(self.time, [self.time, self.old_time] + [t for t in TIMES if t not in (self.time, self.old_time)][:4])
+        ch, cid = self._choices(
+            self.time, [self.time, self.old_time] + [t for t in TIMES if t not in (self.time, self.old_time)][:4]
+        )
         if not any(c["text"] == self.old_time for c in ch):  # keep the negated time as a distractor
             wrong = next(c for c in ch if c["id"] != cid)
             wrong["text"] = self.old_time
@@ -123,7 +178,10 @@ class _Builder:
                        "First, then, after that, finally の順序表現から2番目を特定します。", "2番目の活動ではありません。")  # fmt: skip
 
     def q_inference(self) -> dict:
-        u = self.say("transport", f"{self.name} usually comes by bus, but the buses are not running that day, so a neighbor offered to drive.")
+        u = self.say(
+            "transport",
+            f"{self.name} usually comes by bus, but the buses are not running that day, so a neighbor offered to drive.",
+        )
         ch, cid = self._choices("By car", ["By car", "By bus", "By bicycle", "On foot", "By train"])
         if not any(c["text"] == "By bus" for c in ch):
             next(c for c in ch if c["id"] != cid)["text"] = "By bus"
@@ -132,7 +190,9 @@ class _Builder:
 
     def q_main(self) -> dict:
         u = self.say("place", f"The {self.event} will be held in the {self.place} this {self.day}.")
-        ch, cid = self._choices(f"Details of an upcoming {self.event}", [f"Details of an upcoming {e}" for e, _, _ in EVENTS])
+        ch, cid = self._choices(
+            f"Details of an upcoming {self.event}", [f"Details of an upcoming {e}" for e, _, _ in EVENTS]
+        )
         return self._q("main_idea", "What is the talk mainly about?", ch, cid, [{"utterance_id": u}], f"It is about an upcoming {self.event}.",
                        f"全体を通じて{self.event}の案内をしています。", "話題になっている催しではありません。")  # fmt: skip
 
@@ -153,15 +213,36 @@ class _Builder:
                 price, d = limit - 3, other_day  # cheap, wrong day
             else:
                 price, d = limit + 8, other_day
-            rows.append({"id": f"r{i + 1}", "cells": [{"id": f"r{i + 1}c1", "text": p}, {"id": f"r{i + 1}c2", "text": f"${price}"}, {"id": f"r{i + 1}c3", "text": d}]})
+            rows.append(
+                {
+                    "id": f"r{i + 1}",
+                    "cells": [
+                        {"id": f"r{i + 1}c1", "text": p},
+                        {"id": f"r{i + 1}c2", "text": f"${price}"},
+                        {"id": f"r{i + 1}c3", "text": d},
+                    ],
+                }
+            )
         fid = f"f{len(self.figures) + 1}"
-        self.figures.append({"id": fid, "kind": "table", "title": "Available plans", "columns": ["Plan", "Price", "Day"], "rows": rows, "note": ""})
+        self.figures.append(
+            {
+                "id": fid,
+                "kind": "table",
+                "title": "Available plans",
+                "columns": ["Plan", "Price", "Day"],
+                "rows": rows,
+                "note": "",
+            }
+        )
         u = self.say("cond", f"We need a plan that costs less than {limit} dollars and is available on {day}.")
         choices = [{"id": f"c{i + 1}", "text": p} for i, p in enumerate(plans)]
         skill = "integration" if self.spec.primary_skill == "integration" else "condition_matching"
         q = self._q(skill, "Which plan meets the speaker's conditions?", choices, f"c{good + 1}", [{"utterance_id": u}, {"figure_id": fid, "element_id": f"r{good + 1}"}],
                     f"{plans[good]} meets both conditions.", f"{limit}ドル未満かつ{day}に利用できるのは{plans[good]}だけです。", "価格または曜日の条件を満たしません。", figure_ids=[fid])  # fmt: skip
-        self.radio_desc = "The table lists four plans. " + " ".join(f"{row['cells'][0]['text']} costs {row['cells'][1]['text'][1:]} dollars and is available on {row['cells'][2]['text']}." for row in rows)
+        self.radio_desc = "The table lists four plans. " + " ".join(
+            f"{row['cells'][0]['text']} costs {row['cells'][1]['text'][1:]} dollars and is available on {row['cells'][2]['text']}."
+            for row in rows
+        )
         return q
 
     # ---- special formats
@@ -202,7 +283,19 @@ class _Builder:
         elif part["template_type"] == "matching":
             qs = self.build_matching()
         else:
-            order = [spec.primary_skill] + [k for k in ("numbers_negation", "explicit_detail", "speaker_attitude", "discourse_structure", "inference", "main_idea", "condition_matching") if k != spec.primary_skill]
+            order = [spec.primary_skill] + [
+                k
+                for k in (
+                    "numbers_negation",
+                    "explicit_detail",
+                    "speaker_attitude",
+                    "discourse_structure",
+                    "inference",
+                    "main_idea",
+                    "condition_matching",
+                )
+                if k != spec.primary_skill
+            ]
             if spec.primary_skill == "integration":
                 order = [k for k in order if k != "condition_matching"]
             qs = [self.makers[k]() for k in order[:n]]
@@ -213,16 +306,35 @@ class _Builder:
         segments = []
         for i in range(n_seg):
             chunk = self.utts[i * size : (i + 1) * size] or [self.utts[-1]]
-            segments.append({"id": f"s{i + 1}", "label": "", "plays": part["plays"], "utterances": [{k: v for k, v in u.items() if k != "key"} for u in chunk]})
+            segments.append(
+                {
+                    "id": f"s{i + 1}",
+                    "label": "",
+                    "plays": part["plays"],
+                    "utterances": [{k: v for k, v in u.items() if k != "key"} for u in chunk],
+                }
+            )
         seg_of = {u["id"]: s["id"] for s in segments for u in s["utterances"]}
         questions = []
         for i, q in enumerate(qs):
             segs = sorted({seg_of[e["utterance_id"]] for e in q["evidence"] if "utterance_id" in e})
-            questions.append({"id": f"q{i + 1}", "slot": i + 1, "segment_ids": segs if n_seg > 1 else [], "prompt_medium": part["question_medium"], "prompt_timing": part["question_timing"], **q})
+            questions.append(
+                {
+                    "id": f"q{i + 1}",
+                    "slot": i + 1,
+                    "segment_ids": segs if n_seg > 1 else [],
+                    "prompt_medium": part["question_medium"],
+                    "prompt_timing": part["question_timing"],
+                    **q,
+                }
+            )
         skills = sorted({s for q in questions for s in q["skill_tags"]})
         pre = None
         if part["template_type"] == "real_life":
-            pre = {"situation_en": f"You want to join the {self.event} and you are deciding whether you can go. You hear the following announcement.", "read_seconds": part.get("pre_read_sec", 10)}
+            pre = {
+                "situation_en": f"You want to join the {self.event} and you are deciding whether you can go. You hear the following announcement.",
+                "read_seconds": part.get("pre_read_sec", 10),
+            }
         tag = hashlib.sha256(f"{spec.seed}".encode()).hexdigest()[:10]
         return {
             "schema_version": 2, "source": spec.source, "content_id": f"demo-{spec.mode}-{spec.part}-{tag}".replace("_", "-"), "revision": 1,
@@ -277,13 +389,25 @@ class DemoReview:
         st = get_storage()
         key = oracle_key(payload)
         if not st.exists(key):
-            return {"unavailable": True, "answers": {}, "ambiguous": [], "notes": "demo mock: this material was not produced by the demo generator, so the mock cannot review it"}
-        return {"answers": json.loads(st.get(key)), "ambiguous": [], "notes": "demo mock solver (not an independent review)"}
+            return {
+                "unavailable": True,
+                "answers": {},
+                "ambiguous": [],
+                "notes": "demo mock: this material was not produced by the demo generator, so the mock cannot review it",
+            }
+        return {
+            "answers": json.loads(st.get(key)),
+            "ambiguous": [],
+            "notes": "demo mock solver (not an independent review)",
+        }
 
 
 def _tone(freq: float, ms: int, amp: float = 0.28) -> bytes:
     n_cycle = max(8, round(RATE / freq))
-    cycle = b"".join(int(amp * 32767 * math.sin(2 * math.pi * i / n_cycle)).to_bytes(2, "little", signed=True) for i in range(n_cycle))
+    cycle = b"".join(
+        int(amp * 32767 * math.sin(2 * math.pi * i / n_cycle)).to_bytes(2, "little", signed=True)
+        for i in range(n_cycle)
+    )
     need = ms * BYTES_PER_MS
     return (cycle * (need // len(cycle) + 1))[: need // 2 * 2]
 

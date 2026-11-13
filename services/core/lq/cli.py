@@ -30,7 +30,13 @@ def _echo(obj) -> None:
 def _find_unit(s, ref: str, realm: str) -> m.Unit:
     unit = s.get(m.Unit, ref)
     if unit is None:
-        unit = s.execute(select(m.Unit).where(m.Unit.realm == realm, m.Unit.content_id == ref).order_by(m.Unit.revision.desc())).scalars().first()
+        unit = (
+            s.execute(
+                select(m.Unit).where(m.Unit.realm == realm, m.Unit.content_id == ref).order_by(m.Unit.revision.desc())
+            )
+            .scalars()
+            .first()
+        )
     if unit is None:
         typer.echo(f"unit not found: {ref}", err=True)
         raise typer.Exit(1)
@@ -44,7 +50,12 @@ def doctor() -> None:
     from lq.storage import get_storage
 
     s = get_settings()
-    report: dict = {"ffmpeg": bool(shutil.which("ffmpeg")), "ffprobe": bool(shutil.which("ffprobe")), "env": s.env, "storage_backend": s.storage_backend}
+    report: dict = {
+        "ffmpeg": bool(shutil.which("ffmpeg")),
+        "ffprobe": bool(shutil.which("ffprobe")),
+        "env": s.env,
+        "storage_backend": s.storage_backend,
+    }
     try:
         with session_scope() as db:
             db.execute(select(1))
@@ -63,8 +74,18 @@ def doctor() -> None:
         report["storage"] = f"error: {e}"
     table = budget.price_table()
     report["openai_api_key"] = "set" if s.openai_api_key else "not set (demo and import still work)"
-    report["models"] = {"content": s.content_model, "review": s.review_model, "tts": f"{s.tts_provider}:{s.tts_model if s.tts_provider != 'openai_speech' else s.tts_speech_model}", "asr": s.asr_model}
-    report["prices_known"] = {"content": s.content_model in table["text"], "review": s.review_model in table["text"], "tts": s.tts_model in table["realtime"] or s.tts_speech_model in table["speech"], "asr": s.asr_model in table["transcription"]}
+    report["models"] = {
+        "content": s.content_model,
+        "review": s.review_model,
+        "tts": f"{s.tts_provider}:{s.tts_model if s.tts_provider != 'openai_speech' else s.tts_speech_model}",
+        "asr": s.asr_model,
+    }
+    report["prices_known"] = {
+        "content": s.content_model in table["text"],
+        "review": s.review_model in table["text"],
+        "tts": s.tts_model in table["realtime"] or s.tts_speech_model in table["speech"],
+        "asr": s.asr_model in table["transcription"],
+    }
     report["price_table"] = {"source": table["source"], "checked_at": table["checked_at"]}
     if s.tts_provider == "openai_speech":
         report["warning"] = "openai_speech (/v1/audio/speech) is deprecated and shuts down on 2027-01-06"
@@ -92,7 +113,11 @@ def migrate() -> None:
 
 
 @app.command("create-user")
-def create_user(username: str, realm: str = "live", password_env: str = typer.Option("", help="read the password from this environment variable instead of prompting")) -> None:
+def create_user(
+    username: str,
+    realm: str = "live",
+    password_env: str = typer.Option("", help="read the password from this environment variable instead of prompting"),
+) -> None:
     """Create the owner account. No password is bundled: you type it, or pass it through an env var."""
     from lq.services import auth
 
@@ -141,7 +166,12 @@ def seed(realm: str = "live") -> None:
 
 
 @app.command()
-def demo(username: str = "demo", password_env: str = "", mock: bool = True, mock_modes: str = typer.Option("common_test,cefr_c1", help="modes to prepare an assessment set for")) -> None:
+def demo(
+    username: str = "demo",
+    password_env: str = "",
+    mock: bool = True,
+    mock_modes: str = typer.Option("common_test,cefr_c1", help="modes to prepare an assessment set for"),
+) -> None:
     """Build the demo data area with free demo providers and run all its jobs. Tone audio only
     (音声動作確認用); nothing is added to the live area."""
     from lq.jobs import worker
@@ -149,7 +179,13 @@ def demo(username: str = "demo", password_env: str = "", mock: bool = True, mock
 
     with session_scope() as s:
         seed_mod.seed_profiles(s)
-        out = seed_mod.seed_demo(s, username=username, password=os.environ.get(password_env) if password_env else None, with_mock=mock, mock_modes=tuple(x for x in mock_modes.split(",") if x))
+        out = seed_mod.seed_demo(
+            s,
+            username=username,
+            password=os.environ.get(password_env) if password_env else None,
+            with_mock=mock,
+            mock_modes=tuple(x for x in mock_modes.split(",") if x),
+        )
     outcomes = worker.drain("demo-cli")
     with session_scope() as s:
         out["mock_sets_assembled"] = len(seed_mod.assemble_demo_mocks(s))
@@ -158,7 +194,9 @@ def demo(username: str = "demo", password_env: str = "", mock: bool = True, mock
     out["note"] = "demo audio is tone bursts for checking playback, not listening material"
     _echo(out)
     if out["password_created"]:
-        typer.echo(f"\nDemo login: {username} / {out['password_created']}  (shown once; change it with `lq set-password {username}`)")
+        typer.echo(
+            f"\nDemo login: {username} / {out['password_created']}  (shown once; change it with `lq set-password {username}`)"
+        )
 
 
 @app.command()
@@ -179,7 +217,11 @@ def validate(paths: list[Path]) -> None:
             for n in notes:
                 typer.echo(f"{p.name}: {n['item']}: {n['status']} - {n['reason']}")
         else:
-            units = [{k: v for k, v in u.items() if k not in ("audio", "review")} for u in data["units"]] if "units" in data else [{k: v for k, v in data.items() if k not in ("audio", "review", "files")}]
+            units = (
+                [{k: v for k, v in u.items() if k not in ("audio", "review")} for u in data["units"]]
+                if "units" in data
+                else [{k: v for k, v in data.items() if k not in ("audio", "review", "files")}]
+            )
         for raw in units:
             try:
                 u = UnitContent.model_validate(raw)
@@ -189,7 +231,9 @@ def validate(paths: list[Path]) -> None:
                 continue
             errs = [] if u.legacy_radio_only else lint_unit(u, require_distractors=data.get("schema_version") != 1)
             bad += 1 if errs else 0
-            typer.echo(f"{p.name}: {u.content_id}@{u.revision}: {'FORMAT PROBLEMS ' + str(errs) if errs else 'ok'}  hash={content_hash(u)[:12]}")
+            typer.echo(
+                f"{p.name}: {u.content_id}@{u.revision}: {'FORMAT PROBLEMS ' + str(errs) if errs else 'ok'}  hash={content_hash(u)[:12]}"
+            )
     raise typer.Exit(1 if bad else 0)
 
 
@@ -205,7 +249,20 @@ def _specs(mode: str, part: str, skill: str, band: int, count: int, topic: str, 
         typer.echo(f"unknown part {part!r}; parts: {[x['part'] for x in current_profile(mode)['parts']]}", err=True)
         raise typer.Exit(1)
     batch = new_id()[:8]
-    return [{"mode": mode, "part": part, "template_type": p["template_type"], "primary_skill": skill, "band": band, "topic_hint": topic, "seed": f"cli-{batch}-{i}", "source": source, "pool": pool} for i in range(count)]
+    return [
+        {
+            "mode": mode,
+            "part": part,
+            "template_type": p["template_type"],
+            "primary_skill": skill,
+            "band": band,
+            "topic_hint": topic,
+            "seed": f"cli-{batch}-{i}",
+            "source": source,
+            "pool": pool,
+        }
+        for i in range(count)
+    ]
 
 
 @app.command()
@@ -224,9 +281,15 @@ def plan(mode: str, part: str, skill: str = "explicit_detail", band: int = 3, co
     clips = len(plan_clips(sample)) if sample else 10
     chars = words * 6 + clips * 60
     est = {
-        "content": budget.est_text(s.content_model, len(system) + len(user) + len(json.dumps(authoring.authored_schema())), 6000),
+        "content": budget.est_text(
+            s.content_model, len(system) + len(user) + len(json.dumps(authoring.authored_schema())), 6000
+        ),
         "review": budget.est_text(s.review_model, words * 8 + 1500, 2500),
-        "tts": budget.est_tts("speech" if s.tts_provider == "openai_speech" else "realtime", s.tts_speech_model if s.tts_provider == "openai_speech" else s.tts_model, "x" * chars),
+        "tts": budget.est_tts(
+            "speech" if s.tts_provider == "openai_speech" else "realtime",
+            s.tts_speech_model if s.tts_provider == "openai_speech" else s.tts_model,
+            "x" * chars,
+        ),
         "asr": budget.est_asr(s.asr_model, chars / 14),
     }
     per_unit = None if any(v is None for v in est.values()) else round(sum(est.values()), 4)
@@ -248,14 +311,34 @@ def generate(mode: str, part: str, skill: str = "explicit_detail", band: int = 3
 
     ids = []
     with session_scope() as s:
-        for spec in _specs(mode, part, skill, band, count, topic, pool, "demo-generated" if realm == "demo" else "generated"):
+        for spec in _specs(
+            mode, part, skill, band, count, topic, pool, "demo-generated" if realm == "demo" else "generated"
+        ):
             job, _ = queue.enqueue(s, realm, "generate", spec)
             ids.append(job.id)
     if run:
         worker.drain("cli")
     with session_scope() as s:
         jobs = [admin.job_dto(s, s.get(m.GenerationJob, i)) for i in ids]
-    _echo([{k: j[k] for k in ("id", "status", "blocked_reason", "blocked_label", "stop_detail", "last_completed_step", "unit_id", "unit_status", "cost")} for j in jobs])
+    _echo(
+        [
+            {
+                k: j[k]
+                for k in (
+                    "id",
+                    "status",
+                    "blocked_reason",
+                    "blocked_label",
+                    "stop_detail",
+                    "last_completed_step",
+                    "unit_id",
+                    "unit_status",
+                    "cost",
+                )
+            }
+            for j in jobs
+        ]
+    )
     if send and get_settings().server_url:
         for j in jobs:
             if j["unit_status"] == "READY":
@@ -286,9 +369,24 @@ def _requeue(ref: str, realm: str, to_audio: bool = False) -> None:
             return
         if to_audio and u.status in ("AUDIO_GENERATING", "AUDIO_QA", "FAILED"):
             u.status = "AUDIO_PENDING"
-        job = s.execute(select(m.GenerationJob).where(m.GenerationJob.unit_id == u.id).order_by(m.GenerationJob.created_at.desc())).scalars().first()
+        job = (
+            s.execute(
+                select(m.GenerationJob)
+                .where(m.GenerationJob.unit_id == u.id)
+                .order_by(m.GenerationJob.created_at.desc())
+            )
+            .scalars()
+            .first()
+        )
         if job is None:
-            job, _ = queue.enqueue(s, realm, "process_unit", {"origin": "cli", "mode": u.mode, "part": u.part}, dedupe_key=f"process:{u.id}", unit_id=u.id)
+            job, _ = queue.enqueue(
+                s,
+                realm,
+                "process_unit",
+                {"origin": "cli", "mode": u.mode, "part": u.part},
+                dedupe_key=f"process:{u.id}",
+                unit_id=u.id,
+            )
         else:
             queue.manual_retry(s, job.id)
         jid = job.id
@@ -308,7 +406,14 @@ def approve(unit: str, target: str = typer.Option(..., help="content | audio"), 
         raise typer.BadParameter("target must be content or audio")
     with session_scope() as s:
         u = _find_unit(s, unit, realm)
-        rec = importer.manual_approve(s, u, target=target, reviewer=reviewer, method="author_reviewed" if as_author and target == "content" else None, note=note)
+        rec = importer.manual_approve(
+            s,
+            u,
+            target=target,
+            reviewer=reviewer,
+            method="author_reviewed" if as_author and target == "content" else None,
+            note=note,
+        )
         typer.echo(f"recorded {rec.method} for {u.content_id}@{u.revision} hash {u.content_hash[:12]}")
     worker.drain("cli")
 
@@ -322,7 +427,15 @@ def _build_bundle(unit_ref: str, realm: str, out: Path | None) -> Path:
     st = get_storage()
     with session_scope() as s:
         u = _find_unit(s, unit_ref, realm)
-        job = s.execute(select(m.GenerationJob).where(m.GenerationJob.unit_id == u.id).order_by(m.GenerationJob.created_at.desc())).scalars().first()
+        job = (
+            s.execute(
+                select(m.GenerationJob)
+                .where(m.GenerationJob.unit_id == u.id)
+                .order_by(m.GenerationJob.created_at.desc())
+            )
+            .scalars()
+            .first()
+        )
         clip_keys = dict((job.state or {}).get("clip_keys") or {}) if job else {}
         content, cid, rev = dict(u.content), u.content_id, u.revision
     out = out or (get_settings().outbox_dir / f"{cid}-r{rev}-{new_id()[:6]}")
@@ -334,13 +447,22 @@ def _build_bundle(unit_ref: str, realm: str, out: Path | None) -> Path:
         (out / name).write_bytes(data)
         files[name] = {"sha256": sha256_hex(data), "bytes": len(data)}
         audio[clip] = name
-    manifest = {"schema_version": 2, "source": content["source"], "units": [{**content, "audio": audio}], "files": files}
+    manifest = {
+        "schema_version": 2,
+        "source": content["source"],
+        "units": [{**content, "audio": audio}],
+        "files": files,
+    }
     (out / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=1), encoding="utf-8")
     return out
 
 
 @app.command()
-def build(unit: str, out: Path = typer.Option(None, help="output directory (default: a new outbox entry)"), realm: str = "live") -> None:
+def build(
+    unit: str,
+    out: Path = typer.Option(None, help="output directory (default: a new outbox entry)"),
+    realm: str = "live",
+) -> None:
     """Export a unit as an import bundle: manifest.json plus one audio file per clip."""
     d = _build_bundle(unit, realm, out)
     typer.echo(f"bundle written to {d}")
@@ -356,8 +478,16 @@ def _post_bundle(d: Path, realm: str) -> dict:
     names = list(json.loads(manifest).get("files", {}))
     handles = [open(d / n, "rb") for n in names]  # noqa: SIM115
     try:
-        files = [("manifest", ("manifest.json", manifest, "application/json"))] + [("files", (n, h, "application/octet-stream")) for n, h in zip(names, handles, strict=True)]
-        r = httpx.post(f"{s.server_url.rstrip('/')}/api/import", headers={"Authorization": f"Bearer {s.import_token}"}, data={"realm": realm}, files=files, timeout=300)
+        files = [("manifest", ("manifest.json", manifest, "application/json"))] + [
+            ("files", (n, h, "application/octet-stream")) for n, h in zip(names, handles, strict=True)
+        ]
+        r = httpx.post(
+            f"{s.server_url.rstrip('/')}/api/import",
+            headers={"Authorization": f"Bearer {s.import_token}"},
+            data={"realm": realm},
+            files=files,
+            timeout=300,
+        )
     finally:
         for h in handles:
             h.close()
@@ -368,11 +498,17 @@ def _post_bundle(d: Path, realm: str) -> dict:
 
 def _send_or_queue(d: Path, realm: str) -> bool:
     meta_p = d / "outbox.json"
-    meta = json.loads(meta_p.read_text()) if meta_p.exists() else {"attempts": 0, "realm": realm, "created_at": datetime.now(UTC).isoformat()}
+    meta = (
+        json.loads(meta_p.read_text())
+        if meta_p.exists()
+        else {"attempts": 0, "realm": realm, "created_at": datetime.now(UTC).isoformat()}
+    )
     try:
         rep = _post_bundle(d, meta["realm"])
     except Exception as e:  # noqa: BLE001 - any failure keeps the bundle for a later resend
-        meta.update(attempts=meta["attempts"] + 1, last_error=str(e)[:500], last_attempt_at=datetime.now(UTC).isoformat())
+        meta.update(
+            attempts=meta["attempts"] + 1, last_error=str(e)[:500], last_attempt_at=datetime.now(UTC).isoformat()
+        )
         outbox = get_settings().outbox_dir
         if outbox not in d.parents:
             target = outbox / d.name
@@ -387,14 +523,23 @@ def _send_or_queue(d: Path, realm: str) -> bool:
         if get_settings().outbox_dir in d.parents:
             shutil.rmtree(d)
         return True
-    meta.update(attempts=meta["attempts"] + 1, last_error=f"server refused: {json.dumps(rep, ensure_ascii=False)[:500]}", refused=True)
+    meta.update(
+        attempts=meta["attempts"] + 1,
+        last_error=f"server refused: {json.dumps(rep, ensure_ascii=False)[:500]}",
+        refused=True,
+    )
     meta_p.write_text(json.dumps(meta, indent=1))
     typer.echo(f"server refused {d.name}: {rep.get('status')} (kept for inspection; fix and resend)", err=True)
     return False
 
 
 @app.command("import")
-def import_cmd(manifest: Path, files: list[Path] = typer.Argument(None), realm: str = "live", remote: bool = typer.Option(False, help="send to LQ_SERVER_URL instead of importing into the local database")) -> None:
+def import_cmd(
+    manifest: Path,
+    files: list[Path] = typer.Argument(None),
+    realm: str = "live",
+    remote: bool = typer.Option(False, help="send to LQ_SERVER_URL instead of importing into the local database"),
+) -> None:
     """Import a manifest / Unit JSON (schema 2, or the earlier radio generator's schema 1) with its audio."""
     from lq.jobs import worker
     from lq.services import importer
@@ -427,7 +572,9 @@ def outbox_list() -> None:
     items = []
     for d in sorted(root.glob("*")) if root.exists() else []:
         meta = json.loads((d / "outbox.json").read_text()) if (d / "outbox.json").exists() else {}
-        items.append({"name": d.name, **{k: meta.get(k) for k in ("attempts", "last_error", "last_attempt_at", "refused")}})
+        items.append(
+            {"name": d.name, **{k: meta.get(k) for k in ("attempts", "last_error", "last_attempt_at", "refused")}}
+        )
     _echo(items)
 
 
@@ -484,7 +631,9 @@ def schema(out: Path = typer.Option(..., help="where to write the Unit JSON Sche
     from lq.domain.content import unit_json_schema
 
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(unit_json_schema(), ensure_ascii=False, indent=1, sort_keys=True) + "\n", encoding="utf-8")
+    out.write_text(
+        json.dumps(unit_json_schema(), ensure_ascii=False, indent=1, sort_keys=True) + "\n", encoding="utf-8"
+    )
     typer.echo(f"wrote {out}")
 
 
@@ -495,7 +644,20 @@ def export_fixtures(out: Path = typer.Option(..., help="directory for sample Uni
 
     out.mkdir(parents=True, exist_ok=True)
     units = load_fixture_units()
-    (out / "manifest.sample.json").write_text(json.dumps({"schema_version": 2, "source": "fixture", "units": [u.model_dump(mode="json") for u in units], "files": {}}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    (out / "manifest.sample.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 2,
+                "source": "fixture",
+                "units": [u.model_dump(mode="json") for u in units],
+                "files": {},
+            },
+            ensure_ascii=False,
+            indent=1,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     typer.echo(f"wrote {len(units)} units to {out / 'manifest.sample.json'}")
 
 

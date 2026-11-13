@@ -43,7 +43,10 @@ def _post_json(url: str, key: str, body: dict, timeout: float, meter, entry: str
             meter.release(entry)
         else:
             meter.mark_unknown(entry, f"http {r.status_code}")
-        raise ProviderError(f"OpenAI HTTP {r.status_code}: {r.text[:300]}", retryable=r.status_code in (408, 409, 429) or r.status_code >= 500)
+        raise ProviderError(
+            f"OpenAI HTTP {r.status_code}: {r.text[:300]}",
+            retryable=r.status_code in (408, 409, 429) or r.status_code >= 500,
+        )
     return r.json()
 
 
@@ -69,7 +72,9 @@ class _Structured:
     def __init__(self, api_key: str, base_url: str, model: str, timeout: float):
         self.key, self.base, self.model, self.timeout = api_key, base_url.rstrip("/"), model, timeout
 
-    def _call(self, step: str, system: str, user: str, schema_name: str, schema: dict, max_output_tokens: int, meter) -> dict:
+    def _call(
+        self, step: str, system: str, user: str, schema_name: str, schema: dict, max_output_tokens: int, meter
+    ) -> dict:
         est = budget.est_text(self.model, len(system) + len(user) + len(json.dumps(schema)), max_output_tokens)
         entry = meter.reserve(step, self.name, self.model, est)
         body = {
@@ -131,7 +136,12 @@ class RealtimeTTS:
         usage: dict = {}
         sent = False
         try:
-            with connect(f"{self.url}?model={self.model}", additional_headers=_headers(self.key), open_timeout=self.timeout, max_size=None) as ws:
+            with connect(
+                f"{self.url}?model={self.model}",
+                additional_headers=_headers(self.key),
+                open_timeout=self.timeout,
+                max_size=None,
+            ) as ws:
                 ws.send(json.dumps({
                     "type": "session.update",
                     "session": {
@@ -141,7 +151,18 @@ class RealtimeTTS:
                         "audio": {"input": {"turn_detection": None}, "output": {"format": {"type": "audio/pcm", "rate": 24000}, "voice": voice}},
                     },
                 }))  # fmt: skip
-                ws.send(json.dumps({"type": "conversation.item.create", "item": {"type": "message", "role": "user", "content": [{"type": "input_text", "text": text}]}}))
+                ws.send(
+                    json.dumps(
+                        {
+                            "type": "conversation.item.create",
+                            "item": {
+                                "type": "message",
+                                "role": "user",
+                                "content": [{"type": "input_text", "text": text}],
+                            },
+                        }
+                    )
+                )
                 ws.send(json.dumps({"type": "response.create", "response": {"output_modalities": ["audio"]}}))
                 sent = True
                 while True:
@@ -184,7 +205,13 @@ class SpeechTTS:
 
     def synthesize(self, text: str, voice: str, lang: str, instructions: str, meter) -> bytes:
         entry = meter.reserve("tts", self.name, self.model, budget.est_tts("speech", self.model, text))
-        body = {"model": self.model, "voice": voice, "input": text, "response_format": "wav", "instructions": instructions or "Read clearly at a natural pace."}
+        body = {
+            "model": self.model,
+            "voice": voice,
+            "input": text,
+            "response_format": "wav",
+            "instructions": instructions or "Read clearly at a natural pace.",
+        }
         try:
             r = httpx.post(f"{self.base}/audio/speech", headers=_headers(self.key), json=body, timeout=self.timeout)
         except httpx.ConnectError as e:
@@ -195,7 +222,10 @@ class SpeechTTS:
             raise ProviderError(f"{TIMEOUT_NOTE}: {e}") from e
         if r.status_code >= 400:
             (meter.release if r.status_code < 500 else lambda x: meter.mark_unknown(x, f"http {r.status_code}"))(entry)
-            raise ProviderError(f"OpenAI HTTP {r.status_code}: {r.text[:300]}", retryable=r.status_code in (408, 429) or r.status_code >= 500)
+            raise ProviderError(
+                f"OpenAI HTTP {r.status_code}: {r.text[:300]}",
+                retryable=r.status_code in (408, 429) or r.status_code >= 500,
+            )
         meter.settle(entry, None, {"note": "speech endpoint returns no usage; cost stays at the estimate"})
         return decode_to_pcm(r.content)
 
@@ -228,6 +258,9 @@ class OpenAIASR:
             raise ProviderError(f"{TIMEOUT_NOTE}: {e}") from e
         if r.status_code >= 400:
             (meter.release if r.status_code < 500 else lambda x: meter.mark_unknown(x, f"http {r.status_code}"))(entry)
-            raise ProviderError(f"OpenAI HTTP {r.status_code}: {r.text[:300]}", retryable=r.status_code in (408, 429) or r.status_code >= 500)
+            raise ProviderError(
+                f"OpenAI HTTP {r.status_code}: {r.text[:300]}",
+                retryable=r.status_code in (408, 429) or r.status_code >= 500,
+            )
         meter.settle(entry, est, {"seconds": seconds, "basis": "per-minute price x measured duration"})
         return r.json().get("text", "")

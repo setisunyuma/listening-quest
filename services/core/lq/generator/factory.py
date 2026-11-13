@@ -60,7 +60,9 @@ def get_providers(realm: str) -> Providers:
 def assign_voices(unit) -> dict[str, str]:
     """One fixed voice per speaker_id inside a unit; narrator and the Japanese explainer are distinct."""
     s = get_settings()
-    pool = [v.strip() for v in s.tts_speaker_voices.split(",") if v.strip() and v.strip() not in (s.tts_narrator_voice,)]
+    pool = [
+        v.strip() for v in s.tts_speaker_voices.split(",") if v.strip() and v.strip() not in (s.tts_narrator_voice,)
+    ]
     voices = {"explainer_ja": s.tts_ja_voice}
     i = 0
     for sp in unit.speakers:

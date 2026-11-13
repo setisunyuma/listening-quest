@@ -22,8 +22,19 @@ def xp_rows(db, user, kind=None):
     return db.execute(q).scalars().all()
 
 
-def stock(db, n, mode="common_test", part="3", skills=("explicit_detail", "numbers_negation", "inference", "speaker_attitude"), band=3, prefix="s"):
-    return [ready_unit(db, mode=mode, part=part, skill=skills[i % len(skills)], band=band, seed=f"{prefix}{i}") for i in range(n)]
+def stock(
+    db,
+    n,
+    mode="common_test",
+    part="3",
+    skills=("explicit_detail", "numbers_negation", "inference", "speaker_attitude"),
+    band=3,
+    prefix="s",
+):
+    return [
+        ready_unit(db, mode=mode, part=part, skill=skills[i % len(skills)], band=band, seed=f"{prefix}{i}")
+        for i in range(n)
+    ]
 
 
 # ---- 3. radio / answer-included access removes a unit from strict first-attempt statistics
@@ -33,7 +44,9 @@ def test_radio_access_disqualifies_first_attempt(db, user):
     u1, u2 = stock(db, 2)
     prog = radio.build_program(db, user, "common_test", T0, unit_ids=[u1.id])
     db.commit()
-    assert db.execute(select(m.ExposureEvent.kind).where(m.ExposureEvent.unit_id == u1.id)).scalars().all() == ["radio_access"]
+    assert db.execute(select(m.ExposureEvent.kind).where(m.ExposureEvent.unit_id == u1.id)).scalars().all() == [
+        "radio_access"
+    ]
     a1 = do_attempt(db, user, u1, now=T0 + timedelta(hours=1))
     a2 = do_attempt(db, user, u2, now=T0 + timedelta(hours=1))
     assert (a1.strict_first, a1.category) == (False, "repeat") and "prior_exposure" in a1.not_first_reasons
@@ -81,7 +94,9 @@ def test_resubmit_and_ack_apply_once(db, user):
         db.commit()
     assert db.execute(select(func.count()).select_from(m.Attempt)).scalar_one() == 1
     assert [x.amount for x in xp_rows(db, user)] == [CFG.xp["unit_base"]]
-    assert db.execute(select(func.count()).select_from(m.SkillObservation).where(m.SkillObservation.kind == "strict_first")).scalar_one() == len(u.skill_tags)
+    assert db.execute(
+        select(func.count()).select_from(m.SkillObservation).where(m.SkillObservation.kind == "strict_first")
+    ).scalar_one() == len(u.skill_tags)
     sched = db.execute(select(m.ReviewSchedule)).scalars().all()
     assert len(sched) == 1 and len(sched[0].history) == 1
     with pytest.raises(L.Conflict):
@@ -124,15 +139,40 @@ def test_partial_answers_give_no_completion_and_no_xp(db, user):
     assert att.category == "partial" and att.unit_score is None and not att.strict_first
     assert xp_rows(db, user) == []
     with pytest.raises(L.Invalid):
-        L.submit_attempt(db, user, L.start_attempt(db, user, attempt_id=eid(), unit_id=u.id, now=T0).id, {"q1": {"choice_id": "c1"}}, now=T0)
+        L.submit_attempt(
+            db,
+            user,
+            L.start_attempt(db, user, attempt_id=eid(), unit_id=u.id, now=T0).id,
+            {"q1": {"choice_id": "c1"}},
+            now=T0,
+        )
 
 
 # ---- 5. / 6. adaptation and difficulty
 
 
 def _cands():
-    mk = lambda i, skill: rec.Candidate(unit_id=f"u{i}", mode="common_test", part="3", template_type="short_dialogue", skills=(skill,), primary_skill=skill, topic=f"t{i % 3}", band=3, est_sec=60, family_id=f"f{i}", fingerprint=f"p{i}")  # noqa: E731
-    return [mk(i, s) for i, s in enumerate(["explicit_detail", "numbers_negation", "inference", "numbers_negation", "main_idea", "speaker_attitude"])]
+    def mk(i, skill):
+        return rec.Candidate(
+            unit_id=f"u{i}",
+            mode="common_test",
+            part="3",
+            template_type="short_dialogue",
+            skills=(skill,),
+            primary_skill=skill,
+            topic=f"t{i % 3}",
+            band=3,
+            est_sec=60,
+            family_id=f"f{i}",
+            fingerprint=f"p{i}",
+        )
+
+    return [
+        mk(i, s)
+        for i, s in enumerate(
+            ["explicit_detail", "numbers_negation", "inference", "numbers_negation", "main_idea", "speaker_attitude"]
+        )
+    ]
 
 
 def test_recommendation_is_deterministic_and_follows_misses():
@@ -142,8 +182,12 @@ def test_recommendation_is_deterministic_and_follows_misses():
     p_miss = rec.pick_for("weak", _cands(), missed, set(), None, "seed-1", CFG)
     assert p_ok.category == "explore"  # no weakness evidence: the slot widens range instead
     assert p_miss.category == "weak" and p_miss.params["skill"] == "numbers_negation" and "数字" in p_miss.reason_text
-    assert p_miss == rec.pick_for("weak", _cands(), missed, set(), None, "seed-1", CFG)  # same state + seed -> same pick
-    assert {rec.pick_for("explore", _cands(), base, set(), None, f"s{i}", CFG).unit_id for i in range(20)} != {p_ok.unit_id} or True
+    assert p_miss == rec.pick_for(
+        "weak", _cands(), missed, set(), None, "seed-1", CFG
+    )  # same state + seed -> same pick
+    assert {rec.pick_for("explore", _cands(), base, set(), None, f"s{i}", CFG).unit_id for i in range(20)} != {
+        p_ok.unit_id
+    } or True
 
 
 def test_wrong_answer_changes_next_slot_but_not_slot_count(db, user):
@@ -153,7 +197,17 @@ def test_wrong_answer_changes_next_slot_but_not_slot_count(db, user):
 
     def run(first_correct: bool):
         db.execute(m.Attempt.__table__.delete())
-        for t in (m.PlanSlot, m.DailyPlan, m.SkillObservation, m.ExposureEvent, m.ReviewSchedule, m.XpEvent, m.ClientEvent, m.ModeState, m.LearningSession):
+        for t in (
+            m.PlanSlot,
+            m.DailyPlan,
+            m.SkillObservation,
+            m.ExposureEvent,
+            m.ReviewSchedule,
+            m.XpEvent,
+            m.ClientEvent,
+            m.ModeState,
+            m.LearningSession,
+        ):
             db.execute(t.__table__.delete())
         db.commit()
         plan = plans.start_plan(db, user, T0)
@@ -165,7 +219,9 @@ def test_wrong_answer_changes_next_slot_but_not_slot_count(db, user):
         db.commit()
         do_attempt(db, user, target[0], correct=first_correct, slot_id=slots[0].id)
         after = plans._plan_slots(db, plan.id)
-        assert [(s.idx, s.time_cap_sec) for s in after] == caps and db.get(m.DailyPlan, plan.id).total_slots == len(caps)
+        assert [(s.idx, s.time_cap_sec) for s in after] == caps and db.get(m.DailyPlan, plan.id).total_slots == len(
+            caps
+        )
         return after[1].unit_id, after[1].reason_text
 
     wrong_next, wrong_reason = run(False)
@@ -177,13 +233,18 @@ def test_wrong_answer_changes_next_slot_but_not_slot_count(db, user):
 
 def test_band_rule_pure():
     d0 = date(2026, 11, 2)
-    obs = lambda n, v: [(f"fp{i}", v) for i in range(n)]  # noqa: E731
+
+    def obs(n, v):
+        return [(f"fp{i}", v) for i in range(n)]
+
     assert not rules.adjust_band(3, obs(9, 1.0), None, d0, CFG).changed  # fewer than 10 distinct units
     assert rules.adjust_band(3, obs(10, 0.9), None, d0, CFG).band == 4
     assert rules.adjust_band(3, obs(10, 0.5), None, d0, CFG).band == 2
     assert rules.adjust_band(3, obs(10, 0.7), None, d0, CFG).band == 3
     assert not rules.adjust_band(3, obs(10, 1.0), d0, d0, CFG).changed  # at most one step per learning day
-    assert not rules.adjust_band(3, [("same", 1.0)] * 30, None, d0, CFG).changed  # same audio repeated is one observation
+    assert not rules.adjust_band(
+        3, [("same", 1.0)] * 30, None, d0, CFG
+    ).changed  # same audio repeated is one observation
     assert rules.adjust_band(5, obs(12, 1.0), None, d0, CFG).band == 5
 
 
@@ -222,9 +283,18 @@ def test_self_report_assist_radio_and_repeats_never_raise_band(db, user):
         do_attempt(db, user, u, now=T0 + timedelta(hours=2, minutes=i))
     st = L.get_mode_state(db, user.id, "common_test")
     assert st.difficulty_band == 3 and st.band_history == []
-    assert db.execute(select(func.count()).select_from(m.SkillObservation).where(m.SkillObservation.kind == "strict_first")).scalar_one() == 0
+    assert (
+        db.execute(
+            select(func.count()).select_from(m.SkillObservation).where(m.SkillObservation.kind == "strict_first")
+        ).scalar_one()
+        == 0
+    )
     g = stats.growth(db, user, T0 + timedelta(hours=3), "common_test")
-    assert g["first_official"]["units"] == 0 and g["assisted"]["units"] == 5 and g["self_reported"]["counts"] == {"correct": 5}
+    assert (
+        g["first_official"]["units"] == 0
+        and g["assisted"]["units"] == 5
+        and g["self_reported"]["counts"] == {"correct": 5}
+    )
 
 
 # ---- 7. official plays vs extra, speed, same audio with different questions
@@ -244,12 +314,26 @@ def test_same_audio_other_questions_is_not_first(db, user):
     data = base.model_dump(mode="json")
     q = data["questions"][0]
     q["prompt_en"] = "Which statement is true?"
-    variant = type(base).model_validate({**data, "content_id": base.content_id + "-b", "variant_of": base.content_id, "questions": [q]})
+    variant = type(base).model_validate(
+        {**data, "content_id": base.content_id + "-b", "variant_of": base.content_id, "questions": [q]}
+    )
     u1, u2 = ready_unit(db, content=base), ready_unit(db, content=variant)
     assert u1.stimulus_fingerprint == u2.stimulus_fingerprint and u1.content_hash != u2.content_hash
     a1, a2 = do_attempt(db, user, u1), do_attempt(db, user, u2, now=T0 + timedelta(hours=1))
     assert a1.strict_first and not a2.strict_first and not a2.eligible_at_start
-    arranged = ready_unit(db, content=make_content(part="3", seed="v2", presentation_profile={"kind": "audio_arranged", "choices_read_aloud": True, "figure_verbalized": False, "notes": ""}))
+    arranged = ready_unit(
+        db,
+        content=make_content(
+            part="3",
+            seed="v2",
+            presentation_profile={
+                "kind": "audio_arranged",
+                "choices_read_aloud": True,
+                "figure_verbalized": False,
+                "notes": "",
+            },
+        ),
+    )
     a3 = do_attempt(db, user, arranged, now=T0 + timedelta(hours=2))
     g = stats.growth(db, user, T0 + timedelta(hours=3), "common_test")
     assert a3.presentation == "arranged" and g["first_official"]["units"] == 1 and g["first_arranged"]["units"] == 1
@@ -277,8 +361,12 @@ def test_modes_do_not_mix_and_share_one_plan(db, user):
     rebuilt = plans.rebuild_remaining(db, user, plan.id, "cefr_c1", T0 + timedelta(hours=3))
     db.commit()
     slots = plans._plan_slots(db, plan.id)
-    assert slots[0].state == "completed" and slots[0].mode == "common_test" and all(s.mode == "cefr_c1" for s in slots[1:])
-    assert rebuilt.planned_sec <= rebuilt.budget_sec + c1[0].estimated_duration_sec and rebuilt.total_slots == len(slots)
+    assert (
+        slots[0].state == "completed" and slots[0].mode == "common_test" and all(s.mode == "cefr_c1" for s in slots[1:])
+    )
+    assert rebuilt.planned_sec <= rebuilt.budget_sec + c1[0].estimated_duration_sec and rebuilt.total_slots == len(
+        slots
+    )
 
 
 # ---- 9. spaced review
@@ -288,11 +376,17 @@ def test_srs_pure_rules():
     d = date(2026, 11, 2)
     first = rules.srs_next(None, "correct_unaided", d, CFG)
     assert first.sched == rules.Sched(0, d + timedelta(days=1))
-    assert not rules.srs_next(first.sched, "correct_unaided", d, CFG).changed  # right after the explanation: early repeat
+    assert not rules.srs_next(
+        first.sched, "correct_unaided", d, CFG
+    ).changed  # right after the explanation: early repeat
     due = rules.srs_next(first.sched, "correct_unaided", d + timedelta(days=1), CFG)
     assert due.sched == rules.Sched(1, d + timedelta(days=4))
-    assert rules.srs_next(due.sched, "incorrect", d + timedelta(days=4), CFG).sched == rules.Sched(0, d + timedelta(days=5))
-    assert rules.srs_next(due.sched, "incorrect", d + timedelta(days=2), CFG).sched.stage == 0  # early miss goes back too
+    assert rules.srs_next(due.sched, "incorrect", d + timedelta(days=4), CFG).sched == rules.Sched(
+        0, d + timedelta(days=5)
+    )
+    assert (
+        rules.srs_next(due.sched, "incorrect", d + timedelta(days=2), CFG).sched.stage == 0
+    )  # early miss goes back too
     assisted = rules.srs_next(due.sched, "correct_assisted", d + timedelta(days=4), CFG)
     assert assisted.sched == rules.Sched(1, d + timedelta(days=5))
     s = first.sched
@@ -314,7 +408,11 @@ def test_review_flow_in_service(db, user):
     assert early.session_type == "train" and (sc.stage, sc.due_day) == (0, d0 + timedelta(days=1))
     rev = do_attempt(db, user, u, now=T0 + days(1))
     db.refresh(sc)
-    assert rev.session_type == "review" and rev.category == "review" and (sc.stage, sc.due_day) == (1, d0 + timedelta(days=4))
+    assert (
+        rev.session_type == "review"
+        and rev.category == "review"
+        and (sc.stage, sc.due_day) == (1, d0 + timedelta(days=4))
+    )
     assert sorted(x.kind for x in xp_rows(db, user)) == ["review_bonus", "unit_base", "unit_base"]
     do_attempt(db, user, u, correct=False, now=T0 + days(4))
     db.refresh(sc)
@@ -368,9 +466,13 @@ def test_daily_reward_once_across_day_change_timezone_and_late_sync(db, user):
             db.commit()
     daily = xp_rows(db, user, "daily_plan")
     assert len(daily) == 1 and daily[0].learning_day == date(2026, 11, 2)
-    assert {x.learning_day for x in xp_rows(db, user, "unit_base")} == {date(2026, 11, 2)} and len(xp_rows(db, user, "unit_base")) == len(slots)
+    assert {x.learning_day for x in xp_rows(db, user, "unit_base")} == {date(2026, 11, 2)} and len(
+        xp_rows(db, user, "unit_base")
+    ) == len(slots)
     assert db.get(m.DailyPlan, plan.id).status == "completed"
-    assert plans.start_plan(db, user, next_day).id != plan.id  # the new day gets its own plan, the old one is not re-rewarded
+    assert (
+        plans.start_plan(db, user, next_day).id != plan.id
+    )  # the new day gets its own plan, the old one is not re-rewarded
 
 
 # ---- 11. new material and wrong answers never grow today's plan
@@ -387,7 +489,9 @@ def test_plan_size_is_fixed(db, user):
     db.commit()
     for i in range(3):
         slot = plans._plan_slots(db, plan.id)[i]
-        do_attempt(db, user, db.get(m.Unit, slot.unit_id), correct=False, slot_id=slot.id, now=T0 + timedelta(minutes=10 * i))
+        do_attempt(
+            db, user, db.get(m.Unit, slot.unit_id), correct=False, slot_id=slot.id, now=T0 + timedelta(minutes=10 * i)
+        )
     plan = db.get(m.DailyPlan, plan.id)
     slots = plans._plan_slots(db, plan.id)
     assert (plan.total_slots, plan.budget_sec, len(slots), [s.time_cap_sec for s in slots]) == (n, budget, n, caps)
@@ -414,8 +518,24 @@ def test_reserved_slot_keeps_its_unit_while_others_adapt(db, user):
         plans.replace_slot(db, user, after[1].id, T0)
     assert plans.release_slots(db, user, plan.id) == 1
     assert plans._plan_slots(db, plan.id)[1].assignment_version == kept[1] + 1
-    stale = plans.sync_offline_answers(db, user, [{"event_id": eid(), "unit_id": kept[0], "unit_revision": 1, "answers": answers(db.get(m.Unit, kept[0])), "slot_id": after[1].id, "assignment_version": kept[1]}], T0)
-    assert stale[0]["note"] == "slot_changed_recorded_as_free_practice"  # old device copy: graded, but not booked on the slot
+    stale = plans.sync_offline_answers(
+        db,
+        user,
+        [
+            {
+                "event_id": eid(),
+                "unit_id": kept[0],
+                "unit_revision": 1,
+                "answers": answers(db.get(m.Unit, kept[0])),
+                "slot_id": after[1].id,
+                "assignment_version": kept[1],
+            }
+        ],
+        T0,
+    )
+    assert (
+        stale[0]["note"] == "slot_changed_recorded_as_free_practice"
+    )  # old device copy: graded, but not booked on the slot
 
 
 def test_radio_xp_needs_real_coverage(db, user):
@@ -423,11 +543,20 @@ def test_radio_xp_needs_real_coverage(db, user):
     prog = radio.build_program(db, user, "common_test", T0, unit_ids=[u1.id, u2.id])
     db.commit()
     t1, t2 = prog.timeline
-    out = radio.report_progress(db, user, prog.id, event_id=eid(), ranges=[[t2["end_ms"] - 20, t2["end_ms"]]], position_ms=t2["end_ms"])  # seek to the end
+    out = radio.report_progress(
+        db, user, prog.id, event_id=eid(), ranges=[[t2["end_ms"] - 20, t2["end_ms"]]], position_ms=t2["end_ms"]
+    )  # seek to the end
     assert out["awarded"] == []
     ev = eid()
     for _ in range(2):
-        out = radio.report_progress(db, user, prog.id, event_id=ev, ranges=[[0, int(t1["end_ms"] * 0.5)], [int(t1["end_ms"] * 0.4), t1["end_ms"]]], position_ms=t1["end_ms"])
+        out = radio.report_progress(
+            db,
+            user,
+            prog.id,
+            event_id=ev,
+            ranges=[[0, int(t1["end_ms"] * 0.5)], [int(t1["end_ms"] * 0.4), t1["end_ms"]]],
+            position_ms=t1["end_ms"],
+        )
     db.commit()
     assert [x.unit_id for x in xp_rows(db, user, "radio_unit")] == [u1.id]
     assert db.execute(select(func.count()).select_from(m.Attempt)).scalar_one() == 0  # listening is never graded

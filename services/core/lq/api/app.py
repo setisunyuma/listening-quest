@@ -63,7 +63,9 @@ async def _iv(_r, e):
     return JSONResponse({"detail": str(e)}, status_code=422)
 
 
-def current_user(request: Request, session: Session = Depends(db), x_csrf_token: str | None = Header(default=None)) -> m.User:
+def current_user(
+    request: Request, session: Session = Depends(db), x_csrf_token: str | None = Header(default=None)
+) -> m.User:
     """Cookie session + CSRF (double submit) on every state-changing request."""
     got = auth.resolve(session, request.cookies.get(auth.SESSION_COOKIE))
     if got is None:
@@ -82,8 +84,12 @@ def current_user(request: Request, session: Session = Depends(db), x_csrf_token:
 def _set_cookies(resp: Response, token: str, csrf: str) -> None:
     s = get_settings()
     age = s.session_ttl_hours * 3600
-    resp.set_cookie(auth.SESSION_COOKIE, token, max_age=age, httponly=True, secure=s.cookie_secure, samesite="lax", path="/")
-    resp.set_cookie(auth.CSRF_COOKIE, csrf, max_age=age, httponly=False, secure=s.cookie_secure, samesite="lax", path="/")
+    resp.set_cookie(
+        auth.SESSION_COOKIE, token, max_age=age, httponly=True, secure=s.cookie_secure, samesite="lax", path="/"
+    )
+    resp.set_cookie(
+        auth.CSRF_COOKIE, csrf, max_age=age, httponly=False, secure=s.cookie_secure, samesite="lax", path="/"
+    )
 
 
 # ---------------------------------------------------------------- auth / settings
@@ -97,7 +103,11 @@ def health(session: Session = Depends(db)) -> dict[str, Any]:
 
 @app.post("/api/auth/login", response_model=S.MeOut)
 def login(body: S.LoginIn, request: Request, response: Response, session: Session = Depends(db)):
-    client = (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "?")).split(",")[0].strip()
+    client = (
+        (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "?"))
+        .split(",")[0]
+        .strip()
+    )
     try:
         user, token, csrf = auth.login(session, body.username, body.password, client)
     except auth.TooManyAttempts:
@@ -107,11 +117,19 @@ def login(body: S.LoginIn, request: Request, response: Response, session: Sessio
     if user is None:
         raise HTTPException(401, "wrong username or password")
     _set_cookies(response, token, csrf)
-    return {"username": user.username, "realm": user.realm, "user_id": user.id, "csrf_token": csrf, "settings": L.user_settings(user)}
+    return {
+        "username": user.username,
+        "realm": user.realm,
+        "user_id": user.id,
+        "csrf_token": csrf,
+        "settings": L.user_settings(user),
+    }
 
 
 @app.post("/api/auth/logout")
-def logout(request: Request, response: Response, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def logout(
+    request: Request, response: Response, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     auth.logout(session, request.cookies.get(auth.SESSION_COOKIE))
     session.commit()
     response.delete_cookie(auth.SESSION_COOKIE, path="/")
@@ -121,11 +139,19 @@ def logout(request: Request, response: Response, session: Session = Depends(db),
 
 @app.get("/api/auth/me", response_model=S.MeOut)
 def me(request: Request, user: m.User = Depends(current_user)):
-    return {"username": user.username, "realm": user.realm, "user_id": user.id, "csrf_token": request.state.csrf, "settings": L.user_settings(user)}
+    return {
+        "username": user.username,
+        "realm": user.realm,
+        "user_id": user.id,
+        "csrf_token": request.state.csrf,
+        "settings": L.user_settings(user),
+    }
 
 
 @app.patch("/api/settings")
-def patch_settings(body: S.SettingsPatch, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def patch_settings(
+    body: S.SettingsPatch, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     out = L.update_user_settings(user, body.model_dump(exclude_none=True))
     session.commit()
     return out
@@ -210,7 +236,9 @@ def library(mode: str | None = None, session: Session = Depends(db), user: m.Use
 
 @app.post("/api/attempts", response_model=S.AttemptOut)
 def attempt_start(body: S.AttemptStartIn, session: Session = Depends(db), user: m.User = Depends(current_user)):
-    att = L.start_attempt(session, user, attempt_id=body.attempt_id, unit_id=body.unit_id, slot_id=body.slot_id, now=now_utc())
+    att = L.start_attempt(
+        session, user, attempt_id=body.attempt_id, unit_id=body.unit_id, slot_id=body.slot_id, now=now_utc()
+    )
     session.commit()
     return L.attempt_dto(session, att)
 
@@ -228,7 +256,9 @@ def attempt_play(attempt_id: str, body: S.PlayIn, session: Session = Depends(db)
 
 
 @app.post("/api/attempts/{attempt_id}/aids")
-def attempt_aid(attempt_id: str, body: S.AidIn, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def attempt_aid(
+    attempt_id: str, body: S.AidIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     """Dedicated path for explicit help. The assisted flag is committed before any text is returned."""
     out = L.request_aid(session, user, attempt_id, event_id=body.event_id, kind=body.kind)
     session.commit()
@@ -236,7 +266,9 @@ def attempt_aid(attempt_id: str, body: S.AidIn, session: Session = Depends(db), 
 
 
 @app.post("/api/attempts/{attempt_id}/submit", response_model=S.ResultOut)
-def attempt_submit(attempt_id: str, body: S.SubmitIn, session: Session = Depends(db), user: m.User = Depends(current_user)):
+def attempt_submit(
+    attempt_id: str, body: S.SubmitIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+):
     att = L.submit_attempt(session, user, attempt_id, body.answers, now=now_utc())
     session.commit()
     return L.result_dto(session, att)
@@ -255,14 +287,18 @@ def attempt_ack(attempt_id: str, session: Session = Depends(db), user: m.User = 
 
 
 @app.post("/api/attempts/{attempt_id}/error-reasons")
-def attempt_reason(attempt_id: str, body: S.ErrorReasonIn, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def attempt_reason(
+    attempt_id: str, body: S.ErrorReasonIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     out = L.set_error_reason(session, user, attempt_id, body.question_id, body.reason)
     session.commit()
     return {"self_reasons": out}
 
 
 @app.post("/api/sync/answers")
-def sync_answers(body: S.SyncIn, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def sync_answers(
+    body: S.SyncIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     out = plans.sync_offline_answers(session, user, [i.model_dump() for i in body.items], now_utc())
     session.commit()
     return {"results": out}
@@ -272,18 +308,37 @@ def sync_answers(body: S.SyncIn, session: Session = Depends(db), user: m.User = 
 
 
 @app.post("/api/radio/programs")
-def radio_create(body: S.RadioProgramIn, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def radio_create(
+    body: S.RadioProgramIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     """The learner explicitly asks for listen-through audio. Answer access is recorded for every unit in it."""
     if body.mode not in MODES:
         raise L.Invalid("unknown mode")
-    prog = radio.build_program(session, user, body.mode, now_utc(), target_sec=body.minutes * 60 if body.minutes else None, unit_ids=body.unit_ids, include_new=body.include_new)
+    prog = radio.build_program(
+        session,
+        user,
+        body.mode,
+        now_utc(),
+        target_sec=body.minutes * 60 if body.minutes else None,
+        unit_ids=body.unit_ids,
+        include_new=body.include_new,
+    )
     session.commit()
     return radio.program_dto(session, prog)
 
 
 @app.get("/api/radio/programs")
 def radio_list(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
-    rows = session.execute(select(m.RadioProgram).where(m.RadioProgram.user_id == user.id).order_by(m.RadioProgram.created_at.desc()).limit(10)).scalars().all()
+    rows = (
+        session.execute(
+            select(m.RadioProgram)
+            .where(m.RadioProgram.user_id == user.id)
+            .order_by(m.RadioProgram.created_at.desc())
+            .limit(10)
+        )
+        .scalars()
+        .all()
+    )
     return {"programs": [radio.program_dto(session, p) for p in rows]}
 
 
@@ -293,21 +348,43 @@ def radio_get(program_id: str, session: Session = Depends(db), user: m.User = De
 
 
 @app.post("/api/radio/programs/{program_id}/progress")
-def radio_progress(program_id: str, body: S.RadioProgressIn, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
-    out = radio.report_progress(session, user, program_id, event_id=body.event_id, ranges=[list(r) for r in body.ranges], position_ms=body.position_ms, now=now_utc())
+def radio_progress(
+    program_id: str, body: S.RadioProgressIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    out = radio.report_progress(
+        session,
+        user,
+        program_id,
+        event_id=body.event_id,
+        ranges=[list(r) for r in body.ranges],
+        position_ms=body.position_ms,
+        now=now_utc(),
+    )
     session.commit()
     return out
 
 
 @app.post("/api/radio/self-reports")
-def radio_self_report(body: S.SelfReportIn, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
-    out = radio.self_report(session, user, event_id=body.event_id, unit_id=body.unit_id, value=body.value, session_id=body.session_id, now=now_utc())
+def radio_self_report(
+    body: S.SelfReportIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    out = radio.self_report(
+        session,
+        user,
+        event_id=body.event_id,
+        unit_id=body.unit_id,
+        value=body.value,
+        session_id=body.session_id,
+        now=now_utc(),
+    )
     session.commit()
     return out
 
 
 @app.post("/api/radio/relisten")
-def radio_relisten(body: S.UnitIdIn, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def radio_relisten(
+    body: S.UnitIdIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     out = radio.schedule_relisten(session, user, body.unit_id, now_utc())
     session.commit()
     return out
@@ -320,15 +397,38 @@ def radio_relisten(body: S.UnitIdIn, session: Session = Depends(db), user: m.Use
 def assessment_sets(mode: str, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
     if mode not in MODES:
         raise L.Invalid("unknown mode")
-    rows = session.execute(select(m.MockSet).where(m.MockSet.realm == user.realm, m.MockSet.mode == mode, m.MockSet.status == "READY").order_by(m.MockSet.created_at)).scalars().all()
-    open_sessions = session.execute(select(m.LearningSession).where(m.LearningSession.user_id == user.id, m.LearningSession.session_type == "assessment", m.LearningSession.mode == mode).order_by(m.LearningSession.started_at.desc()).limit(10)).scalars().all()
+    rows = (
+        session.execute(
+            select(m.MockSet)
+            .where(m.MockSet.realm == user.realm, m.MockSet.mode == mode, m.MockSet.status == "READY")
+            .order_by(m.MockSet.created_at)
+        )
+        .scalars()
+        .all()
+    )
+    open_sessions = (
+        session.execute(
+            select(m.LearningSession)
+            .where(
+                m.LearningSession.user_id == user.id,
+                m.LearningSession.session_type == "assessment",
+                m.LearningSession.mode == mode,
+            )
+            .order_by(m.LearningSession.started_at.desc())
+            .limit(10)
+        )
+        .scalars()
+        .all()
+    )
     p = current_profile(mode)
     return {"sets": [assessment.mock_set_dto(x) for x in rows], "exam": p["exam"], "profile_label": p["label_ja"],
             "sessions": [{"session_id": s.id, "status": s.status, "started_at": s.started_at.isoformat(), "result": s.result} for s in open_sessions]}  # fmt: skip
 
 
 @app.post("/api/assessments")
-def assessment_start(body: S.AssessmentStartIn, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def assessment_start(
+    body: S.AssessmentStartIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     try:
         sess = assessment.start(session, user, body.mock_set_id, now_utc())
     except assessment.StaleSet:
@@ -339,19 +439,25 @@ def assessment_start(body: S.AssessmentStartIn, session: Session = Depends(db), 
 
 
 @app.get("/api/assessments/{session_id}")
-def assessment_get(session_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def assessment_get(
+    session_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     return assessment.paper_dto(session, assessment.get_session(session, user, session_id))
 
 
 @app.post("/api/assessments/{session_id}/submit")
-def assessment_submit(session_id: str, body: S.AssessmentSubmitIn, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def assessment_submit(
+    session_id: str, body: S.AssessmentSubmitIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     out = assessment.submit(session, user, session_id, body.answers, now_utc())
     session.commit()
     return out
 
 
 @app.get("/api/assessments/{session_id}/result")
-def assessment_result(session_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def assessment_result(
+    session_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     return assessment.result_dto(session, user, session_id)
 
 
@@ -359,7 +465,9 @@ def assessment_result(session_id: str, session: Session = Depends(db), user: m.U
 
 
 @app.get("/api/stats/growth")
-def growth(mode: str, days: int = 30, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def growth(
+    mode: str, days: int = 30, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     if mode not in MODES or not (1 <= days <= 365):
         raise L.Invalid("bad mode or period")
     out = stats.growth(session, user, now_utc(), mode, days)
@@ -368,7 +476,13 @@ def growth(mode: str, days: int = 30, session: Session = Depends(db), user: m.Us
 
 
 @app.get("/api/history")
-def history(mode: str | None = None, limit: int = 50, offset: int = 0, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def history(
+    mode: str | None = None,
+    limit: int = 50,
+    offset: int = 0,
+    session: Session = Depends(db),
+    user: m.User = Depends(current_user),
+) -> dict[str, Any]:
     return stats.history(session, user, min(max(limit, 1), 200), max(offset, 0), mode)
 
 
@@ -380,7 +494,14 @@ def schedules(session: Session = Depends(db), user: m.User = Depends(current_use
 @app.get("/api/export")
 def export(session: Session = Depends(db), user: m.User = Depends(current_user)) -> Response:
     body = backup.export_user(session, user)
-    return Response(json.dumps(body, ensure_ascii=False), media_type="application/json", headers={"Content-Disposition": f'attachment; filename="listening-quest-export-{now_utc():%Y%m%d}.json"', "Cache-Control": "no-store"})
+    return Response(
+        json.dumps(body, ensure_ascii=False),
+        media_type="application/json",
+        headers={
+            "Content-Disposition": f'attachment; filename="listening-quest-export-{now_utc():%Y%m%d}.json"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @app.post("/api/restore")
@@ -408,24 +529,48 @@ def _may_fetch(session: Session, user: m.User, asset: m.Asset) -> bool:
             return False
         if session.execute(select(A.id).where(A.user_id == user.id, A.unit_id == unit.id).limit(1)).first():
             return True
-        return session.execute(select(m.PlanSlot.id).join(m.DailyPlan, m.DailyPlan.id == m.PlanSlot.plan_id).where(m.DailyPlan.user_id == user.id, m.PlanSlot.unit_id == unit.id, m.PlanSlot.reserved.is_(True)).limit(1)).first() is not None
+        return (
+            session.execute(
+                select(m.PlanSlot.id)
+                .join(m.DailyPlan, m.DailyPlan.id == m.PlanSlot.plan_id)
+                .where(m.DailyPlan.user_id == user.id, m.PlanSlot.unit_id == unit.id, m.PlanSlot.reserved.is_(True))
+                .limit(1)
+            ).first()
+            is not None
+        )
     if asset.kind == "exam":
-        rows = session.execute(select(m.LearningSession).where(m.LearningSession.user_id == user.id, m.LearningSession.session_type == "assessment")).scalars()
+        rows = session.execute(
+            select(m.LearningSession).where(
+                m.LearningSession.user_id == user.id, m.LearningSession.session_type == "assessment"
+            )
+        ).scalars()
         return any(unit.id in [i["unit_id"] for i in s.meta.get("items", [])] for s in rows)
     if asset.kind in ("feedback", "utterance"):  # only after the unit's answers were submitted
-        return session.execute(select(A.id).where(A.user_id == user.id, A.unit_id == unit.id, A.status == "submitted").limit(1)).first() is not None
+        return (
+            session.execute(
+                select(A.id).where(A.user_id == user.id, A.unit_id == unit.id, A.status == "submitted").limit(1)
+            ).first()
+            is not None
+        )
     return False  # unit radio tracks are only reachable inside a program the learner asked for
 
 
 @app.head("/api/audio/{asset_id}", include_in_schema=False)
 @app.get("/api/audio/{asset_id}")
-def audio(asset_id: str, request: Request, session: Session = Depends(db), user: m.User = Depends(current_user)) -> Response:
+def audio(
+    asset_id: str, request: Request, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> Response:
     asset = session.get(m.Asset, asset_id) if _ID.match(asset_id) else None
     if asset is None or not _may_fetch(session, user, asset):
         raise HTTPException(404, "audio not available")
     st = get_storage()
     size = asset.bytes
-    headers = {"Accept-Ranges": "bytes", "Cache-Control": "private, no-store", "ETag": f'"{asset.sha256[:32]}"', "X-Content-Type-Options": "nosniff"}
+    headers = {
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "private, no-store",
+        "ETag": f'"{asset.sha256[:32]}"',
+        "X-Content-Type-Options": "nosniff",
+    }
     rng = request.headers.get("range")
     if rng:
         mt = re.fullmatch(r"bytes=(\d*)-(\d*)", rng.strip())
@@ -442,7 +587,9 @@ def audio(asset_id: str, request: Request, session: Session = Depends(db), user:
         body = b"" if request.method == "HEAD" else st.get_range(asset.storage_key, start, end)
         return Response(body, status_code=206, media_type=asset.mime, headers=headers)
     headers["Content-Length"] = str(size)
-    return Response(b"" if request.method == "HEAD" else st.get(asset.storage_key), media_type=asset.mime, headers=headers)
+    return Response(
+        b"" if request.method == "HEAD" else st.get(asset.storage_key), media_type=asset.mime, headers=headers
+    )
 
 
 # ---------------------------------------------------------------- material management
@@ -458,7 +605,9 @@ def admin_overview(session: Session = Depends(db), user: m.User = Depends(curren
 
 
 @app.patch("/api/admin/system")
-def admin_system(body: S.SystemPatch, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def admin_system(
+    body: S.SystemPatch, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     patch = body.model_dump(exclude_none=True)
     if "replenish_modes" in patch and not set(patch["replenish_modes"]) <= set(MODES):
         raise L.Invalid("unknown mode in replenish_modes")
@@ -466,7 +615,11 @@ def admin_system(body: S.SystemPatch, session: Session = Depends(db), user: m.Us
         out = budget.set_system(session, user.realm, patch)
     except ValueError as e:
         raise L.Invalid(str(e)) from e
-    session.add(m.AuditLog(realm=user.realm, actor=user.username, action="system_settings_changed", target="system", details=patch))
+    session.add(
+        m.AuditLog(
+            realm=user.realm, actor=user.username, action="system_settings_changed", target="system", details=patch
+        )
+    )
     queue.release_blocked(session, user.realm, ("paid_disabled", "budget", "job_cap", "no_provider"))
     session.commit()
     return out
@@ -478,7 +631,9 @@ def admin_jobs(session: Session = Depends(db), user: m.User = Depends(current_us
 
 
 @app.post("/api/admin/jobs")
-def admin_generate(body: S.GenerateIn, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def admin_generate(
+    body: S.GenerateIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     if body.mode not in MODES or body.primary_skill not in SKILLS:
         raise L.Invalid("unknown mode or skill")
     part = next((p for p in current_profile(body.mode)["parts"] if p["part"] == body.part), None)
@@ -514,7 +669,9 @@ def admin_units(session: Session = Depends(db), user: m.User = Depends(current_u
 
 
 @app.post("/api/admin/units/{unit_id}/approve")
-def admin_approve(unit_id: str, body: S.ApproveIn, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def admin_approve(
+    unit_id: str, body: S.ApproveIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     unit = L.get_unit_for(session, user, unit_id)
     rec = importer.manual_approve(session, unit, target=body.target, reviewer=user.username, note=body.note)
     session.commit()
@@ -522,7 +679,9 @@ def admin_approve(unit_id: str, body: S.ApproveIn, session: Session = Depends(db
 
 
 @app.post("/api/admin/units/{unit_id}/invalidate")
-def admin_invalidate(unit_id: str, body: S.InvalidateIn, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def admin_invalidate(
+    unit_id: str, body: S.InvalidateIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     out = admin.invalidate_unit(session, user, unit_id, body.reason, now_utc())
     session.commit()
     return out
@@ -545,7 +704,12 @@ async def _read_import(manifest: UploadFile, files: list[UploadFile]) -> tuple[d
 
 
 @app.post("/api/admin/import")
-async def admin_import(manifest: UploadFile = File(...), files: list[UploadFile] = File(default=[]), session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+async def admin_import(
+    manifest: UploadFile = File(...),
+    files: list[UploadFile] = File(default=[]),
+    session: Session = Depends(db),
+    user: m.User = Depends(current_user),
+) -> dict[str, Any]:
     data, blobs = await _read_import(manifest, files)
     out = importer.import_manifest(session, user.realm, data, blobs, actor=f"ui:{user.username}")
     session.commit()
@@ -553,7 +717,13 @@ async def admin_import(manifest: UploadFile = File(...), files: list[UploadFile]
 
 
 @app.post("/api/import")
-async def cli_import(manifest: UploadFile = File(...), files: list[UploadFile] = File(default=[]), realm: str = Form(default="live"), authorization: str | None = Header(default=None), session: Session = Depends(db)) -> dict[str, Any]:
+async def cli_import(
+    manifest: UploadFile = File(...),
+    files: list[UploadFile] = File(default=[]),
+    realm: str = Form(default="live"),
+    authorization: str | None = Header(default=None),
+    session: Session = Depends(db),
+) -> dict[str, Any]:
     """Machine import for the generator CLI. Bearer token (LQ_IMPORT_TOKEN); no cookies involved."""
     token = get_settings().import_token
     given = (authorization or "").removeprefix("Bearer ").strip()
@@ -571,12 +741,26 @@ async def cli_import(manifest: UploadFile = File(...), files: list[UploadFile] =
 def admin_mock(mode: str, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
     if mode not in MODES:
         raise L.Invalid("unknown mode")
-    sets = session.execute(select(m.MockSet).where(m.MockSet.realm == user.realm, m.MockSet.mode == mode).order_by(m.MockSet.created_at.desc()).limit(10)).scalars().all()
-    return {"inventory": assessment.reserved_inventory(session, user.realm, mode), "sets": [assessment.mock_set_dto(x) for x in sets]}
+    sets = (
+        session.execute(
+            select(m.MockSet)
+            .where(m.MockSet.realm == user.realm, m.MockSet.mode == mode)
+            .order_by(m.MockSet.created_at.desc())
+            .limit(10)
+        )
+        .scalars()
+        .all()
+    )
+    return {
+        "inventory": assessment.reserved_inventory(session, user.realm, mode),
+        "sets": [assessment.mock_set_dto(x) for x in sets],
+    }
 
 
 @app.post("/api/admin/mock/generate")
-def admin_mock_generate(body: S.ModeIn, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def admin_mock_generate(
+    body: S.ModeIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     if body.mode not in MODES:
         raise L.Invalid("unknown mode")
     n = assessment.enqueue_missing(session, user.realm, body.mode, new_id()[:8])
@@ -585,13 +769,19 @@ def admin_mock_generate(body: S.ModeIn, session: Session = Depends(db), user: m.
 
 
 @app.post("/api/admin/mock/assemble")
-def admin_mock_assemble(body: S.ModeIn, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+def admin_mock_assemble(
+    body: S.ModeIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
     if body.mode not in MODES:
         raise L.Invalid("unknown mode")
     try:
         ms = assessment.assemble(session, user.realm, body.mode)
     except assessment.Shortage as e:
-        return {"assembled": False, "shortage": e.detail, "message": "素材がそろっていません。不足分を生成してから組み立ててください。"}
+        return {
+            "assembled": False,
+            "shortage": e.detail,
+            "message": "素材がそろっていません。不足分を生成してから組み立ててください。",
+        }
     session.commit()
     return {"assembled": True, "set": assessment.mock_set_dto(ms)}
 
@@ -603,7 +793,15 @@ def admin_replenish(session: Session = Depends(db), user: m.User = Depends(curre
     cfg = budget.get_system(session, user.realm)
     why = None
     if n == 0:
-        why = "自動補充がOFFです" if not cfg["auto_replenish"] else ("有料生成がOFFです" if user.realm != "demo" and not cfg["paid_enabled"] else "在庫は十分、または本日の生成上限に達しています")
+        why = (
+            "自動補充がOFFです"
+            if not cfg["auto_replenish"]
+            else (
+                "有料生成がOFFです"
+                if user.realm != "demo" and not cfg["paid_enabled"]
+                else "在庫は十分、または本日の生成上限に達しています"
+            )
+        )
     return {"queued": n, "reason": why}
 
 

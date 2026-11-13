@@ -129,12 +129,29 @@ def get_unit_for(session, user: m.User, unit_id: str) -> m.Unit:
 
 
 def lineage_unit_ids(session, unit: m.Unit) -> list[str]:
-    return list(session.execute(select(m.Unit.id).where(m.Unit.realm == unit.realm, m.Unit.source == unit.source, m.Unit.content_id == unit.content_id)).scalars())
+    return list(
+        session.execute(
+            select(m.Unit.id).where(
+                m.Unit.realm == unit.realm, m.Unit.source == unit.source, m.Unit.content_id == unit.content_id
+            )
+        ).scalars()
+    )
 
 
-def prior_exposures(session, user_id: str, unit: m.Unit, before: datetime | None = None, exclude_attempt: str | None = None, kinds: tuple[str, ...] | None = None, after: datetime | None = None) -> list[m.ExposureEvent]:
+def prior_exposures(
+    session,
+    user_id: str,
+    unit: m.Unit,
+    before: datetime | None = None,
+    exclude_attempt: str | None = None,
+    kinds: tuple[str, ...] | None = None,
+    after: datetime | None = None,
+) -> list[m.ExposureEvent]:
     E = m.ExposureEvent
-    q = select(E).where(E.user_id == user_id, or_(E.stimulus_fingerprint == unit.stimulus_fingerprint, E.unit_id.in_(lineage_unit_ids(session, unit))))
+    q = select(E).where(
+        E.user_id == user_id,
+        or_(E.stimulus_fingerprint == unit.stimulus_fingerprint, E.unit_id.in_(lineage_unit_ids(session, unit))),
+    )
     if before is not None:
         q = q.where(E.at < before)
     if after is not None:
@@ -146,8 +163,29 @@ def prior_exposures(session, user_id: str, unit: m.Unit, before: datetime | None
     return list(session.execute(q).scalars())
 
 
-def add_exposure(session, user_id: str, unit: m.Unit, kind: str, *, attempt_id: str | None = None, session_id: str | None = None, meta: dict | None = None, event_id: str | None = None, at: datetime | None = None) -> None:
-    values = dict(user_id=user_id, unit_id=unit.id, stimulus_fingerprint=unit.stimulus_fingerprint, family_id=unit.family_id, kind=kind, attempt_id=attempt_id, session_id=session_id, meta=meta or {}, at=at or datetime.now(UTC))
+def add_exposure(
+    session,
+    user_id: str,
+    unit: m.Unit,
+    kind: str,
+    *,
+    attempt_id: str | None = None,
+    session_id: str | None = None,
+    meta: dict | None = None,
+    event_id: str | None = None,
+    at: datetime | None = None,
+) -> None:
+    values = dict(
+        user_id=user_id,
+        unit_id=unit.id,
+        stimulus_fingerprint=unit.stimulus_fingerprint,
+        family_id=unit.family_id,
+        kind=kind,
+        attempt_id=attempt_id,
+        session_id=session_id,
+        meta=meta or {},
+        at=at or datetime.now(UTC),
+    )
     values["id"] = event_id or new_id()
     session.execute(pg_insert(m.ExposureEvent).values(**values).on_conflict_do_nothing(index_elements=["id"]))
 
@@ -156,18 +194,40 @@ def get_mode_state(session, user_id: str, mode: str, lock: bool = False) -> m.Mo
     q = select(m.ModeState).where(m.ModeState.user_id == user_id, m.ModeState.mode == mode)
     st = session.execute(q.with_for_update() if lock else q).scalar_one_or_none()
     if st is None:
-        session.execute(pg_insert(m.ModeState).values(id=sha256_hex(f"{user_id}:{mode}")[:32], user_id=user_id, mode=mode, difficulty_band=rules.load_config().initial_band, band_since=datetime(2000, 1, 1, tzinfo=UTC), band_history=[], updated_at=datetime.now(UTC)).on_conflict_do_nothing())
+        session.execute(
+            pg_insert(m.ModeState)
+            .values(
+                id=sha256_hex(f"{user_id}:{mode}")[:32],
+                user_id=user_id,
+                mode=mode,
+                difficulty_band=rules.load_config().initial_band,
+                band_since=datetime(2000, 1, 1, tzinfo=UTC),
+                band_history=[],
+                updated_at=datetime.now(UTC),
+            )
+            .on_conflict_do_nothing()
+        )
         st = session.execute(q.with_for_update() if lock else q).scalar_one()
     return st
 
 
-def get_or_create_session(session, user_id: str, session_type: str, mode: str, plan_id: str | None, day: date) -> m.LearningSession:
+def get_or_create_session(
+    session, user_id: str, session_type: str, mode: str, plan_id: str | None, day: date
+) -> m.LearningSession:
     S = m.LearningSession
-    q = select(S).where(S.user_id == user_id, S.session_type == session_type, S.mode == mode, S.status == "open", S.meta["day"].astext == day.isoformat())
+    q = select(S).where(
+        S.user_id == user_id,
+        S.session_type == session_type,
+        S.mode == mode,
+        S.status == "open",
+        S.meta["day"].astext == day.isoformat(),
+    )
     q = q.where(S.plan_id == plan_id) if plan_id else q.where(S.plan_id.is_(None))
     row = session.execute(q.limit(1)).scalar_one_or_none()
     if row is None:
-        row = m.LearningSession(user_id=user_id, session_type=session_type, mode=mode, plan_id=plan_id, meta={"day": day.isoformat()})
+        row = m.LearningSession(
+            user_id=user_id, session_type=session_type, mode=mode, plan_id=plan_id, meta={"day": day.isoformat()}
+        )
         session.add(row)
         session.flush()
     return row
@@ -188,7 +248,17 @@ def allowed_plays(content: UnitContent) -> dict[str, int]:
 # ---------------------------------------------------------------- start
 
 
-def start_attempt(session, user: m.User, *, attempt_id: str, unit_id: str, slot_id: str | None = None, now: datetime | None = None, offline: bool = False, started_at: datetime | None = None) -> m.Attempt:
+def start_attempt(
+    session,
+    user: m.User,
+    *,
+    attempt_id: str,
+    unit_id: str,
+    slot_id: str | None = None,
+    now: datetime | None = None,
+    offline: bool = False,
+    started_at: datetime | None = None,
+) -> m.Attempt:
     now = now or datetime.now(UTC)
     existing = session.get(m.Attempt, attempt_id)
     if existing:
@@ -203,7 +273,9 @@ def start_attempt(session, user: m.User, *, attempt_id: str, unit_id: str, slot_
     if "train" not in unit.session_types:
         raise Invalid("this unit cannot be used for answering (radio only)")
     A = m.Attempt
-    q = select(A).where(A.user_id == user.id, A.unit_id == unit_id, A.status == "open", A.session_type.in_(("train", "review")))
+    q = select(A).where(
+        A.user_id == user.id, A.unit_id == unit_id, A.status == "open", A.session_type.in_(("train", "review"))
+    )
     q = q.where(A.slot_id == slot_id) if slot_id else q.where(A.slot_id.is_(None))
     open_one = session.execute(q.limit(1)).scalar_one_or_none()
     if open_one is not None:  # reload / second tab: resume the same attempt instead of creating another
@@ -211,7 +283,9 @@ def start_attempt(session, user: m.User, *, attempt_id: str, unit_id: str, slot_
 
     slot = plan = None
     if slot_id:
-        slot = session.execute(select(m.PlanSlot).where(m.PlanSlot.id == slot_id).with_for_update()).scalar_one_or_none()
+        slot = session.execute(
+            select(m.PlanSlot).where(m.PlanSlot.id == slot_id).with_for_update()
+        ).scalar_one_or_none()
         plan = session.get(m.DailyPlan, slot.plan_id) if slot else None
         if slot is None or plan is None or plan.user_id != user.id:
             raise NotFound("plan slot not found")
@@ -224,9 +298,25 @@ def start_attempt(session, user: m.User, *, attempt_id: str, unit_id: str, slot_
     prior = prior_exposures(session, user.id, unit, before=start)
     eligible = rules.initial_first_eligible(e.kind for e in prior)
     E = m.ExposureEvent
-    family_seen = session.execute(select(func.count()).select_from(E).where(E.user_id == user.id, E.family_id == unit.family_id, E.stimulus_fingerprint != unit.stimulus_fingerprint, E.at < start)).scalar_one() > 0
+    family_seen = (
+        session.execute(
+            select(func.count())
+            .select_from(E)
+            .where(
+                E.user_id == user.id,
+                E.family_id == unit.family_id,
+                E.stimulus_fingerprint != unit.stimulus_fingerprint,
+                E.at < start,
+            )
+        ).scalar_one()
+        > 0
+    )
     today = plan.learning_day if plan else user_day(user, now)
-    sched = session.execute(select(m.ReviewSchedule).where(m.ReviewSchedule.user_id == user.id, m.ReviewSchedule.unit_id == unit.id, m.ReviewSchedule.kind == "recall")).scalar_one_or_none()
+    sched = session.execute(
+        select(m.ReviewSchedule).where(
+            m.ReviewSchedule.user_id == user.id, m.ReviewSchedule.unit_id == unit.id, m.ReviewSchedule.kind == "recall"
+        )
+    ).scalar_one_or_none()
     due = sched is not None and sched.due_day <= user_day(user, now)
     session_type = "review" if due else "train"
     state = get_mode_state(session, user.id, unit.mode)
@@ -291,7 +381,16 @@ def _open_attempt(session, user: m.User, attempt_id: str, lock: bool = True) -> 
 # ---------------------------------------------------------------- plays and aids
 
 
-def record_play(session, user: m.User, attempt_id: str, *, event_id: str, segment_id: str, rate: float = 1.0, at: datetime | None = None) -> dict:
+def record_play(
+    session,
+    user: m.User,
+    attempt_id: str,
+    *,
+    event_id: str,
+    segment_id: str,
+    rate: float = 1.0,
+    at: datetime | None = None,
+) -> dict:
     payload = {"attempt": attempt_id, "segment": segment_id, "rate": round(float(rate), 2)}
     done = claim_event(session, user.id, event_id, "play", payload)
     if done is not None:
@@ -312,7 +411,17 @@ def record_play(session, user: m.User, attempt_id: str, *, event_id: str, segmen
         att.aids = aids
         flag_modified(att, "plays")
         flag_modified(att, "aids")
-    add_exposure(session, user.id, unit, "stimulus_play", attempt_id=att.id, session_id=att.session_id, meta={"segment": segment_id, "rate": rate}, event_id=event_id, at=at)
+    add_exposure(
+        session,
+        user.id,
+        unit,
+        "stimulus_play",
+        attempt_id=att.id,
+        session_id=att.session_id,
+        meta={"segment": segment_id, "rate": rate},
+        event_id=event_id,
+        at=at,
+    )
     return finish_event(session, event_id, {"plays": att.plays, "aids": att.aids, "allowed_plays": allowed})
 
 
@@ -333,7 +442,18 @@ def request_aid(session, user: m.User, attempt_id: str, *, event_id: str, kind: 
         session.flush()
     if kind == "transcript":
         labels = {s.id: (s.label or s.id) for s in content.speakers}
-        data = {"segments": [{"id": seg.id, "lines": [{"utterance_id": u.id, "speaker": labels.get(u.speaker_id, u.speaker_id), "text": u.text} for u in seg.utterances]} for seg in content.segments]}
+        data = {
+            "segments": [
+                {
+                    "id": seg.id,
+                    "lines": [
+                        {"utterance_id": u.id, "speaker": labels.get(u.speaker_id, u.speaker_id), "text": u.text}
+                        for u in seg.utterances
+                    ],
+                }
+                for seg in content.segments
+            ]
+        }
     elif kind == "hint":
         data = {"hints": {q.id: q.feedback.hint_ja for q in content.questions if q.feedback.hint_ja}}
     else:
@@ -350,22 +470,60 @@ def _srs_outcome(complete: bool, all_correct: bool, assisted: bool) -> str:
     return "correct_assisted" if assisted else "correct_unaided"
 
 
-def apply_schedule(session, user: m.User, unit: m.Unit, outcome: str, today: date, *, attempt_id: str | None, kind: str = "recall", source: str = "attempt") -> dict:
+def apply_schedule(
+    session,
+    user: m.User,
+    unit: m.Unit,
+    outcome: str,
+    today: date,
+    *,
+    attempt_id: str | None,
+    kind: str = "recall",
+    source: str = "attempt",
+) -> dict:
     cfg = rules.load_config()
     R = m.ReviewSchedule
-    row = session.execute(select(R).where(R.user_id == user.id, R.unit_id == unit.id, R.kind == kind).with_for_update()).scalar_one_or_none()
+    row = session.execute(
+        select(R).where(R.user_id == user.id, R.unit_id == unit.id, R.kind == kind).with_for_update()
+    ).scalar_one_or_none()
     cur = rules.Sched(row.stage, row.due_day) if row else None
     res = rules.srs_next(cur, outcome, today, cfg)
-    entry = {"at": datetime.now(UTC).isoformat(), "day": today.isoformat(), "from_stage": cur.stage if cur else None, "to_stage": res.sched.stage, "due_day": res.sched.due_day.isoformat(), "reason_code": res.reason_code, "reason_ja": res.reason_ja, "outcome": outcome, "attempt_id": attempt_id, "source": source, "changed": res.changed}
+    entry = {
+        "at": datetime.now(UTC).isoformat(),
+        "day": today.isoformat(),
+        "from_stage": cur.stage if cur else None,
+        "to_stage": res.sched.stage,
+        "due_day": res.sched.due_day.isoformat(),
+        "reason_code": res.reason_code,
+        "reason_ja": res.reason_ja,
+        "outcome": outcome,
+        "attempt_id": attempt_id,
+        "source": source,
+        "changed": res.changed,
+    }
     if row is None:
-        row = R(user_id=user.id, unit_id=unit.id, kind=kind, stage=res.sched.stage, due_day=res.sched.due_day, last_result=outcome, history=[entry])
+        row = R(
+            user_id=user.id,
+            unit_id=unit.id,
+            kind=kind,
+            stage=res.sched.stage,
+            due_day=res.sched.due_day,
+            last_result=outcome,
+            history=[entry],
+        )
         session.add(row)
     else:
         row.stage, row.due_day = res.sched.stage, res.sched.due_day
         row.last_result = outcome
         row.history = [*row.history, entry][-50:]
         row.updated_at = datetime.now(UTC)
-    return {"stage": res.sched.stage, "due_day": res.sched.due_day.isoformat(), "reason_code": res.reason_code, "reason_ja": res.reason_ja, "interval_days": cfg.review_intervals_days[res.sched.stage]}
+    return {
+        "stage": res.sched.stage,
+        "due_day": res.sched.due_day.isoformat(),
+        "reason_code": res.reason_code,
+        "reason_ja": res.reason_ja,
+        "interval_days": cfg.review_intervals_days[res.sched.stage],
+    }
 
 
 def band_observations(session, user_id: str, mode: str, since: datetime) -> list[tuple[str, float]]:
@@ -373,7 +531,15 @@ def band_observations(session, user_id: str, mode: str, since: datetime) -> list
     rows = session.execute(
         select(A.stimulus_fingerprint, A.unit_score)
         .join(U, U.id == A.unit_id)
-        .where(A.user_id == user_id, A.mode == mode, A.strict_first.is_(True), A.complete.is_(True), A.status == "submitted", U.invalidated_at.is_(None), A.submitted_at > since)
+        .where(
+            A.user_id == user_id,
+            A.mode == mode,
+            A.strict_first.is_(True),
+            A.complete.is_(True),
+            A.status == "submitted",
+            U.invalidated_at.is_(None),
+            A.submitted_at > since,
+        )
         .order_by(A.submitted_at)
     ).all()
     return [(fp, float(score)) for fp, score in rows]
@@ -385,7 +551,18 @@ def update_band(session, user: m.User, mode: str, today: date, now: datetime) ->
     obs = band_observations(session, user.id, mode, st.band_since)
     d = rules.adjust_band(st.difficulty_band, obs, st.last_band_change_day, today, cfg)
     if d.changed:
-        st.band_history = [*st.band_history, {"at": now.isoformat(), "day": today.isoformat(), "from": st.difficulty_band, "to": d.band, "reason": d.reason, "n": d.n, "mean": round(d.mean, 4)}]
+        st.band_history = [
+            *st.band_history,
+            {
+                "at": now.isoformat(),
+                "day": today.isoformat(),
+                "from": st.difficulty_band,
+                "to": d.band,
+                "reason": d.reason,
+                "n": d.n,
+                "mean": round(d.mean, 4),
+            },
+        ]
         st.difficulty_band = d.band
         st.band_since = now
         st.last_band_change_day = today
@@ -393,7 +570,15 @@ def update_band(session, user: m.User, mode: str, today: date, now: datetime) ->
     return {"band": d.band, "changed": d.changed, "reason": d.reason, "n": d.n, "mean": d.mean}
 
 
-def submit_attempt(session, user: m.User, attempt_id: str, answers: dict, *, now: datetime | None = None, client_meta: dict | None = None) -> m.Attempt:
+def submit_attempt(
+    session,
+    user: m.User,
+    attempt_id: str,
+    answers: dict,
+    *,
+    now: datetime | None = None,
+    client_meta: dict | None = None,
+) -> m.Attempt:
     """Grade and commit every consequence exactly once. `answers` must contain every question id; the
     value is an answer object or null for an explicit skip."""
     now = now or datetime.now(UTC)
@@ -419,7 +604,12 @@ def submit_attempt(session, user: m.User, attempt_id: str, answers: dict, *, now
     for q in content.sorted_questions():
         ans = normalized[q.id]
         ok = is_correct(q, ans)
-        per_q[q.id] = {"answer": ans, "correct": ok, "skipped": ans is None, "system_guess": None if ok else q.skill_tags[0]}
+        per_q[q.id] = {
+            "answer": ans,
+            "correct": ok,
+            "skipped": ans is None,
+            "system_guess": None if ok else q.skill_tags[0],
+        }
         for s in q.skill_tags:
             (skills_right if ok else skills_wrong).append(s)
     complete = all(v["answer"] is not None for v in per_q.values())
@@ -427,10 +617,21 @@ def submit_attempt(session, user: m.User, attempt_id: str, answers: dict, *, now
     all_correct = correct_n == len(per_q)
     allowed = allowed_plays(content)
     assisted = rules.is_assisted(att.plays, allowed, att.aids)
-    external = bool(prior_exposures(session, user.id, unit, exclude_attempt=att.id, kinds=ANSWER_ACCESS_KINDS, after=att.started_at))
+    external = bool(
+        prior_exposures(session, user.id, unit, exclude_attempt=att.id, kinds=ANSWER_ACCESS_KINDS, after=att.started_at)
+    )
     strict, reasons = rules.judge_strict_first(
-        rules.AttemptFacts(session_type=att.session_type, eligible_at_start=att.eligible_at_start, first_claim=att.first_claim, plays=att.plays, allowed_plays=allowed,
-                           aids=att.aids, external_answer_access=external, complete=complete, invalidated=unit.invalidated_at is not None)  # fmt: skip
+        rules.AttemptFacts(
+            session_type=att.session_type,
+            eligible_at_start=att.eligible_at_start,
+            first_claim=att.first_claim,
+            plays=att.plays,
+            allowed_plays=allowed,
+            aids=att.aids,
+            external_answer_access=external,
+            complete=complete,
+            invalidated=unit.invalidated_at is not None,
+        )  # fmt: skip
     )
     if not complete:
         category = "partial"
@@ -463,12 +664,45 @@ def submit_attempt(session, user: m.User, attempt_id: str, answers: dict, *, now
             for s in q.skill_tags:
                 by_skill.setdefault(s, []).append(1.0 if per_q[q.id]["correct"] else 0.0)
         for s, vals in by_skill.items():
-            session.add(m.SkillObservation(user_id=user.id, mode=unit.mode, unit_id=unit.id, attempt_id=att.id, skill=s, kind="strict_first", presentation=att.presentation, score=sum(vals) / len(vals), band=unit.difficulty_band))
+            session.add(
+                m.SkillObservation(
+                    user_id=user.id,
+                    mode=unit.mode,
+                    unit_id=unit.id,
+                    attempt_id=att.id,
+                    skill=s,
+                    kind="strict_first",
+                    presentation=att.presentation,
+                    score=sum(vals) / len(vals),
+                    band=unit.difficulty_band,
+                )
+            )
     need = set(skills_wrong) | ({unit.primary_skill} if assisted else set())
     for s in sorted(need):  # "missed or needed help just now": steers the next pick, never the band
-        session.add(m.SkillObservation(user_id=user.id, mode=unit.mode, unit_id=unit.id, attempt_id=att.id, skill=s, kind="need_signal", presentation=att.presentation, score=0.0, band=unit.difficulty_band))
+        session.add(
+            m.SkillObservation(
+                user_id=user.id,
+                mode=unit.mode,
+                unit_id=unit.id,
+                attempt_id=att.id,
+                skill=s,
+                kind="need_signal",
+                presentation=att.presentation,
+                score=0.0,
+                band=unit.difficulty_band,
+            )
+        )
 
-    add_exposure(session, user.id, unit, "answer_access", attempt_id=att.id, session_id=att.session_id, meta={"via": "feedback"}, at=now)
+    add_exposure(
+        session,
+        user.id,
+        unit,
+        "answer_access",
+        attempt_id=att.id,
+        session_id=att.session_id,
+        meta={"via": "feedback"},
+        at=now,
+    )
     today = user_day(user, now)
     sched = apply_schedule(session, user, unit, _srs_outcome(complete, all_correct, assisted), today, attempt_id=att.id)
     band = update_band(session, user, unit.mode, today, now) if strict else None
@@ -500,7 +734,15 @@ def result_dto(session, att: m.Attempt) -> dict:
             if e.utterance_id:
                 a = assets.get(f"utt:{e.utterance_id}")
                 u = utt[e.utterance_id]
-                ev.append({"type": "utterance", "utterance_id": u.id, "speaker": labels.get(u.speaker_id, u.speaker_id), "text": u.text, "audio_url": audio_url(a) if a else None})
+                ev.append(
+                    {
+                        "type": "utterance",
+                        "utterance_id": u.id,
+                        "speaker": labels.get(u.speaker_id, u.speaker_id),
+                        "text": u.text,
+                        "audio_url": audio_url(a) if a else None,
+                    }
+                )
             else:
                 ev.append({"type": "figure", "figure_id": e.figure_id, "element_id": e.element_id})
         questions.append({
@@ -524,12 +766,30 @@ def result_dto(session, att: m.Attempt) -> dict:
 
 
 def award_xp(session, user_id: str, kind: str, unit_id: str | None, day: date, amount: int, dedupe_key: str) -> int:
-    res = session.execute(pg_insert(m.XpEvent).values(id=sha256_hex(dedupe_key)[:32], user_id=user_id, kind=kind, unit_id=unit_id, learning_day=day, amount=amount, dedupe_key=dedupe_key, created_at=datetime.now(UTC)).on_conflict_do_nothing().returning(m.XpEvent.id))
+    res = session.execute(
+        pg_insert(m.XpEvent)
+        .values(
+            id=sha256_hex(dedupe_key)[:32],
+            user_id=user_id,
+            kind=kind,
+            unit_id=unit_id,
+            learning_day=day,
+            amount=amount,
+            dedupe_key=dedupe_key,
+            created_at=datetime.now(UTC),
+        )
+        .on_conflict_do_nothing()
+        .returning(m.XpEvent.id)
+    )
     return amount if res.first() is not None else 0
 
 
 def total_xp(session, user_id: str) -> int:
-    return int(session.execute(select(func.coalesce(func.sum(m.XpEvent.amount), 0)).where(m.XpEvent.user_id == user_id)).scalar_one())
+    return int(
+        session.execute(
+            select(func.coalesce(func.sum(m.XpEvent.amount), 0)).where(m.XpEvent.user_id == user_id)
+        ).scalar_one()
+    )
 
 
 def ack_feedback(session, user: m.User, attempt_id: str, *, now: datetime | None = None) -> dict:
@@ -545,11 +805,27 @@ def ack_feedback(session, user: m.User, attempt_id: str, *, now: datetime | None
         att.feedback_viewed_at = now
     plan_info = None
     if att.complete and att.session_type in ("train", "review"):
-        got = award_xp(session, user.id, "unit_base", att.unit_id, att.learning_day, cfg.xp["unit_base"], f"unit_base:{user.id}:{att.unit_id}:{att.learning_day.isoformat()}")
+        got = award_xp(
+            session,
+            user.id,
+            "unit_base",
+            att.unit_id,
+            att.learning_day,
+            cfg.xp["unit_base"],
+            f"unit_base:{user.id}:{att.unit_id}:{att.learning_day.isoformat()}",
+        )
         if got:
             awarded.append({"kind": "unit_base", "amount": got})
         if att.review_was_due:
-            got = award_xp(session, user.id, "review_bonus", att.unit_id, att.learning_day, cfg.xp["review_bonus"], f"review_bonus:{user.id}:{att.unit_id}:{att.learning_day.isoformat()}")
+            got = award_xp(
+                session,
+                user.id,
+                "review_bonus",
+                att.unit_id,
+                att.learning_day,
+                cfg.xp["review_bonus"],
+                f"review_bonus:{user.id}:{att.unit_id}:{att.learning_day.isoformat()}",
+            )
             if got:
                 awarded.append({"kind": "review_bonus", "amount": got})
         if att.slot_id:
@@ -559,7 +835,14 @@ def ack_feedback(session, user: m.User, attempt_id: str, *, now: datetime | None
             if plan_info and plan_info.get("daily_xp"):
                 awarded.append({"kind": "daily_plan", "amount": plan_info["daily_xp"]})
     xp = total_xp(session, user.id)
-    return {"awarded": awarded, "total_xp": xp, "level": rules.level_for(xp, cfg), "slot_completed": bool(plan_info and plan_info.get("slot_completed")), "plan_completed": bool(plan_info and plan_info.get("plan_completed")), "needs_all_answers": not att.complete}
+    return {
+        "awarded": awarded,
+        "total_xp": xp,
+        "level": rules.level_for(xp, cfg),
+        "slot_completed": bool(plan_info and plan_info.get("slot_completed")),
+        "plan_completed": bool(plan_info and plan_info.get("plan_completed")),
+        "needs_all_answers": not att.complete,
+    }
 
 
 def set_error_reason(session, user: m.User, attempt_id: str, question_id: str, reason: str | None) -> dict:

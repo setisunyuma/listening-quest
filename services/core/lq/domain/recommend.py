@@ -80,17 +80,49 @@ def target_skills(state: LearnerState, cfg: LearningConfig) -> list[tuple[str, s
 
 
 def pick_review(cands, state: LearnerState, exclude: set[str], cap_sec: int | None, seed: str) -> Pick | None:
-    due = [c for c in cands if c.unit_id not in exclude and c.due_day is not None and c.due_day <= state.today and (cap_sec is None or c.est_sec <= cap_sec)]
+    due = [
+        c
+        for c in cands
+        if c.unit_id not in exclude
+        and c.due_day is not None
+        and c.due_day <= state.today
+        and (cap_sec is None or c.est_sec <= cap_sec)
+    ]
     if not due:
         return None
-    due.sort(key=lambda c: (0 if c.last_result == "incorrect" else 1, -(state.today - c.due_day).days, tiebreak(seed, c.unit_id)))
+    due.sort(
+        key=lambda c: (
+            0 if c.last_result == "incorrect" else 1,
+            -(state.today - c.due_day).days,
+            tiebreak(seed, c.unit_id),
+        )
+    )
     c = due[0]
     overdue = (state.today - c.due_day).days
-    text = "誤答した問題の復習" if c.last_result == "incorrect" else ("期限が来た復習" if overdue == 0 else f"期限を{overdue}日過ぎた復習")
-    return Pick(c.unit_id, "review", c.est_sec, "review_due", text, {"due_day": c.due_day.isoformat(), "stage": c.stage, "overdue_days": overdue, "last_result": c.last_result})
+    text = (
+        "誤答した問題の復習"
+        if c.last_result == "incorrect"
+        else ("期限が来た復習" if overdue == 0 else f"期限を{overdue}日過ぎた復習")
+    )
+    return Pick(
+        c.unit_id,
+        "review",
+        c.est_sec,
+        "review_due",
+        text,
+        {"due_day": c.due_day.isoformat(), "stage": c.stage, "overdue_days": overdue, "last_result": c.last_result},
+    )
 
 
-def pick_weak(cands, state: LearnerState, exclude: set[str], cap_sec: int | None, seed: str, cfg: LearningConfig, skip_skills: tuple[str, ...] = ()) -> Pick | None:
+def pick_weak(
+    cands,
+    state: LearnerState,
+    exclude: set[str],
+    cap_sec: int | None,
+    seed: str,
+    cfg: LearningConfig,
+    skip_skills: tuple[str, ...] = (),
+) -> Pick | None:
     targets = [(s, why) for s, why in target_skills(state, cfg) if s not in skip_skills] or target_skills(state, cfg)
     if not targets:
         return None
@@ -104,17 +136,34 @@ def pick_weak(cands, state: LearnerState, exclude: set[str], cap_sec: int | None
         if not hit:
             continue
         best = min(hit, key=lambda s: rank[s])
-        pool.append((rank[best], 1 if c.family_touched else 0, abs(c.band - state.band), tiebreak(seed, c.unit_id), c, best))
+        pool.append(
+            (rank[best], 1 if c.family_touched else 0, abs(c.band - state.band), tiebreak(seed, c.unit_id), c, best)
+        )
     if not pool:
         return None
     pool.sort(key=lambda t: t[:4])
     _, _, _, _, c, skill = pool[0]
     label = SKILL_LABELS_JA.get(skill, skill)
     text = f"{label}を再確認" if why_of[skill] == "recent_miss" else f"{label}を重点練習"
-    return Pick(c.unit_id, "weak", c.est_sec, "weak_skill", text, {"skill": skill, "why": why_of[skill], "band": c.band, "learner_band": state.band, "transfer_family": c.family_touched})
+    return Pick(
+        c.unit_id,
+        "weak",
+        c.est_sec,
+        "weak_skill",
+        text,
+        {
+            "skill": skill,
+            "why": why_of[skill],
+            "band": c.band,
+            "learner_band": state.band,
+            "transfer_family": c.family_touched,
+        },
+    )
 
 
-def pick_explore(cands, state: LearnerState, exclude: set[str], cap_sec: int | None, seed: str, cfg: LearningConfig) -> Pick | None:
+def pick_explore(
+    cands, state: LearnerState, exclude: set[str], cap_sec: int | None, seed: str, cfg: LearningConfig
+) -> Pick | None:
     pool = []
     for c in cands:
         if c.unit_id in exclude or c.touched or (cap_sec is not None and c.est_sec > cap_sec):
@@ -143,12 +192,28 @@ def pick_explore(cands, state: LearnerState, exclude: set[str], cap_sec: int | N
         text = "最近出ていない形式で範囲を維持"
     else:
         text = "初見の教材で範囲を広げる"
-    return Pick(c.unit_id, "explore", c.est_sec, "explore_range", text, {"template_type": c.template_type, "primary_skill": c.primary_skill, "band": c.band, "learner_band": state.band})
+    return Pick(
+        c.unit_id,
+        "explore",
+        c.est_sec,
+        "explore_range",
+        text,
+        {
+            "template_type": c.template_type,
+            "primary_skill": c.primary_skill,
+            "band": c.band,
+            "learner_band": state.band,
+        },
+    )
 
 
 def pick_for(category: str, cands, state, exclude, cap_sec, seed, cfg, skip_skills=()) -> Pick | None:
     """Pick for a slot of `category`, falling back to the categories that widen coverage."""
-    order = {"review": ("review", "weak", "explore"), "weak": ("weak", "explore", "review"), "explore": ("explore", "weak", "review")}[category]
+    order = {
+        "review": ("review", "weak", "explore"),
+        "weak": ("weak", "explore", "review"),
+        "explore": ("explore", "weak", "review"),
+    }[category]
     for cat in order:
         if cat == "review":
             p = pick_review(cands, state, exclude, cap_sec, seed)
@@ -186,7 +251,14 @@ def _advance(state: LearnerState, c: Candidate) -> LearnerState:
     )
 
 
-def build_plan(cands: list[Candidate], state: LearnerState, budget_sec: int, cfg: LearningConfig, seed: str, exclude: set[str] | None = None) -> PlanDraft:
+def build_plan(
+    cands: list[Candidate],
+    state: LearnerState,
+    budget_sec: int,
+    cfg: LearningConfig,
+    seed: str,
+    exclude: set[str] | None = None,
+) -> PlanDraft:
     """Fill the time budget: due reviews 40%, weak-skill new units 40%, range-widening new units 20%.
     Unused quota (no due reviews / no weak signal) flows into the next category, ending in exploration.
     A slot is one whole unit; units are never cut to fit."""
@@ -219,7 +291,17 @@ def build_plan(cands: list[Candidate], state: LearnerState, budget_sec: int, cfg
                 picked_skills = (*picked_skills, p.params["skill"])
                 if len(picked_skills) >= len(target_skills(cur, cfg)):
                     picked_skills = ()
-            slots.append({"category": p.category, "unit_id": p.unit_id, "est_sec": p.est_sec, "time_cap_sec": slot_cap(p.est_sec, cfg), "reason_code": p.reason_code, "reason_text": p.reason_text, "reason_params": p.params})
+            slots.append(
+                {
+                    "category": p.category,
+                    "unit_id": p.unit_id,
+                    "est_sec": p.est_sec,
+                    "time_cap_sec": slot_cap(p.est_sec, cfg),
+                    "reason_code": p.reason_code,
+                    "reason_text": p.reason_text,
+                    "reason_params": p.params,
+                }
+            )
             total += p.est_sec
             spent += p.est_sec
             cur = _advance(cur, by_id[p.unit_id])

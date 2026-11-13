@@ -127,7 +127,9 @@ class Unit(Base):
     session_types: Mapped[list] = mapped_column(JSONB, default=list)  # allowed: train/review/radio/assessment
     pool: Mapped[str] = mapped_column(String(16), default="practice")  # practice | assessment
     audio_kind: Mapped[str] = mapped_column(String(16), default="none")  # none | demo_tone | tts | imported
-    audio_review_state: Mapped[str] = mapped_column(String(24), default="none")  # none|auto_checked|human_listened|mock_checked
+    audio_review_state: Mapped[str] = mapped_column(
+        String(24), default="none"
+    )  # none|auto_checked|human_listened|mock_checked
     superseded_by: Mapped[str | None] = mapped_column(ID, nullable=True)
     invalidated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     invalidated_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -192,7 +194,9 @@ class GenerationJob(Base):
     kind: Mapped[str] = mapped_column(String(24))  # generate | process_unit
     params: Mapped[dict] = mapped_column(JSONB, default=dict)
     dedupe_key: Mapped[str | None] = mapped_column(String(200), unique=True, nullable=True)
-    status: Mapped[str] = mapped_column(String(16), default="QUEUED")  # QUEUED|RUNNING|BLOCKED|RETRY_WAIT|FAILED|SUCCEEDED
+    status: Mapped[str] = mapped_column(
+        String(16), default="QUEUED"
+    )  # QUEUED|RUNNING|BLOCKED|RETRY_WAIT|FAILED|SUCCEEDED
     blocked_reason: Mapped[str | None] = mapped_column(String(64), nullable=True)
     stop_detail: Mapped[str | None] = mapped_column(Text, nullable=True)
     last_completed_step: Mapped[str | None] = mapped_column(String(32), nullable=True)
@@ -310,7 +314,9 @@ class Attempt(Base):
     complete: Mapped[bool] = mapped_column(Boolean, default=False)  # every target question answered (no skips)
     unit_score: Mapped[float | None] = mapped_column(Float, nullable=True)  # mean correctness, complete only
     strict_first: Mapped[bool] = mapped_column(Boolean, default=False)
-    category: Mapped[str | None] = mapped_column(String(16), nullable=True)  # first|assisted|review|repeat|assessment|partial
+    category: Mapped[str | None] = mapped_column(
+        String(16), nullable=True
+    )  # first|assisted|review|repeat|assessment|partial
     not_first_reasons: Mapped[list] = mapped_column(JSONB, default=list)
     error_reasons: Mapped[dict] = mapped_column(JSONB, default=dict)  # self-declared, per question
     offline: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -323,7 +329,10 @@ class Attempt(Base):
 
 class ExposureEvent(Base):
     __tablename__ = "exposure_events"
-    __table_args__ = (Index("ix_exposure_user_fp", "user_id", "stimulus_fingerprint"), Index("ix_exposure_user_family", "user_id", "family_id"))
+    __table_args__ = (
+        Index("ix_exposure_user_fp", "user_id", "stimulus_fingerprint"),
+        Index("ix_exposure_user_family", "user_id", "family_id"),
+    )
     id: Mapped[str] = mapped_column(ID, primary_key=True, default=new_id)
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
     unit_id: Mapped[str] = mapped_column(ForeignKey("units.id"), index=True)

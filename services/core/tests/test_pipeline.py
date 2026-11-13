@@ -21,7 +21,16 @@ from lq.services import importer
 from lq.services.seed import load_fixture_units, seed_fixtures
 from lq.storage import get_storage
 
-SPEC = {"mode": "common_test", "part": "3", "template_type": "short_dialogue", "primary_skill": "numbers_negation", "band": 3, "seed": "t1", "source": "demo-generated", "pool": "practice"}
+SPEC = {
+    "mode": "common_test",
+    "part": "3",
+    "template_type": "short_dialogue",
+    "primary_skill": "numbers_negation",
+    "band": 3,
+    "seed": "t1",
+    "source": "demo-generated",
+    "pool": "practice",
+}
 
 
 def demo_providers(**over):
@@ -50,7 +59,9 @@ def test_generate_job_reaches_ready_with_all_tracks(db, user):
     assert worker.drain("w1") == ["succeeded"]
     job, unit = unit_of(db, jid)
     assert (job.status, job.last_completed_step, unit.status) == ("SUCCEEDED", "ready", "READY")
-    assert unit.audio_kind == "demo_tone" and unit.audio_review_state == "mock_checked"  # labelled as demo, not as checked speech
+    assert (
+        unit.audio_kind == "demo_tone" and unit.audio_review_state == "mock_checked"
+    )  # labelled as demo, not as checked speech
     assets = {a.role: a for a in db.execute(select(m.Asset).where(m.Asset.unit_id == unit.id)).scalars()}
     assert {"stimulus:s1", "exam", "feedback", "radio"} <= set(assets)
     st = get_storage()
@@ -103,7 +114,9 @@ def test_audio_failure_keeps_unit_out_of_ready_and_resume_reuses_finished_clips(
     job, unit = unit_of(db, jid)
     assert job.status == "RETRY_WAIT" and unit.status == "AUDIO_GENERATING" and unit.session_types == []
     assert db.execute(select(func.count()).select_from(m.Asset)).scalar_one() == 0
-    assert db.execute(select(func.count()).select_from(m.AudioCache)).scalar_one() == 3  # only finished clips are cached
+    assert (
+        db.execute(select(func.count()).select_from(m.AudioCache)).scalar_one() == 3
+    )  # only finished clips are cached
     counting = FlakyTTS(fail_after=10_000)
     factory.set_provider_override("demo", demo_providers(tts=counting))
     job.run_after = datetime.now(UTC)
@@ -167,7 +180,12 @@ def test_retry_is_bounded(db, user):
         assert job.run_after > datetime.now(UTC)
         job.run_after = datetime.now(UTC)
         db.commit()
-    assert job.status == "FAILED" and job.attempts == job.max_attempts and "retry limit" in job.stop_detail and len(seen) == job.max_attempts
+    assert (
+        job.status == "FAILED"
+        and job.attempts == job.max_attempts
+        and "retry limit" in job.stop_detail
+        and len(seen) == job.max_attempts
+    )
 
 
 def _manifest_with_audio(unit):
@@ -179,7 +197,12 @@ def _manifest_with_audio(unit):
         blobs[name] = wav_bytes(_tone(220 + 7 * i, 500))
         files[name] = {"sha256": sha256_hex(blobs[name]), "bytes": len(blobs[name])}
         audio[cid] = name
-    return {"schema_version": 2, "source": "ext", "units": [{**unit.model_dump(mode="json"), "source": "ext", "audio": audio, "review": {"status": "passed"}}], "files": files}, blobs
+    return {
+        "schema_version": 2,
+        "source": "ext",
+        "units": [{**unit.model_dump(mode="json"), "source": "ext", "audio": audio, "review": {"status": "passed"}}],
+        "files": files,
+    }, blobs
 
 
 def test_import_with_audio_skips_tts_needs_explicit_approval_and_is_idempotent(db, user):
@@ -201,7 +224,9 @@ def test_import_with_audio_skips_tts_needs_explicit_approval_and_is_idempotent(d
     assert worker.drain("w") == ["succeeded"]
     db.refresh(unit)
     assert unit.status == "READY" and unit.audio_kind == "imported"
-    assert [r.method for r in db.execute(select(m.ReviewRecord).where(m.ReviewRecord.target == "content")).scalars()] == ["manual_reviewed"]
+    assert [
+        r.method for r in db.execute(select(m.ReviewRecord).where(m.ReviewRecord.target == "content")).scalars()
+    ] == ["manual_reviewed"]
     again = importer.import_manifest(db, "demo", manifest, blobs)  # the same version sent again
     db.commit()
     assert again["status"] == "duplicate" and db.execute(select(func.count()).select_from(m.Unit)).scalar_one() == 1
@@ -218,7 +243,10 @@ def test_import_rejects_bad_files_and_missing_evidence(db, user):
     tampered = {**blobs, name: blobs[name] + b"x"}
     assert "sha256 does not match" in importer.import_manifest(db, "demo", manifest, tampered)["errors"][0]
     evil = {**manifest, "files": {**manifest["files"], "../../etc/passwd.wav": {"sha256": "0", "bytes": 1}}}
-    assert "not allowed" in importer.import_manifest(db, "demo", evil, {**blobs, "../../etc/passwd.wav": b"x"})["errors"][0]
+    assert (
+        "not allowed"
+        in importer.import_manifest(db, "demo", evil, {**blobs, "../../etc/passwd.wav": b"x"})["errors"][0]
+    )
     del blobs[name]
     rep = importer.import_manifest(db, "demo", manifest, blobs)
     assert rep["units"][0]["status"] == "rejected" and "was not uploaded" in rep["units"][0]["errors"][0]
@@ -237,7 +265,11 @@ def test_legacy_complete_mp3_is_radio_only(db, user):
     rep = importer.import_manifest(db, "demo", legacy, {"ep01.wav": audio})
     db.commit()
     status = {n["item"]: n["status"] for n in rep["notes"]}
-    assert status["ep01-radio"] == "radio_only" and status["ep01-a"] == "not_converted" and status["ep01"] == "ignored_field"  # evidence is not invented
+    assert (
+        status["ep01-radio"] == "radio_only"
+        and status["ep01-a"] == "not_converted"
+        and status["ep01"] == "ignored_field"
+    )  # evidence is not invented
     assert worker.drain("w") == ["blocked:awaiting_content_review"]
     unit = db.execute(select(m.Unit)).scalar_one()
     importer.manual_approve(db, unit, target="content", reviewer="owner")
@@ -257,13 +289,22 @@ def test_fixture_seed_is_idempotent_and_realms_stay_apart(db, user, live_user):
     seed_fixtures(db, "live")
     db.commit()
     outcomes = worker.drain("w")
-    by_realm = dict(db.execute(select(m.Unit.realm, func.count()).where(m.Unit.status == "READY").group_by(m.Unit.realm)).all())
+    by_realm = dict(
+        db.execute(select(m.Unit.realm, func.count()).where(m.Unit.status == "READY").group_by(m.Unit.realm)).all()
+    )
     assert by_realm == {"demo": n}  # live examples wait for real audio; demo tone audio never enters the live area
     assert outcomes.count("succeeded") == n and outcomes.count("blocked:missing_audio") == n
     methods = set(db.execute(select(m.ReviewRecord.method).where(m.ReviewRecord.target == "content")).scalars())
     assert methods == {"author_reviewed"}
     with pytest.raises(ValueError):
-        C.add_review_record(db, db.execute(select(m.Unit).where(m.Unit.realm == "live")).scalars().first(), target="content", method="demo_mock_reviewed", reviewer="x", result="pass")
+        C.add_review_record(
+            db,
+            db.execute(select(m.Unit).where(m.Unit.realm == "live")).scalars().first(),
+            target="content",
+            method="demo_mock_reviewed",
+            reviewer="x",
+            result="pass",
+        )
 
 
 # ---- 13. cache and hashing
@@ -273,7 +314,15 @@ def test_cache_key_tracks_every_synthesis_input():
     base = dict(text="Hello there.", provider="p", model="m1", voice="v1", speaker="sp1", lang="en", instructions="")
     k0 = pipeline.cache_key(**base)
     assert k0 == pipeline.cache_key(**base)
-    for field, value in [("text", "Hello there!"), ("model", "m2"), ("voice", "v2"), ("speaker", "sp2"), ("lang", "ja"), ("instructions", "slow"), ("provider", "q")]:
+    for field, value in [
+        ("text", "Hello there!"),
+        ("model", "m2"),
+        ("voice", "v2"),
+        ("speaker", "sp2"),
+        ("lang", "ja"),
+        ("instructions", "slow"),
+        ("provider", "q"),
+    ]:
         assert pipeline.cache_key(**{**base, field: value}) != k0, field
 
 
@@ -294,7 +343,19 @@ def test_content_hash_covers_meaning_only():
     u = make_content(seed="h1")
     h = content_hash(u)
     assert "content_hash" not in HASHED_FIELDS and "review" not in HASHED_FIELDS
-    assert content_hash(u.model_copy(update={"title": "other", "revision": 9, "estimated_duration_sec": 999, "calibration_status": "calibrated"})) == h
+    assert (
+        content_hash(
+            u.model_copy(
+                update={
+                    "title": "other",
+                    "revision": 9,
+                    "estimated_duration_sec": 999,
+                    "calibration_status": "calibrated",
+                }
+            )
+        )
+        == h
+    )
     data = u.model_dump(mode="json")
     data["questions"][0]["feedback"]["explanation_ja"] += "追記"
     assert content_hash(type(u).model_validate(data)) != h
@@ -311,7 +372,9 @@ def test_review_record_only_counts_for_the_same_hash(db, user):
     data["revision"] = 2
     data["questions"][0]["prompt_en"] = "A different question?"
     u2, status = C.register_unit(db, "demo", type(make_content()).model_validate(data))
-    assert status == "created" and C.passing_review(db, u2, "content") is None and C.carry_over_review(db, u2) is None  # meaning changed: review again
+    assert (
+        status == "created" and C.passing_review(db, u2, "content") is None and C.carry_over_review(db, u2) is None
+    )  # meaning changed: review again
 
 
 def test_asr_comparison_separates_notation_from_meaning():
@@ -333,17 +396,33 @@ def test_reviewer_never_sees_the_key_and_mismatch_is_quarantined(db, user):
     content = C.load_content(unit)
     payload = json.dumps(reviewer.seen_payloads[0], ensure_ascii=False)
     q = content.questions[0]
-    for secret in (q.feedback.explanation_ja, q.feedback.answer_en, q.feedback.distractors[0].reason_ja, unit.title, unit.family_id, "choice_id", "evidence", "answer", "skill"):
+    for secret in (
+        q.feedback.explanation_ja,
+        q.feedback.answer_en,
+        q.feedback.distractors[0].reason_ja,
+        unit.title,
+        unit.family_id,
+        "choice_id",
+        "evidence",
+        "answer",
+        "skill",
+    ):
         assert secret not in payload, secret
     assert set(reviewer.seen_payloads[0]) == set(reviewer_view(content))
     lv = json.dumps(learner_view(content), ensure_ascii=False)
-    assert q.feedback.explanation_ja not in lv and content.segments[0].utterances[0].text not in lv and '"answer"' not in lv
+    assert (
+        q.feedback.explanation_ja not in lv
+        and content.segments[0].utterances[0].text not in lv
+        and '"answer"' not in lv
+    )
 
     class Disagrees(DemoReview):
         def solve(self, payload, meter):
             out = super().solve(payload, meter)
             qid = payload["questions"][0]["id"]
-            wrong = next(c["id"] for c in payload["questions"][0]["choices"] if c["id"] != out["answers"][qid]["choice_id"])
+            wrong = next(
+                c["id"] for c in payload["questions"][0]["choices"] if c["id"] != out["answers"][qid]["choice_id"]
+            )
             out["answers"][qid] = {"choice_id": wrong}
             return out
 
@@ -352,7 +431,9 @@ def test_reviewer_never_sees_the_key_and_mismatch_is_quarantined(db, user):
     assert worker.drain("w") == ["failed"]
     job2, unit2 = unit_of(db, jid2)
     assert unit2.status == "QUARANTINED" and "disagreed" in unit2.status_reason and job2.status == "FAILED"
-    assert db.execute(select(m.ReviewRecord.result).where(m.ReviewRecord.unit_id == unit2.id)).scalars().all() == ["fail"]
+    assert db.execute(select(m.ReviewRecord.result).where(m.ReviewRecord.unit_id == unit2.id)).scalars().all() == [
+        "fail"
+    ]
 
     class Unsure(DemoReview):
         def solve(self, payload, meter):
@@ -480,7 +561,9 @@ def test_openai_adapters_reserve_before_any_request_and_tests_cannot_reach_the_n
     with pytest.raises(BudgetBlocked):  # paid use is off: blocked before the HTTP layer is touched
         OpenAIContent("sk-test", "https://api.openai.com/v1", "gpt-6.1-terra", 5).generate(spec, meter)
     with pytest.raises(BudgetBlocked):
-        RealtimeTTS("sk-test", "wss://api.openai.com/v1/realtime", "gpt-realtime-2.1-mini", 5).synthesize("Hi", "cedar", "en", "", meter)
+        RealtimeTTS("sk-test", "wss://api.openai.com/v1/realtime", "gpt-realtime-2.1-mini", 5).synthesize(
+            "Hi", "cedar", "en", "", meter
+        )
     budget.set_system(db, "live", {"paid_enabled": True})
     db.commit()
     with pytest.raises(AssertionError, match="network call attempted"):  # conftest blocks httpx / websockets
@@ -497,6 +580,45 @@ def test_auto_replenish_respects_switches_and_does_not_duplicate(db, user, live_
     n = replenish.run_for_user(db, user)
     db.commit()
     jobs = db.execute(select(m.GenerationJob)).scalars().all()
-    assert 0 < n <= 12 and {j.params["mode"] for j in jobs} == {L.user_settings(user)["active_mode"]} and {j.realm for j in jobs} == {"demo"}
+    assert (
+        0 < n <= 12
+        and {j.params["mode"] for j in jobs} == {L.user_settings(user)["active_mode"]}
+        and {j.realm for j in jobs} == {"demo"}
+    )
     assert replenish.run_for_user(db, user) == 0  # queued work counts as stock on the way; nothing is duplicated
     assert replenish.run_for_user(db, live_user) == 0
+
+
+def test_cli_generate_sends_to_server_and_keeps_failures_in_outbox(db, user, monkeypatch, tmp_path):
+    from typer.testing import CliRunner
+
+    from lq import cli
+    from lq.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "server_url", "https://lq.invalid")
+    monkeypatch.setattr(get_settings(), "import_token", "t")
+    monkeypatch.setattr(get_settings(), "outbox_dir", tmp_path / "outbox")
+    sent = []
+
+    def post(d, realm):
+        if not sent:
+            sent.append("fail")
+            raise RuntimeError("connection refused")
+        manifest = json.loads((d / "manifest.json").read_text())
+        blobs = {n: (d / n).read_bytes() for n in manifest["files"]}
+        sent.append(manifest["units"][0]["content_id"])
+        return importer.import_manifest(db, "live", manifest, blobs)
+
+    monkeypatch.setattr(cli, "_post_bundle", post)
+    r = CliRunner().invoke(cli.app, ["generate", "common_test", "3", "--realm", "demo"])
+    assert r.exit_code == 0, r.output
+    assert "kept in outbox" in r.output
+    boxes = list((tmp_path / "outbox").iterdir())
+    assert len(boxes) == 1 and (boxes[0] / "outbox.json").exists()
+    manifest = json.loads((boxes[0] / "manifest.json").read_text())
+    assert "review" not in manifest["units"][0] and manifest["files"]  # review results are not exported as approvals
+    r = CliRunner().invoke(cli.app, ["outbox", "flush"])
+    assert r.exit_code == 0 and "sent 1" in r.output and list((tmp_path / "outbox").iterdir()) == []
+    db.commit()
+    live = db.execute(select(m.Unit).where(m.Unit.realm == "live")).scalar_one()
+    assert live.status == "CONTENT_REVIEW"  # received with all audio, but the live area wants its own content review

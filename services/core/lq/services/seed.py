@@ -49,7 +49,9 @@ def expand_fixture(raw: dict) -> dict:
     profile = current_profile(raw["mode"])
     part = part_spec(profile, raw["part"])
     speakers = [{"id": "narrator", "role": "narrator", "label": "Narrator", "voice_hint": "neutral"}]
-    speakers += [{"id": _sid(lbl), "role": "speaker", "label": lbl, "voice_hint": hint} for lbl, hint in raw["speakers"].items()]
+    speakers += [
+        {"id": _sid(lbl), "role": "speaker", "label": lbl, "voice_hint": hint} for lbl, hint in raw["speakers"].items()
+    ]
     segments, n = [], 0
     for si, seg in enumerate(raw["script"], 1):
         utts = []
@@ -60,8 +62,20 @@ def expand_fixture(raw: dict) -> dict:
         segments.append({"id": f"s{si}", "label": "", "plays": part["plays"], "utterances": utts})
     figures = []
     for f in raw.get("figures", []):
-        rows = [{"id": f"r{ri}", "cells": [{"id": f"r{ri}c{ci}", "text": str(c)} for ci, c in enumerate(row, 1)]} for ri, row in enumerate(f["rows"], 1)]
-        figures.append({"id": f["id"], "kind": f["kind"], "title": f.get("title", ""), "columns": f.get("columns", []), "rows": rows, "note": f.get("note", "")})
+        rows = [
+            {"id": f"r{ri}", "cells": [{"id": f"r{ri}c{ci}", "text": str(c)} for ci, c in enumerate(row, 1)]}
+            for ri, row in enumerate(f["rows"], 1)
+        ]
+        figures.append(
+            {
+                "id": f["id"],
+                "kind": f["kind"],
+                "title": f.get("title", ""),
+                "columns": f.get("columns", []),
+                "rows": rows,
+                "note": f.get("note", ""),
+            }
+        )
     questions = []
     for qi, q in enumerate(raw["questions"], 1):
         texts = q.get("choices") or raw["common_choices"]
@@ -122,7 +136,14 @@ def seed_fixtures(session, realm: str) -> dict:
             C.add_review_record(session, unit, target="content", method="author_reviewed", reviewer="fixture-author",
                                 result="pass", details={"note": "script, key, evidence and distractor reasons checked by the author of the bundled examples"})  # fmt: skip
         if unit.status not in ("READY", "QUARANTINED"):
-            queue.enqueue(session, realm, "process_unit", {"origin": "fixture", "mode": content.mode, "part": content.part}, dedupe_key=f"process:{unit.id}", unit_id=unit.id)
+            queue.enqueue(
+                session,
+                realm,
+                "process_unit",
+                {"origin": "fixture", "mode": content.mode, "part": content.part},
+                dedupe_key=f"process:{unit.id}",
+                unit_id=unit.id,
+            )
     return {"created": created, "already_present": dup}
 
 
@@ -137,7 +158,14 @@ DEMO_PLAN = {  # extra procedurally generated demo units per mode: (part, skill,
 }  # fmt: skip
 
 
-def seed_demo(session, *, username: str = "demo", password: str | None = None, with_mock: bool = True, mock_modes: tuple[str, ...] = ("common_test", "cefr_c1")) -> dict:
+def seed_demo(
+    session,
+    *,
+    username: str = "demo",
+    password: str | None = None,
+    with_mock: bool = True,
+    mock_modes: tuple[str, ...] = ("common_test", "cefr_c1"),
+) -> dict:
     """Create / refresh the demo data area. Never touches the live area."""
     out: dict = {"password_created": None}
     user = session.execute(select(m.User).where(m.User.username == username)).scalar_one_or_none()
@@ -153,19 +181,47 @@ def seed_demo(session, *, username: str = "demo", password: str | None = None, w
     for mode, specs in DEMO_PLAN.items():
         prof = current_profile(mode)
         for i, (part, skill, band) in enumerate(specs):
-            params = {"mode": mode, "part": part, "template_type": part_spec(prof, part)["template_type"], "primary_skill": skill, "band": band, "seed": f"demoseed-{mode}-{i}", "source": "demo-generated", "pool": "practice"}
+            params = {
+                "mode": mode,
+                "part": part,
+                "template_type": part_spec(prof, part)["template_type"],
+                "primary_skill": skill,
+                "band": band,
+                "seed": f"demoseed-{mode}-{i}",
+                "source": "demo-generated",
+                "pool": "practice",
+            }
             _, created = queue.enqueue(session, "demo", "generate", params, dedupe_key=f"demoseed:{mode}:{i}")
             queued += 1 if created else 0
     if with_mock:
-        has_set = session.execute(select(m.MockSet).where(m.MockSet.realm == "demo", m.MockSet.mode == mock_modes[0])).first() if mock_modes else True
+        has_set = (
+            session.execute(select(m.MockSet).where(m.MockSet.realm == "demo", m.MockSet.mode == mock_modes[0])).first()
+            if mock_modes
+            else True
+        )
         if not has_set:
             for mode in mock_modes:
                 prof = current_profile(mode)
                 for p in prof["parts"]:
                     for i in range(p["units"]):
-                        skill = "integration" if p["template_type"] in ("lecture_integrated", "condition_choice") else ["explicit_detail", "numbers_negation", "inference", "speaker_attitude"][i % 4]
-                        params = {"mode": mode, "part": p["part"], "template_type": p["template_type"], "primary_skill": skill, "band": 3, "seed": f"demomock-{mode}-{p['part']}-{i}", "source": "demo-generated", "pool": "assessment"}
-                        _, created = queue.enqueue(session, "demo", "generate", params, dedupe_key=f"demomock:{mode}:{p['part']}:{i}")
+                        skill = (
+                            "integration"
+                            if p["template_type"] in ("lecture_integrated", "condition_choice")
+                            else ["explicit_detail", "numbers_negation", "inference", "speaker_attitude"][i % 4]
+                        )
+                        params = {
+                            "mode": mode,
+                            "part": p["part"],
+                            "template_type": p["template_type"],
+                            "primary_skill": skill,
+                            "band": 3,
+                            "seed": f"demomock-{mode}-{p['part']}-{i}",
+                            "source": "demo-generated",
+                            "pool": "assessment",
+                        }
+                        _, created = queue.enqueue(
+                            session, "demo", "generate", params, dedupe_key=f"demomock:{mode}:{p['part']}:{i}"
+                        )
                         queued += 1 if created else 0
             out["mock_modes"] = list(mock_modes)
     out["jobs_queued"] = queued

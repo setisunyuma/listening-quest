@@ -122,7 +122,9 @@ _DROP = ("title", "default", "minLength", "maxLength", "pattern", "minItems", "m
 
 def _strictify(node):
     if isinstance(node, dict):
-        out = {k: _strictify(v) for k, v in node.items() if k not in _DROP or not isinstance(v, (str, int, float, bool))}
+        out = {
+            k: _strictify(v) for k, v in node.items() if k not in _DROP or not isinstance(v, (str, int, float, bool))
+        }
         if out.get("type") == "object":
             out["additionalProperties"] = False
             out["required"] = list(out.get("properties", {}).keys())
@@ -151,7 +153,15 @@ SOLUTION_SCHEMA = {
                 "properties": {
                     "question_id": {"type": "string"},
                     "choice_ids": {"type": "array", "items": {"type": "string"}},
-                    "pairs": {"type": "array", "items": {"type": "object", "additionalProperties": False, "required": ["item_id", "choice_id"], "properties": {"item_id": {"type": "string"}, "choice_id": {"type": "string"}}}},
+                    "pairs": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "additionalProperties": False,
+                            "required": ["item_id", "choice_id"],
+                            "properties": {"item_id": {"type": "string"}, "choice_id": {"type": "string"}},
+                        },
+                    },
                     "text": {"type": "string"},
                     "ambiguous": {"type": "boolean"},
                     "reason": {"type": "string"},
@@ -196,10 +206,19 @@ def unit_scoring_groups(profile: dict, part: str, question_ids_by_slot: list[str
             continue
         ids = [question_ids_by_slot[i] for i in rel if i < len(question_ids_by_slot)]
         if rule.get("all_or_nothing"):
-            groups.append({"id": f"g{len(groups) + 1}", "question_ids": ids, "points": rule["points"], "all_or_nothing": True})
+            groups.append(
+                {"id": f"g{len(groups) + 1}", "question_ids": ids, "points": rule["points"], "all_or_nothing": True}
+            )
         else:
             for qid in ids:
-                groups.append({"id": f"g{len(groups) + 1}", "question_ids": [qid], "points": rule["points_each"], "all_or_nothing": False})
+                groups.append(
+                    {
+                        "id": f"g{len(groups) + 1}",
+                        "question_ids": [qid],
+                        "points": rule["points_each"],
+                        "all_or_nothing": False,
+                    }
+                )
     return groups
 
 
@@ -256,7 +275,9 @@ def authored_to_unit(raw: dict, spec: GenSpec) -> dict:
 
 
 def build_review_prompt(payload: dict) -> tuple[str, str]:
-    return templates()["review_rubric"], "Material (learner-visible information only):\n" + json.dumps(payload, ensure_ascii=False, indent=1)
+    return templates()["review_rubric"], "Material (learner-visible information only):\n" + json.dumps(
+        payload, ensure_ascii=False, indent=1
+    )
 
 
 def solution_to_answers(raw: dict, payload: dict) -> dict:
@@ -332,7 +353,9 @@ def lint_unit(unit: UnitContent, require_distractors: bool = True) -> list[str]:
     official = unit.presentation_profile.kind == "official"
     for q in unit.questions:
         if official and q.prompt_medium != part["question_medium"]:
-            errs.append(f"question {q.id}: prompt_medium should be {part['question_medium']} in the official presentation")
+            errs.append(
+                f"question {q.id}: prompt_medium should be {part['question_medium']} in the official presentation"
+            )
         if not _JA.search(q.feedback.explanation_ja):
             errs.append(f"question {q.id}: explanation_ja must be Japanese")
         texts = [c.text.strip().lower() for c in q.choices]

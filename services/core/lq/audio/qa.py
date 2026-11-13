@@ -15,8 +15,29 @@ _NUM = {
     "eighteen": "18", "nineteen": "19", "twenty": "20", "thirty": "30", "forty": "40", "fifty": "50", "sixty": "60", "seventy": "70",
     "eighty": "80", "ninety": "90",
 }  # fmt: skip
-_NEG = {"not", "no", "never", "neither", "nor", "none", "nobody", "nothing", "without", "hardly", "barely", "rarely", "seldom", "cannot"}
-_CONTR = [(r"\bcan't\b", "can not"), (r"\bwon't\b", "will not"), (r"\bshan't\b", "shall not"), (r"n't\b", " not"), (r"\bcannot\b", "can not")]
+_NEG = {
+    "not",
+    "no",
+    "never",
+    "neither",
+    "nor",
+    "none",
+    "nobody",
+    "nothing",
+    "without",
+    "hardly",
+    "barely",
+    "rarely",
+    "seldom",
+    "cannot",
+}
+_CONTR = [
+    (r"\bcan't\b", "can not"),
+    (r"\bwon't\b", "will not"),
+    (r"\bshan't\b", "shall not"),
+    (r"n't\b", " not"),
+    (r"\bcannot\b", "can not"),
+]
 
 
 def normalize_tokens(text: str) -> list[str]:
@@ -42,7 +63,15 @@ def normalize_tokens(text: str) -> list[str]:
     # merge "20 5" -> "25" so "twenty-five" equals "25"
     out: list[str] = []
     for tok in toks:
-        if out and tok.isdigit() and len(tok) == 1 and out[-1].isdigit() and len(out[-1]) == 2 and out[-1].endswith("0") and out[-1] != "10":
+        if (
+            out
+            and tok.isdigit()
+            and len(tok) == 1
+            and out[-1].isdigit()
+            and len(out[-1]) == 2
+            and out[-1].endswith("0")
+            and out[-1] != "10"
+        ):
             out[-1] = str(int(out[-1]) + int(tok))
         else:
             out.append(tok)
@@ -65,7 +94,9 @@ def critical_tokens(tokens: list[str]) -> list[str]:
     return sorted(t for t in tokens if t.isdigit() or t in _NEG)
 
 
-def compare_transcript(expected: str, heard: str, *, is_evidence: bool = False, max_wer: float = 0.2, max_wer_evidence: float = 0.1) -> dict:
+def compare_transcript(
+    expected: str, heard: str, *, is_evidence: bool = False, max_wer: float = 0.2, max_wer_evidence: float = 0.1
+) -> dict:
     ref, hyp = normalize_tokens(expected), normalize_tokens(heard)
     wer = _wer(ref, hyp)
     crit_ref, crit_hyp = critical_tokens(ref), critical_tokens(hyp)

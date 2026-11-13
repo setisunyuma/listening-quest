@@ -44,7 +44,16 @@ MODE_LABELS_JA = {
     "cefr_c2": "C2",
 }
 SESSION_TYPES = ("train", "review", "radio", "assessment")
-UNIT_STATUSES = ("DRAFT", "CONTENT_REVIEW", "AUDIO_PENDING", "AUDIO_GENERATING", "AUDIO_QA", "READY", "QUARANTINED", "FAILED")
+UNIT_STATUSES = (
+    "DRAFT",
+    "CONTENT_REVIEW",
+    "AUDIO_PENDING",
+    "AUDIO_GENERATING",
+    "AUDIO_QA",
+    "READY",
+    "QUARANTINED",
+    "FAILED",
+)
 
 _ID = Annotated[str, Field(pattern=r"^[A-Za-z0-9_.\-]{1,64}$")]
 
@@ -460,11 +469,19 @@ def reviewer_view(unit: UnitContent) -> dict:
         "part": unit.part,
         "pre_info": unit.pre_info.situation_en if unit.pre_info else "",
         "figures": [
-            {"id": f.id, "kind": f.kind, "title": f.title, "columns": f.columns, "rows": [[c.text for c in r.cells] for r in f.rows], "note": f.note}
+            {
+                "id": f.id,
+                "kind": f.kind,
+                "title": f.title,
+                "columns": f.columns,
+                "rows": [[c.text for c in r.cells] for r in f.rows],
+                "note": f.note,
+            }
             for f in unit.figures
         ],
         "audio_script": [
-            {"segment": seg.id, "lines": [{"speaker": u.speaker_id, "text": u.text} for u in seg.utterances]} for seg in unit.segments
+            {"segment": seg.id, "lines": [{"speaker": u.speaker_id, "text": u.text} for u in seg.utterances]}
+            for seg in unit.segments
         ],
         "questions": [
             {

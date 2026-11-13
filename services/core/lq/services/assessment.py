@@ -25,7 +25,9 @@ class Shortage(Exception):
 
 def _in_use_unit_ids(session, realm: str) -> set[str]:
     used: set[str] = set()
-    for ms in session.execute(select(m.MockSet).where(m.MockSet.realm == realm, m.MockSet.status.in_(("READY", "USED")))).scalars():
+    for ms in session.execute(
+        select(m.MockSet).where(m.MockSet.realm == realm, m.MockSet.status.in_(("READY", "USED")))
+    ).scalars():
         used.update(i["unit_id"] for i in ms.items)
     return used
 
@@ -35,28 +37,99 @@ def reserved_inventory(session, realm: str, mode: str) -> dict:
     profile = current_profile(mode)
     used = _in_use_unit_ids(session, realm)
     U = m.Unit
-    rows = session.execute(select(U).where(U.realm == realm, U.mode == mode, U.pool == "assessment", U.status == "READY", U.invalidated_at.is_(None))).scalars().all()
-    pending = session.execute(select(m.GenerationJob).where(m.GenerationJob.realm == realm, m.GenerationJob.status.in_(("QUEUED", "RUNNING", "RETRY_WAIT", "BLOCKED")))).scalars().all()
+    rows = (
+        session.execute(
+            select(U).where(
+                U.realm == realm,
+                U.mode == mode,
+                U.pool == "assessment",
+                U.status == "READY",
+                U.invalidated_at.is_(None),
+            )
+        )
+        .scalars()
+        .all()
+    )
+    pending = (
+        session.execute(
+            select(m.GenerationJob).where(
+                m.GenerationJob.realm == realm,
+                m.GenerationJob.status.in_(("QUEUED", "RUNNING", "RETRY_WAIT", "BLOCKED")),
+            )
+        )
+        .scalars()
+        .all()
+    )
     parts = []
     for p in profile["parts"]:
-        have = [u for u in rows if u.part == p["part"] and u.id not in used and u.question_count == p["questions_per_unit"] and "assessment" in u.session_types]
-        inflight = sum(1 for j in pending if j.params.get("mode") == mode and j.params.get("part") == p["part"] and j.params.get("pool") == "assessment")
-        parts.append({"part": p["part"], "label_ja": p["label_ja"], "need": p["units"], "have": len(have), "in_progress": inflight})
-    return {"mode": mode, "profile_id": profile["id"], "exam_label": profile["exam"]["label_ja"], "parts": parts, "complete": all(x["have"] >= x["need"] for x in parts)}
+        have = [
+            u
+            for u in rows
+            if u.part == p["part"]
+            and u.id not in used
+            and u.question_count == p["questions_per_unit"]
+            and "assessment" in u.session_types
+        ]
+        inflight = sum(
+            1
+            for j in pending
+            if j.params.get("mode") == mode
+            and j.params.get("part") == p["part"]
+            and j.params.get("pool") == "assessment"
+        )
+        parts.append(
+            {
+                "part": p["part"],
+                "label_ja": p["label_ja"],
+                "need": p["units"],
+                "have": len(have),
+                "in_progress": inflight,
+            }
+        )
+    return {
+        "mode": mode,
+        "profile_id": profile["id"],
+        "exam_label": profile["exam"]["label_ja"],
+        "parts": parts,
+        "complete": all(x["have"] >= x["need"] for x in parts),
+    }
 
 
 def enqueue_missing(session, realm: str, mode: str, seed: str) -> int:
     """Queue generation jobs (pool=assessment) for whatever one full set still lacks."""
     inv = reserved_inventory(session, realm, mode)
     profile = current_profile(mode)
-    skills = ["explicit_detail", "numbers_negation", "inference", "speaker_attitude", "main_idea", "discourse_structure", "condition_matching"]
+    skills = [
+        "explicit_detail",
+        "numbers_negation",
+        "inference",
+        "speaker_attitude",
+        "main_idea",
+        "discourse_structure",
+        "condition_matching",
+    ]
     made = 0
     for p in inv["parts"]:
         spec = next(x for x in profile["parts"] if x["part"] == p["part"])
         for i in range(max(0, p["need"] - p["have"] - p["in_progress"])):
-            skill = "integration" if spec["template_type"] in ("lecture_integrated", "condition_choice") else skills[(i + made) % len(skills)]
-            params = {"mode": mode, "part": p["part"], "template_type": spec["template_type"], "primary_skill": skill, "band": 3, "seed": f"mock-{seed}-{p['part']}-{i}", "source": "generated", "pool": "assessment"}
-            _, created = queue.enqueue(session, realm, "generate", params, dedupe_key=f"mock:{realm}:{mode}:{seed}:{p['part']}:{i}")
+            skill = (
+                "integration"
+                if spec["template_type"] in ("lecture_integrated", "condition_choice")
+                else skills[(i + made) % len(skills)]
+            )
+            params = {
+                "mode": mode,
+                "part": p["part"],
+                "template_type": spec["template_type"],
+                "primary_skill": skill,
+                "band": 3,
+                "seed": f"mock-{seed}-{p['part']}-{i}",
+                "source": "generated",
+                "pool": "assessment",
+            }
+            _, created = queue.enqueue(
+                session, realm, "generate", params, dedupe_key=f"mock:{realm}:{mode}:{seed}:{p['part']}:{i}"
+            )
             made += 1 if created else 0
     return made
 
@@ -67,7 +140,21 @@ def assemble(session, realm: str, mode: str) -> m.MockSet:
     profile = current_profile(mode)
     used = _in_use_unit_ids(session, realm)
     U = m.Unit
-    rows = session.execute(select(U).where(U.realm == realm, U.mode == mode, U.pool == "assessment", U.status == "READY", U.invalidated_at.is_(None)).order_by(U.created_at, U.id)).scalars().all()
+    rows = (
+        session.execute(
+            select(U)
+            .where(
+                U.realm == realm,
+                U.mode == mode,
+                U.pool == "assessment",
+                U.status == "READY",
+                U.invalidated_at.is_(None),
+            )
+            .order_by(U.created_at, U.id)
+        )
+        .scalars()
+        .all()
+    )
     exposed = set(session.execute(select(m.ExposureEvent.unit_id).distinct()).scalars())
     by_part: dict[str, list[m.Unit]] = {}
     for u in rows:
@@ -101,12 +188,22 @@ def assemble(session, realm: str, mode: str) -> m.MockSet:
         if len(qs) != len(entry["slots"]):
             problems.append(f"{unit.id}: question count does not match the answer slots")
             continue
-        exam = session.execute(select(m.Asset).where(m.Asset.unit_id == unit.id, m.Asset.kind == "exam")).scalar_one_or_none()
+        exam = session.execute(
+            select(m.Asset).where(m.Asset.unit_id == unit.id, m.Asset.kind == "exam")
+        ).scalar_one_or_none()
         if exam is None:
             problems.append(f"{unit.id}: exam audio missing")
             continue
         duration_ms += exam.duration_ms
-        items.append({"unit_id": unit.id, "part": entry["part"], "section": entry["section"], "slots": {q.id: s for q, s in zip(qs, entry["slots"], strict=True)}, "duration_ms": exam.duration_ms})
+        items.append(
+            {
+                "unit_id": unit.id,
+                "part": entry["part"],
+                "section": entry["section"],
+                "slots": {q.id: s for q, s in zip(qs, entry["slots"], strict=True)},
+                "duration_ms": exam.duration_ms,
+            }
+        )
     if shortage:
         raise Shortage({"missing_units_by_part": shortage})
     if problems:
@@ -139,15 +236,32 @@ def start(session, user: m.User, mock_set_id: str, now: datetime | None = None) 
     # re-check contact history at the moment of starting: unit, same audio, same family
     E = m.ExposureEvent
     hit = session.execute(
-        select(E.unit_id).where(E.user_id == user.id, or_(E.unit_id.in_([u.id for u in units]), E.stimulus_fingerprint.in_([u.stimulus_fingerprint for u in units]), E.family_id.in_([u.family_id for u in units]))).limit(1)
+        select(E.unit_id)
+        .where(
+            E.user_id == user.id,
+            or_(
+                E.unit_id.in_([u.id for u in units]),
+                E.stimulus_fingerprint.in_([u.stimulus_fingerprint for u in units]),
+                E.family_id.in_([u.family_id for u in units]),
+            ),
+        )
+        .limit(1)
     ).first()
     bad = [u.id for u in units if u.status != "READY" or u.invalidated_at is not None]
     if hit or bad:
         ms.status = "STALE"
         session.flush()
-        raise StaleSet("this set contains material you have already been in contact with (or that was withdrawn); assemble a new set")
+        raise StaleSet(
+            "this set contains material you have already been in contact with (or that was withdrawn); assemble a new set"
+        )
     ms.status = "USED"
-    sess = m.LearningSession(user_id=user.id, session_type="assessment", mode=ms.mode, mock_set_id=ms.id, meta={"day": L.user_day(user, now).isoformat(), "items": ms.items})
+    sess = m.LearningSession(
+        user_id=user.id,
+        session_type="assessment",
+        mode=ms.mode,
+        mock_set_id=ms.id,
+        meta={"day": L.user_day(user, now).isoformat(), "items": ms.items},
+    )
     session.add(sess)
     session.flush()
     for u in units:
@@ -179,7 +293,17 @@ def paper_dto(session, sess: m.LearningSession) -> dict:
         for q in view["questions"]:
             q["global_slot"] = it["slots"][q["id"]]
         part = next(p for p in profile["parts"] if p["part"] == it["part"])
-        items.append({"unit_id": unit.id, "part": it["part"], "part_label": part["label_ja"], "section": it["section"], "audio": {"url": L.audio_url(exam), "duration_ms": exam.duration_ms}, "unit": view, "audio_kind": unit.audio_kind})
+        items.append(
+            {
+                "unit_id": unit.id,
+                "part": it["part"],
+                "part_label": part["label_ja"],
+                "section": it["section"],
+                "audio": {"url": L.audio_url(exam), "duration_ms": exam.duration_ms},
+                "unit": view,
+                "audio_kind": unit.audio_kind,
+            }
+        )
     return {"session_id": sess.id, "mode": sess.mode, "status": sess.status, "label": profile["exam"]["label_ja"], "kind": profile["exam"]["kind"],
             "duration_sec": round(sum(i["duration_ms"] for i in sess.meta["items"]) / 1000), "venue_note_ja": profile["exam"]["venue_note_ja"],
             "slot_count": total_slots(profile), "items": items}  # fmt: skip
@@ -216,7 +340,15 @@ def submit(session, user: m.User, session_id: str, answers: dict, now: datetime 
     score = score_exam(profile, slot_correct)
     today = L.user_day(user, now)
     for unit, content, it, ua in per_unit:
-        per_q = {qid: {"answer": a, "correct": slot_correct[it["slots"][qid]], "skipped": a is None, "system_guess": None if slot_correct[it["slots"][qid]] else content.question_map()[qid].skill_tags[0]} for qid, a in ua.items()}
+        per_q = {
+            qid: {
+                "answer": a,
+                "correct": slot_correct[it["slots"][qid]],
+                "skipped": a is None,
+                "system_guess": None if slot_correct[it["slots"][qid]] else content.question_map()[qid].skill_tags[0],
+            }
+            for qid, a in ua.items()
+        }
         complete = all(a is not None for a in ua.values())
         n_ok = sum(1 for v in per_q.values() if v["correct"])
         att = m.Attempt(
@@ -227,7 +359,16 @@ def submit(session, user: m.User, session_id: str, answers: dict, now: datetime 
             result={"questions": per_q, "correct_count": n_ok, "total": len(per_q), "complete": complete, "assisted": False, "skills_wrong": [], "skills_right": []},
         )  # fmt: skip
         session.add(att)
-        L.add_exposure(session, user.id, unit, "answer_access", attempt_id=att.id, session_id=sess.id, meta={"via": "assessment_result"}, at=now)
+        L.add_exposure(
+            session,
+            user.id,
+            unit,
+            "answer_access",
+            attempt_id=att.id,
+            session_id=sess.id,
+            meta={"via": "assessment_result"},
+            at=now,
+        )
         # the material is now known: it joins the practice pool for review / radio, never again as "first"
         unit.pool = "practice"
         roles = set(L.unit_assets(session, unit.id))
@@ -235,8 +376,23 @@ def submit(session, user: m.User, session_id: str, answers: dict, now: datetime 
 
         unit.session_types = allowed_session_types(unit, roles)
         session.flush()
-        L.apply_schedule(session, user, unit, "correct_unaided" if complete and n_ok == len(per_q) else "incorrect", today, attempt_id=att.id, source="assessment")
-    result = {**score, "slots": {str(s): bool(v) for s, v in sorted(slot_correct.items())}, "answered": sum(1 for v in normalized_all.values() if v is not None), "label": profile["exam"]["label_ja"], "kind": profile["exam"]["kind"], "mode": sess.mode}
+        L.apply_schedule(
+            session,
+            user,
+            unit,
+            "correct_unaided" if complete and n_ok == len(per_q) else "incorrect",
+            today,
+            attempt_id=att.id,
+            source="assessment",
+        )
+    result = {
+        **score,
+        "slots": {str(s): bool(v) for s, v in sorted(slot_correct.items())},
+        "answered": sum(1 for v in normalized_all.values() if v is not None),
+        "label": profile["exam"]["label_ja"],
+        "kind": profile["exam"]["kind"],
+        "mode": sess.mode,
+    }
     sess.status = "submitted"
     sess.submit_hash = h
     sess.result = result

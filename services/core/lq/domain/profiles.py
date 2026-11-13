@@ -111,7 +111,14 @@ def score_exam(profile: dict, slot_correct: dict[int, bool]) -> dict:
             sec = by_section[sec_of[rule["slots"][0]]]
             sec["points"] += pts
             sec["max_points"] += mx
-            groups.append({"slots": rule["slots"], "points": pts, "max_points": mx, "all_or_nothing": bool(rule.get("all_or_nothing"))})
+            groups.append(
+                {
+                    "slots": rule["slots"],
+                    "points": pts,
+                    "max_points": mx,
+                    "all_or_nothing": bool(rule.get("all_or_nothing")),
+                }
+            )
         out["points"] = total
         out["max_points"] = profile["exam"]["total_points"]
         out["groups"] = groups

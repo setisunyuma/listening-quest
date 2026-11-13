@@ -4,7 +4,9 @@ from pathlib import Path
 
 _TMP = tempfile.mkdtemp(prefix="lq-test-")
 os.environ["LQ_ENV"] = "test"
-os.environ["LQ_DATABASE_URL"] = os.environ.get("LQ_TEST_DATABASE_URL", "postgresql+psycopg://lq:lq@127.0.0.1:55432/lq_test")
+os.environ["LQ_DATABASE_URL"] = os.environ.get(
+    "LQ_TEST_DATABASE_URL", "postgresql+psycopg://lq:lq@127.0.0.1:55432/lq_test"
+)
 os.environ["LQ_STORAGE_BACKEND"] = "local"
 os.environ["LQ_STORAGE_LOCAL_DIR"] = f"{_TMP}/storage"
 os.environ["LQ_OUTBOX_DIR"] = f"{_TMP}/outbox"

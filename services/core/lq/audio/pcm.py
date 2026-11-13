@@ -61,7 +61,25 @@ def decode_to_pcm(data: bytes) -> bytes:
                         return pcm
         except (wave.Error, EOFError):
             pass
-    out = _run(["ffmpeg", "-v", "error", "-i", "pipe:0", "-f", "s16le", "-acodec", "pcm_s16le", "-ac", "1", "-ar", str(RATE), "pipe:1"], data)
+    out = _run(
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-i",
+            "pipe:0",
+            "-f",
+            "s16le",
+            "-acodec",
+            "pcm_s16le",
+            "-ac",
+            "1",
+            "-ar",
+            str(RATE),
+            "pipe:1",
+        ],
+        data,
+    )
     if len(out) < BYTES_PER_MS * 20:
         raise AudioError("decoded audio is empty")
     return out
@@ -69,18 +87,58 @@ def decode_to_pcm(data: bytes) -> bytes:
 
 def encode_mp3(pcm: bytes, bitrate: str = "64k") -> bytes:
     return _run(
-        ["ffmpeg", "-v", "error", "-f", "s16le", "-ar", str(RATE), "-ac", "1", "-i", "pipe:0", "-codec:a", "libmp3lame", "-b:a", bitrate, "-ar", str(RATE), "-write_xing", "1", "-f", "mp3", "pipe:1"],
+        [
+            "ffmpeg",
+            "-v",
+            "error",
+            "-f",
+            "s16le",
+            "-ar",
+            str(RATE),
+            "-ac",
+            "1",
+            "-i",
+            "pipe:0",
+            "-codec:a",
+            "libmp3lame",
+            "-b:a",
+            bitrate,
+            "-ar",
+            str(RATE),
+            "-write_xing",
+            "1",
+            "-f",
+            "mp3",
+            "pipe:1",
+        ],
         pcm,
     )
 
 
 def probe(data: bytes) -> dict:
-    out = _run(["ffprobe", "-v", "error", "-show_entries", "format=duration,format_name:stream=codec_name,sample_rate,channels", "-of", "json", "-i", "pipe:0"], data)
+    out = _run(
+        [
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
+            "format=duration,format_name:stream=codec_name,sample_rate,channels",
+            "-of",
+            "json",
+            "-i",
+            "pipe:0",
+        ],
+        data,
+    )
     info = json.loads(out or b"{}")
     streams = info.get("streams") or []
     if not streams:
         raise AudioError("no audio stream")
-    return {"codec": streams[0].get("codec_name"), "format": (info.get("format") or {}).get("format_name"), "duration": float((info.get("format") or {}).get("duration") or 0)}
+    return {
+        "codec": streams[0].get("codec_name"),
+        "format": (info.get("format") or {}).get("format_name"),
+        "duration": float((info.get("format") or {}).get("duration") or 0),
+    }
 
 
 def rms_dbfs(pcm: bytes, step: int = 4) -> float:

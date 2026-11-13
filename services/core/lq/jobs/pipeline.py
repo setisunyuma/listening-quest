@@ -38,7 +38,21 @@ class Terminal(Exception):
 
 
 def cache_key(text: str, provider: str, model: str, voice: str, speaker: str, lang: str, instructions: str) -> str:
-    return sha256_hex(canonical_json({"text": text, "provider": provider, "model": model, "voice": voice, "speaker": speaker, "lang": lang, "instructions": instructions, "audio": AUDIO_SETTINGS, "impl": CACHE_IMPL_VERSION}))
+    return sha256_hex(
+        canonical_json(
+            {
+                "text": text,
+                "provider": provider,
+                "model": model,
+                "voice": voice,
+                "speaker": speaker,
+                "lang": lang,
+                "instructions": instructions,
+                "audio": AUDIO_SETTINGS,
+                "impl": CACHE_IMPL_VERSION,
+            }
+        )
+    )
 
 
 def cached_clip(session, key: str) -> bytes | None:
@@ -66,7 +80,17 @@ def store_clip(session, key: str, pcm: bytes, provider: str, model: str, voice: 
     storage_key = f"cache/tts/{key[:2]}/{key}.wav"
     get_storage().put(storage_key, data, "audio/wav")
     if session.get(m.AudioCache, key) is None:
-        session.add(m.AudioCache(cache_key=key, storage_key=storage_key, sha256=sha256_hex(data), duration_ms=duration_ms(pcm), provider=provider, model=model, voice=voice))
+        session.add(
+            m.AudioCache(
+                cache_key=key,
+                storage_key=storage_key,
+                sha256=sha256_hex(data),
+                duration_ms=duration_ms(pcm),
+                provider=provider,
+                model=model,
+                voice=voice,
+            )
+        )
     return storage_key
 
 
@@ -113,7 +137,9 @@ def execute(lease: Lease) -> str:
 def step_content(lease: Lease, prov, meter, realm: str, params: dict) -> str:
     if prov.content is None:
         raise Blocked("no_provider", "no content provider configured (set OPENAI_API_KEY, or import material)")
-    spec = GenSpec(**{k: (tuple(v) if k == "avoid_topics" else v) for k, v in params.items() if k in GenSpec.__dataclass_fields__})
+    spec = GenSpec(
+        **{k: (tuple(v) if k == "avoid_topics" else v) for k, v in params.items() if k in GenSpec.__dataclass_fields__}
+    )
     last_err = ""
     content = None
     for _ in range(3):  # schema violations: bounded retries, each one budgeted
@@ -148,17 +174,28 @@ def step_review(lease: Lease, prov, meter, unit_id: str) -> None:
         content = C.load_content(unit)
         has_pass = C.passing_review(s, unit, "content") is not None or C.carry_over_review(s, unit) is not None
         s.commit()
-    lint = [] if content.legacy_radio_only else authoring.lint_unit(content, require_distractors=content.source != "legacy-radio")
+    lint = (
+        []
+        if content.legacy_radio_only
+        else authoring.lint_unit(content, require_distractors=content.source != "legacy-radio")
+    )
     if lint:
-        _commit_step(lease, lambda s, job: C.quarantine(s, s.get(m.Unit, unit_id), "format check failed: " + "; ".join(lint)))
+        _commit_step(
+            lease, lambda s, job: C.quarantine(s, s.get(m.Unit, unit_id), "format check failed: " + "; ".join(lint))
+        )
         return
     if not has_pass:
         if prov.review is None or content.legacy_radio_only:
-            raise Blocked("awaiting_content_review", "no reviewer configured; approve the content manually (lq approve) or enable API review")
+            raise Blocked(
+                "awaiting_content_review",
+                "no reviewer configured; approve the content manually (lq approve) or enable API review",
+            )
         payload = reviewer_view(content)  # learner-visible information only
         solved = prov.review.solve(payload, meter)
         if solved.get("unavailable"):
-            raise Blocked("awaiting_content_review", "the reviewer cannot judge this material; approve the content manually")
+            raise Blocked(
+                "awaiting_content_review", "the reviewer cannot judge this material; approve the content manually"
+            )
         verdict = authoring.compare_review(content, solved)
 
         def record(s, job):
@@ -166,7 +203,9 @@ def step_review(lease: Lease, prov, meter, unit_id: str) -> None:
             C.add_review_record(s, unit, target="content", method=prov.review.record_method, reviewer=f"{prov.review.name}:{prov.review.model}",
                                 result="pass" if verdict["ok"] else "fail", details={"problems": verdict["problems"], "notes": solved.get("notes", "")[:2000]})  # fmt: skip
             if not verdict["ok"]:
-                C.quarantine(s, unit, "blind review disagreed with the author's key: " + canonical_json(verdict["problems"]))
+                C.quarantine(
+                    s, unit, "blind review disagreed with the author's key: " + canonical_json(verdict["problems"])
+                )
 
         _commit_step(lease, record)
         if not verdict["ok"]:
@@ -185,7 +224,16 @@ def _put_asset(st, unit_id: str, kind: str, role: str, pcm: bytes, meta: dict) -
     aid = new_id()
     key = f"units/{unit_id}/{aid}.mp3"  # opaque name: nothing about answers in the path
     st.put(key, data, "audio/mpeg")
-    return {"id": aid, "kind": kind, "role": role, "storage_key": key, "sha256": sha256_hex(data), "bytes": len(data), "duration_ms": check["duration_ms"], "meta": meta}
+    return {
+        "id": aid,
+        "kind": kind,
+        "role": role,
+        "storage_key": key,
+        "sha256": sha256_hex(data),
+        "bytes": len(data),
+        "duration_ms": check["duration_ms"],
+        "meta": meta,
+    }
 
 
 def step_audio(lease: Lease, prov, meter, unit_id: str) -> None:
@@ -209,7 +257,10 @@ def step_audio(lease: Lease, prov, meter, unit_id: str) -> None:
     clip_keys: dict[str, str] = {}
     missing = [cid for cid in specs if cid not in imported]
     if missing and prov.tts is None:
-        raise Blocked("missing_audio", f"{len(missing)} required clips have no audio and no speech provider is configured: {', '.join(missing[:8])}")
+        raise Blocked(
+            "missing_audio",
+            f"{len(missing)} required clips have no audio and no speech provider is configured: {', '.join(missing[:8])}",
+        )
     used_tts = False
     for cid, spec in specs.items():
         if cid in imported:
@@ -244,10 +295,28 @@ def step_audio(lease: Lease, prov, meter, unit_id: str) -> None:
     t = R.render_exam(content, clips, part, profile.get("timing", {}))
     assets.append(_put_asset(st, unit_id, "exam", "exam", t.pcm(), {"timeline": t.timeline}))
     t = R.render_feedback(content, clips)
-    assets.append(_put_asset(st, unit_id, "feedback", "feedback", t.pcm(), {"timeline": t.timeline, "transcript": R.transcript_of(t, content, specs)}))
+    assets.append(
+        _put_asset(
+            st,
+            unit_id,
+            "feedback",
+            "feedback",
+            t.pcm(),
+            {"timeline": t.timeline, "transcript": R.transcript_of(t, content, specs)},
+        )
+    )
     if R.radio_supported(content)[0]:
         t = R.render_radio(content, clips)
-        assets.append(_put_asset(st, unit_id, "radio", "radio", t.pcm(), {"timeline": t.timeline, "transcript": R.transcript_of(t, content, specs)}))
+        assets.append(
+            _put_asset(
+                st,
+                unit_id,
+                "radio",
+                "radio",
+                t.pcm(),
+                {"timeline": t.timeline, "transcript": R.transcript_of(t, content, specs)},
+            )
+        )
     for seg in content.segments:
         for u in seg.utterances:
             assets.append(_put_asset(st, unit_id, "utterance", f"utt:{u.id}", clips[f"utt:{u.id}"], {}))
@@ -263,7 +332,20 @@ def _save_assets(lease: Lease, unit_id: str, assets: list[dict], clip_keys: dict
             s.delete(a)
         s.flush()
         for a in assets:
-            s.add(m.Asset(id=a["id"], unit_id=unit_id, kind=a["kind"], role=a["role"], storage_key=a["storage_key"], sha256=a["sha256"], bytes=a["bytes"], duration_ms=a["duration_ms"], quality_state="decoded_ok", meta=a["meta"]))
+            s.add(
+                m.Asset(
+                    id=a["id"],
+                    unit_id=unit_id,
+                    kind=a["kind"],
+                    role=a["role"],
+                    storage_key=a["storage_key"],
+                    sha256=a["sha256"],
+                    bytes=a["bytes"],
+                    duration_ms=a["duration_ms"],
+                    quality_state="decoded_ok",
+                    meta=a["meta"],
+                )
+            )
         unit.audio_kind = audio_kind
         unit.status = "AUDIO_QA"
         job.state = {**(job.state or {}), "clip_keys": clip_keys}
@@ -291,13 +373,22 @@ def step_audio_qa(lease: Lease, prov, meter, unit_id: str) -> None:
         if not chk["ok"]:
             problems.append(f"{role}: {chk['problems']}")
     if problems:
-        _commit_step(lease, lambda s, job: C.quarantine(s, s.get(m.Unit, unit_id), "audio check failed: " + "; ".join(problems)))
+        _commit_step(
+            lease, lambda s, job: C.quarantine(s, s.get(m.Unit, unit_id), "audio check failed: " + "; ".join(problems))
+        )
         return
 
-    state = {"audio_human_listened": "human_listened", "audio_auto_checked": "auto_checked", "audio_demo_mock_checked": "mock_checked"}
+    state = {
+        "audio_human_listened": "human_listened",
+        "audio_auto_checked": "auto_checked",
+        "audio_demo_mock_checked": "mock_checked",
+    }
     if approved_method is None:
         if prov.asr is None or not clip_keys:
-            raise Blocked("awaiting_audio_approval", "no independent speech recognition configured (or legacy audio without a script): listen and approve the audio manually")
+            raise Blocked(
+                "awaiting_audio_approval",
+                "no independent speech recognition configured (or legacy audio without a script): listen and approve the audio manually",
+            )
         specs = R.plan_clips(content)
         evidence_utts = {e.utterance_id for q in content.questions for e in q.evidence if e.utterance_id}
         results, bad = [], []
@@ -305,15 +396,27 @@ def step_audio_qa(lease: Lease, prov, meter, unit_id: str) -> None:
             if spec.lang != "en" or cid not in clip_keys:
                 continue  # Japanese explanations: decode/level checks only
             _commit_step(lease, lambda s, job: None)
-            heard = prov.asr.transcribe(decode_to_pcm(st.get(clip_keys[cid])), spec.lang, meter, expected_hint=spec.text)
-            cmp = qa.compare_transcript(spec.text, heard, is_evidence=cid.startswith("utt:") and cid[4:] in evidence_utts)
+            heard = prov.asr.transcribe(
+                decode_to_pcm(st.get(clip_keys[cid])), spec.lang, meter, expected_hint=spec.text
+            )
+            cmp = qa.compare_transcript(
+                spec.text, heard, is_evidence=cid.startswith("utt:") and cid[4:] in evidence_utts
+            )
             results.append({"clip": cid, "wer": cmp["wer"], "ok": cmp["ok"]})
             if not cmp["ok"]:
                 bad.append({"clip": cid, "problems": cmp["problems"], "heard": heard[:300]})
 
         def record(s, job):
             unit = s.get(m.Unit, unit_id)
-            C.add_review_record(s, unit, target="audio", method=prov.asr.record_method, reviewer=f"{prov.asr.name}:{prov.asr.model}", result="fail" if bad else "pass", details={"clips": results, "mismatches": bad})
+            C.add_review_record(
+                s,
+                unit,
+                target="audio",
+                method=prov.asr.record_method,
+                reviewer=f"{prov.asr.name}:{prov.asr.model}",
+                result="fail" if bad else "pass",
+                details={"clips": results, "mismatches": bad},
+            )
             if bad:
                 C.quarantine(s, unit, "speech recognition did not match the script: " + canonical_json(bad)[:1500])
 

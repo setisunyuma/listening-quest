@@ -1,0 +1,18 @@
+# Production overlay: adds Caddy for HTTPS on one origin and closes the web port.
+#   docker compose -f infra/compose.yaml -f infra/compose.prod.yaml --env-file .env up -d --build
+services:
+  web:
+    ports: !reset []
+  caddy:
+    image: caddy:2.10.2
+    ports: ["80:80", "443:443", "443:443/udp"]
+    environment:
+      LQ_DOMAIN: ${LQ_DOMAIN:?set LQ_DOMAIN to the public host name}
+      ACME_EMAIL: ${ACME_EMAIL:-}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on: [web, api]
+    restart: unless-stopped
+volumes: { caddydata: {}, caddyconfig: {} }

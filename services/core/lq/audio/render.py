@@ -68,13 +68,17 @@ def plan_clips(unit: UnitContent) -> dict[str, ClipSpec]:
     clips: dict[str, ClipSpec] = {}
     for seg in unit.segments:
         for u in seg.utterances:
-            clips[f"utt:{u.id}"] = ClipSpec(f"utt:{u.id}", u.text, u.lang, u.speaker_id, "utterance", ("stimulus", "exam", "feedback", "radio"))
+            clips[f"utt:{u.id}"] = ClipSpec(
+                f"utt:{u.id}", u.text, u.lang, u.speaker_id, "utterance", ("stimulus", "exam", "feedback", "radio")
+            )
     radio_ok, _ = radio_supported(unit)
     for q in unit.sorted_questions():
         audio_prompt = q.prompt_medium in ("audio", "both")
         need = tuple(k for k, on in (("stimulus", audio_prompt), ("exam", audio_prompt), ("radio", radio_ok)) if on)
         if need:
-            clips[f"prompt:{q.id}"] = ClipSpec(f"prompt:{q.id}", f"Question {q.slot}. {q.prompt_en}", "en", narr, "narration", need)
+            clips[f"prompt:{q.id}"] = ClipSpec(
+                f"prompt:{q.id}", f"Question {q.slot}. {q.prompt_en}", "en", narr, "narration", need
+            )
         if q.type == "single_choice":
             n = choice_number(q, q.answer.choice_id)
             text = next(c.text for c in q.choices if c.id == q.answer.choice_id)
@@ -85,12 +89,18 @@ def plan_clips(unit: UnitContent) -> dict[str, ClipSpec]:
         else:
             ans = f"Question {q.slot}. {q.feedback.answer_en}"
         clips[f"answer:{q.id}"] = ClipSpec(f"answer:{q.id}", ans, "en", narr, "narration", ("feedback", "radio"))
-        clips[f"explain:{q.id}"] = ClipSpec(f"explain:{q.id}", q.feedback.explanation_ja, "ja", "explainer_ja", "explanation", ("feedback", "radio"))
+        clips[f"explain:{q.id}"] = ClipSpec(
+            f"explain:{q.id}", q.feedback.explanation_ja, "ja", "explainer_ja", "explanation", ("feedback", "radio")
+        )
     if radio_ok:
         if unit.pre_info and unit.pre_info.situation_en:
-            clips["pre"] = ClipSpec("pre", f"Situation. {unit.pre_info.situation_en}", "en", narr, "narration", ("radio",))
+            clips["pre"] = ClipSpec(
+                "pre", f"Situation. {unit.pre_info.situation_en}", "en", narr, "narration", ("radio",)
+            )
         if unit.figures and unit.radio.figure_description_en:
-            clips["figdesc"] = ClipSpec("figdesc", unit.radio.figure_description_en, "en", narr, "narration", ("radio",))
+            clips["figdesc"] = ClipSpec(
+                "figdesc", unit.radio.figure_description_en, "en", narr, "narration", ("radio",)
+            )
     return clips
 
 
@@ -200,11 +210,21 @@ def transcript_of(track: Track, unit: UnitContent, specs: dict[str, ClipSpec]) -
     for e in track.timeline:
         ref = e.get("ref")
         if e["kind"] in ("utterance", "evidence") and ref in utt:
-            out.append({"start_ms": e["start_ms"], "end_ms": e["end_ms"], "kind": e["kind"], "speaker": utt[ref].speaker_id, "text": utt[ref].text})
+            out.append(
+                {
+                    "start_ms": e["start_ms"],
+                    "end_ms": e["end_ms"],
+                    "kind": e["kind"],
+                    "speaker": utt[ref].speaker_id,
+                    "text": utt[ref].text,
+                }
+            )
         elif e["kind"] in ("prompt", "choices", "answer", "explanation"):
             cid = {"explanation": "explain"}.get(e["kind"], e["kind"]) + f":{ref}"
             if cid in specs:
-                out.append({"start_ms": e["start_ms"], "end_ms": e["end_ms"], "kind": e["kind"], "text": specs[cid].text})
+                out.append(
+                    {"start_ms": e["start_ms"], "end_ms": e["end_ms"], "kind": e["kind"], "text": specs[cid].text}
+                )
         elif e["kind"] in ("pre_info", "figure_description"):
             cid = "pre" if e["kind"] == "pre_info" else "figdesc"
             out.append({"start_ms": e["start_ms"], "end_ms": e["end_ms"], "kind": e["kind"], "text": specs[cid].text})

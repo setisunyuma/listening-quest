@@ -42,7 +42,9 @@ class ReviewProvider(Protocol):
     model: str
     record_method: str  # api_reviewed | demo_mock_reviewed
 
-    def solve(self, payload: dict, meter) -> dict: ...  # {"answers": {qid: answer|None}, "ambiguous": [qid], "notes": str}
+    def solve(
+        self, payload: dict, meter
+    ) -> dict: ...  # {"answers": {qid: answer|None}, "ambiguous": [qid], "notes": str}
 
 
 class TTSProvider(Protocol):

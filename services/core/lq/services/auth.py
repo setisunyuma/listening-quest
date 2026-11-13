@@ -41,7 +41,10 @@ def create_user(session, username: str, password: str, realm: str = "live") -> m
         raise ValueError("realm must be live or demo")
     if session.execute(select(m.User).where(m.User.username == username)).scalar_one_or_none():
         raise ValueError("user already exists")
-    if realm == "live" and session.execute(select(func.count()).select_from(m.User).where(m.User.realm == "live")).scalar_one() >= 1:
+    if (
+        realm == "live"
+        and session.execute(select(func.count()).select_from(m.User).where(m.User.realm == "live")).scalar_one() >= 1
+    ):
         raise ValueError("this app is for one owner account; a live account already exists")
     user = m.User(username=username, password_hash=hash_password(password), realm=realm, settings={})
     session.add(user)
@@ -53,12 +56,18 @@ def _tok_hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
 
-def login(session, username: str, password: str, client_key: str, now: datetime | None = None) -> tuple[m.User, str, str]:
+def login(
+    session, username: str, password: str, client_key: str, now: datetime | None = None
+) -> tuple[m.User, str, str]:
     s = get_settings()
     now = now or datetime.now(UTC)
     since = now - timedelta(minutes=s.login_window_minutes)
     for key in (f"u:{username.lower()}", f"ip:{client_key}"):
-        fails = session.execute(select(func.count()).select_from(m.LoginAttempt).where(m.LoginAttempt.key == key, m.LoginAttempt.success.is_(False), m.LoginAttempt.at >= since)).scalar_one()
+        fails = session.execute(
+            select(func.count())
+            .select_from(m.LoginAttempt)
+            .where(m.LoginAttempt.key == key, m.LoginAttempt.success.is_(False), m.LoginAttempt.at >= since)
+        ).scalar_one()
         if fails >= s.login_max_failures:
             raise TooManyAttempts()
     user = session.execute(select(m.User).where(m.User.username == username)).scalar_one_or_none()
@@ -67,9 +76,18 @@ def login(session, username: str, password: str, client_key: str, now: datetime 
         session.add(m.LoginAttempt(key=key, success=ok, at=now))
     if not ok:
         return None, "", ""  # type: ignore[return-value]
-    session.execute(delete(m.LoginAttempt).where(m.LoginAttempt.key == f"u:{username.lower()}", m.LoginAttempt.success.is_(False)))
+    session.execute(
+        delete(m.LoginAttempt).where(m.LoginAttempt.key == f"u:{username.lower()}", m.LoginAttempt.success.is_(False))
+    )
     token, csrf = secrets.token_urlsafe(32), secrets.token_urlsafe(24)
-    session.add(m.AuthSession(token_hash=_tok_hash(token), user_id=user.id, csrf_token=csrf, expires_at=now + timedelta(hours=s.session_ttl_hours)))
+    session.add(
+        m.AuthSession(
+            token_hash=_tok_hash(token),
+            user_id=user.id,
+            csrf_token=csrf,
+            expires_at=now + timedelta(hours=s.session_ttl_hours),
+        )
+    )
     session.execute(delete(m.AuthSession).where(m.AuthSession.expires_at < now))
     return user, token, csrf
 

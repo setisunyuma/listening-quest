@@ -1,0 +1,57 @@
+{
+ "schema_version": 1,
+ "episode_id": "ep-sample",
+ "title": "Sample radio episode (legacy format)",
+ "mode": "common_test",
+ "audio": "ep-sample.wav",
+ "items": [
+  {
+   "id": "q1",
+   "part": "3",
+   "template_type": "short_dialogue",
+   "script": [
+    {
+     "speaker": "W",
+     "text": "The bus to the stadium leaves at 6:40, not 6:15."
+    },
+    {
+     "speaker": "M",
+     "text": "Then we still have time for coffee."
+    }
+   ],
+   "question": "When does the bus leave?",
+   "choices": [
+    "6:15",
+    "6:40",
+    "6:50",
+    "7:15"
+   ],
+   "answer": 2,
+   "explanation_ja": "6時15分ではなく6時40分と訂正しています。",
+   "evidence_line": 1,
+   "skill": "numbers_negation"
+  },
+  {
+   "id": "q2",
+   "script": [
+    {
+     "speaker": "M",
+     "text": "I'll bring the tickets."
+    }
+   ],
+   "question": "Who brings the tickets?",
+   "choices": [
+    "The man",
+    "The woman"
+   ],
+   "answer": 1,
+   "explanation_ja": "男性が持ってくると言っています。"
+  }
+ ],
+ "files": {
+  "ep-sample.wav": {
+   "sha256": "3e2d21596cfcb7af9f90b05395913bd2de1f76e41c63acb7d23053b7a5ed042e",
+   "bytes": 96044
+  }
+ }
+}

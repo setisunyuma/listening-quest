@@ -32,7 +32,15 @@ class LearningConfig:
     slot_cap_factor: float = 1.25
     answer_sec_per_question: int = 12
     feedback_sec_per_question: int = 25
-    xp: dict = field(default_factory=lambda: {"unit_base": 10, "review_bonus": 5, "radio_unit": 5, "daily_plan": 20, "level_size": 100})
+    xp: dict = field(
+        default_factory=lambda: {
+            "unit_base": 10,
+            "review_bonus": 5,
+            "radio_unit": 5,
+            "daily_plan": 20,
+            "level_size": 100,
+        }
+    )
     radio_complete_ratio: float = 0.9
     same_session_recheck_min_gap_units: int = 3
     replenish: dict = field(default_factory=lambda: {"low_days": 1, "target_days": 3, "max_jobs_per_day": 12})
@@ -187,7 +195,9 @@ def srs_next(current: Sched | None, outcome: str, today: date, cfg: LearningConf
     if outcome == "correct_assisted":
         return SrsResult(Sched(current.stage, tomorrow), True, "assisted_short", "補助を使ったため翌日に再確認")
     stage = min(current.stage + 1, len(iv) - 1)
-    return SrsResult(Sched(stage, today + timedelta(days=iv[stage])), True, "advance", f"自力正解のため{iv[stage]}日後に復習")
+    return SrsResult(
+        Sched(stage, today + timedelta(days=iv[stage])), True, "advance", f"自力正解のため{iv[stage]}日後に復習"
+    )
 
 
 # ---------------------------------------------------------------- XP / radio coverage

@@ -37,7 +37,13 @@ def _valid_attempts(session, user: m.User, mode: str | None = None, since: datet
 
 def streak_days(session, user: m.User, today: date) -> int:
     days = set(session.execute(select(m.XpEvent.learning_day).where(m.XpEvent.user_id == user.id).distinct()).scalars())
-    days |= set(session.execute(select(m.Attempt.learning_day).where(m.Attempt.user_id == user.id, m.Attempt.status == "submitted").distinct()).scalars())
+    days |= set(
+        session.execute(
+            select(m.Attempt.learning_day)
+            .where(m.Attempt.user_id == user.id, m.Attempt.status == "submitted")
+            .distinct()
+        ).scalars()
+    )
     d = today if today in days else today - timedelta(days=1)
     n = 0
     while d in days:
@@ -55,8 +61,20 @@ def home(session, user: m.User, now: datetime) -> dict:
     xp = L.total_xp(session, user.id)
     recent = []
     for a, u in reversed(_valid_attempts(session, user, since=now - timedelta(days=14))[-40:]):
-        if u.invalidated_at is None and a.complete and a.result["correct_count"] == a.result["total"] and a.category in ("first", "review"):
-            recent.append({"kind": "perfect_first" if a.category == "first" else "perfect_review", "title": u.title, "mode": u.mode, "at": a.submitted_at.isoformat()})
+        if (
+            u.invalidated_at is None
+            and a.complete
+            and a.result["correct_count"] == a.result["total"]
+            and a.category in ("first", "review")
+        ):
+            recent.append(
+                {
+                    "kind": "perfect_first" if a.category == "first" else "perfect_review",
+                    "title": u.title,
+                    "mode": u.mode,
+                    "at": a.submitted_at.isoformat(),
+                }
+            )
         if len(recent) >= 5:
             break
     modes = []
@@ -66,8 +84,21 @@ def home(session, user: m.User, now: datetime) -> dict:
         modes.append({"mode": mode, "label": MODE_LABELS_JA[mode], "band": st.difficulty_band, "ready_units": ready})
     from lq.services import assessment
 
-    checks = [assessment.mock_set_dto(ms) for ms in session.execute(select(m.MockSet).where(m.MockSet.realm == user.realm, m.MockSet.status == "READY", m.MockSet.mode == s["active_mode"]).order_by(m.MockSet.created_at)).scalars()]
-    day_xp = int(session.execute(select(func.coalesce(func.sum(m.XpEvent.amount), 0)).where(m.XpEvent.user_id == user.id, m.XpEvent.learning_day == today)).scalar_one())
+    checks = [
+        assessment.mock_set_dto(ms)
+        for ms in session.execute(
+            select(m.MockSet)
+            .where(m.MockSet.realm == user.realm, m.MockSet.status == "READY", m.MockSet.mode == s["active_mode"])
+            .order_by(m.MockSet.created_at)
+        ).scalars()
+    ]
+    day_xp = int(
+        session.execute(
+            select(func.coalesce(func.sum(m.XpEvent.amount), 0)).where(
+                m.XpEvent.user_id == user.id, m.XpEvent.learning_day == today
+            )
+        ).scalar_one()
+    )
     return {
         "today": today.isoformat(), "settings": s, "realm": user.realm, "username": user.username,
         "plan": plans.plan_dto(session, plan) if plan else None,
@@ -82,15 +113,36 @@ def home(session, user: m.User, now: datetime) -> dict:
 def library(session, user: m.User, now: datetime, mode: str | None = None) -> dict:
     today = L.user_day(user, now)
     U = m.Unit
-    q = select(U).where(U.realm == user.realm, U.status == "READY", U.invalidated_at.is_(None), U.superseded_by.is_(None), U.pool == "practice")
+    q = select(U).where(
+        U.realm == user.realm,
+        U.status == "READY",
+        U.invalidated_at.is_(None),
+        U.superseded_by.is_(None),
+        U.pool == "practice",
+    )
     if mode:
         q = q.where(U.mode == mode)
     units = session.execute(q.order_by(U.mode, U.part, U.difficulty_band, U.created_at)).scalars().all()
     atts: dict[str, list[m.Attempt]] = {}
-    for a in session.execute(select(m.Attempt).where(m.Attempt.user_id == user.id, m.Attempt.status == "submitted").order_by(m.Attempt.submitted_at)).scalars():
+    for a in session.execute(
+        select(m.Attempt)
+        .where(m.Attempt.user_id == user.id, m.Attempt.status == "submitted")
+        .order_by(m.Attempt.submitted_at)
+    ).scalars():
         atts.setdefault(a.unit_id, []).append(a)
-    scheds = {r.unit_id: r for r in session.execute(select(m.ReviewSchedule).where(m.ReviewSchedule.user_id == user.id, m.ReviewSchedule.kind == "recall")).scalars()}
-    radio_units = set(session.execute(select(m.ExposureEvent.unit_id).where(m.ExposureEvent.user_id == user.id, m.ExposureEvent.kind.in_(("radio_access", "radio_play"))).distinct()).scalars())
+    scheds = {
+        r.unit_id: r
+        for r in session.execute(
+            select(m.ReviewSchedule).where(m.ReviewSchedule.user_id == user.id, m.ReviewSchedule.kind == "recall")
+        ).scalars()
+    }
+    radio_units = set(
+        session.execute(
+            select(m.ExposureEvent.unit_id)
+            .where(m.ExposureEvent.user_id == user.id, m.ExposureEvent.kind.in_(("radio_access", "radio_play")))
+            .distinct()
+        ).scalars()
+    )
     cards = []
     for u in units:
         al = atts.get(u.id, [])
@@ -99,7 +151,13 @@ def library(session, user: m.User, now: datetime, mode: str | None = None) -> di
         badge = None
         if any(a.category == "first" and a.result["correct_count"] == a.result["total"] for a in al):
             badge = "perfect_first"  # rainbow: first attempt, official conditions, everything correct
-        elif any(a.category == "review" and a.complete and a.result["correct_count"] == a.result["total"] and not a.result.get("assisted") for a in al):
+        elif any(
+            a.category == "review"
+            and a.complete
+            and a.result["correct_count"] == a.result["total"]
+            and not a.result.get("assisted")
+            for a in al
+        ):
             badge = "perfect_review"  # purple: all correct on a due review
         if sc and sc.due_day <= today:
             status = "review_due"
@@ -123,7 +181,13 @@ def _agg(rows: list[m.Attempt]) -> dict:
     q_total = sum(a.result["total"] for a in rows)
     q_ok = sum(a.result["correct_count"] for a in rows)
     mean = sum(a.unit_score for a in rows if a.unit_score is not None) / n if n else None
-    return {"units": n, "questions": q_total, "correct": q_ok, "unit_mean": round(mean, 4) if mean is not None else None, "note": "判定中（参考値）" if 0 < n < 5 else ("データなし" if n == 0 else None)}
+    return {
+        "units": n,
+        "questions": q_total,
+        "correct": q_ok,
+        "unit_mean": round(mean, 4) if mean is not None else None,
+        "note": "判定中（参考値）" if 0 < n < 5 else ("データなし" if n == 0 else None),
+    }
 
 
 def growth(session, user: m.User, now: datetime, mode: str, days: int = 30) -> dict:
@@ -141,7 +205,10 @@ def growth(session, user: m.User, now: datetime, mode: str, days: int = 30) -> d
     distinct = len({fp for fp, _ in band_obs})
     SO = m.SkillObservation
     obs = session.execute(
-        select(SO.skill, SO.score, SO.created_at).join(m.Unit, m.Unit.id == SO.unit_id).where(SO.user_id == user.id, SO.mode == mode, SO.kind == "strict_first", m.Unit.invalidated_at.is_(None)).order_by(SO.created_at.desc())
+        select(SO.skill, SO.score, SO.created_at)
+        .join(m.Unit, m.Unit.id == SO.unit_id)
+        .where(SO.user_id == user.id, SO.mode == mode, SO.kind == "strict_first", m.Unit.invalidated_at.is_(None))
+        .order_by(SO.created_at.desc())
     ).all()
     skills = []
     for sk in SKILLS:
@@ -154,15 +221,51 @@ def growth(session, user: m.User, now: datetime, mode: str, days: int = 30) -> d
             "status_label": {"unmeasured": "未測定", "reference": "参考値（判定中）", "weak": "重点練習の対象", "developing": "伸長中", "strong": "安定"}[status],
             "trend": [round(v[1], 3) for v in reversed(vals)], "window": cfg.skill_window, "min_observations": cfg.skill_min_observations,
         })  # fmt: skip
-    reports = session.execute(select(m.SelfReport.value, func.count()).join(m.Unit, m.Unit.id == m.SelfReport.unit_id).where(m.SelfReport.user_id == user.id, m.Unit.mode == mode, m.SelfReport.created_at >= since).group_by(m.SelfReport.value)).all()
-    progs = session.execute(select(m.RadioProgram).where(m.RadioProgram.user_id == user.id, m.RadioProgram.mode == mode, m.RadioProgram.created_at >= since)).scalars().all()
+    reports = session.execute(
+        select(m.SelfReport.value, func.count())
+        .join(m.Unit, m.Unit.id == m.SelfReport.unit_id)
+        .where(m.SelfReport.user_id == user.id, m.Unit.mode == mode, m.SelfReport.created_at >= since)
+        .group_by(m.SelfReport.value)
+    ).all()
+    progs = (
+        session.execute(
+            select(m.RadioProgram).where(
+                m.RadioProgram.user_id == user.id, m.RadioProgram.mode == mode, m.RadioProgram.created_at >= since
+            )
+        )
+        .scalars()
+        .all()
+    )
     radio_ms = sum(b - a for p in progs for a, b in p.played_ranges)
     radio_units = len({uid for p in progs for uid in p.unit_ids})
-    assess = session.execute(select(m.LearningSession).where(m.LearningSession.user_id == user.id, m.LearningSession.session_type == "assessment", m.LearningSession.mode == mode, m.LearningSession.status == "submitted").order_by(m.LearningSession.ended_at.desc()).limit(5)).scalars().all()
-    xp = int(session.execute(select(func.coalesce(func.sum(m.XpEvent.amount), 0)).where(m.XpEvent.user_id == user.id, m.XpEvent.created_at >= since)).scalar_one())
+    assess = (
+        session.execute(
+            select(m.LearningSession)
+            .where(
+                m.LearningSession.user_id == user.id,
+                m.LearningSession.session_type == "assessment",
+                m.LearningSession.mode == mode,
+                m.LearningSession.status == "submitted",
+            )
+            .order_by(m.LearningSession.ended_at.desc())
+            .limit(5)
+        )
+        .scalars()
+        .all()
+    )
+    xp = int(
+        session.execute(
+            select(func.coalesce(func.sum(m.XpEvent.amount), 0)).where(
+                m.XpEvent.user_id == user.id, m.XpEvent.created_at >= since
+            )
+        ).scalar_one()
+    )
     daily: dict[str, dict] = {}
     for a in answer:
-        d = daily.setdefault(a.learning_day.isoformat(), {"day": a.learning_day.isoformat(), "units": 0, "first_units": 0, "first_sum": 0.0})
+        d = daily.setdefault(
+            a.learning_day.isoformat(),
+            {"day": a.learning_day.isoformat(), "units": 0, "first_units": 0, "first_sum": 0.0},
+        )
         d["units"] += 1
         if a.category == "first":
             d["first_units"] += 1
@@ -203,19 +306,49 @@ def history(session, user: m.User, limit: int = 50, offset: int = 0, mode: str |
             "plays": a.plays, "aids": [k for k, v in (a.aids or {}).items() if v], "offline": a.offline, "self_reasons": a.error_reasons or {},
             "invalidated": u.invalidated_at is not None, "invalidated_reason": u.invalidated_reason, "feedback_viewed": a.feedback_viewed_at is not None,
         })  # fmt: skip
-    reports = session.execute(select(m.SelfReport, U).join(U, U.id == m.SelfReport.unit_id).where(m.SelfReport.user_id == user.id).order_by(m.SelfReport.created_at.desc()).limit(30)).all()
-    audits = session.execute(select(m.AuditLog).where(m.AuditLog.realm == user.realm).order_by(m.AuditLog.created_at.desc()).limit(30)).scalars().all()
+    reports = session.execute(
+        select(m.SelfReport, U)
+        .join(U, U.id == m.SelfReport.unit_id)
+        .where(m.SelfReport.user_id == user.id)
+        .order_by(m.SelfReport.created_at.desc())
+        .limit(30)
+    ).all()
+    audits = (
+        session.execute(
+            select(m.AuditLog).where(m.AuditLog.realm == user.realm).order_by(m.AuditLog.created_at.desc()).limit(30)
+        )
+        .scalars()
+        .all()
+    )
     return {
         "attempts": items,
-        "self_reports": [{"id": r.id, "at": r.created_at.isoformat(), "title": u.title, "mode": u.mode, "value": r.value, "label": {"correct": "自分では正解", "incorrect": "自分では不正解", "unknown": "不明"}[r.value]} for r, u in reports],
-        "corrections": [{"at": x.created_at.isoformat(), "action": x.action, "target": x.target, "details": x.details} for x in audits],
+        "self_reports": [
+            {
+                "id": r.id,
+                "at": r.created_at.isoformat(),
+                "title": u.title,
+                "mode": u.mode,
+                "value": r.value,
+                "label": {"correct": "自分では正解", "incorrect": "自分では不正解", "unknown": "不明"}[r.value],
+            }
+            for r, u in reports
+        ],
+        "corrections": [
+            {"at": x.created_at.isoformat(), "action": x.action, "target": x.target, "details": x.details}
+            for x in audits
+        ],
     }
 
 
 def schedules(session, user: m.User, now: datetime) -> list[dict]:
     today = L.user_day(user, now)
     cfg = rules.load_config()
-    rows = session.execute(select(m.ReviewSchedule, m.Unit).join(m.Unit, m.Unit.id == m.ReviewSchedule.unit_id).where(m.ReviewSchedule.user_id == user.id, m.Unit.invalidated_at.is_(None)).order_by(m.ReviewSchedule.due_day)).all()
+    rows = session.execute(
+        select(m.ReviewSchedule, m.Unit)
+        .join(m.Unit, m.Unit.id == m.ReviewSchedule.unit_id)
+        .where(m.ReviewSchedule.user_id == user.id, m.Unit.invalidated_at.is_(None))
+        .order_by(m.ReviewSchedule.due_day)
+    ).all()
     return [{"unit_id": u.id, "title": u.title, "mode": u.mode, "kind": r.kind, "stage": r.stage, "interval_days": cfg.review_intervals_days[r.stage], "due_day": r.due_day.isoformat(), "due": r.due_day <= today,
              "last_result": r.last_result, "last_change": (r.history or [{}])[-1], "history": r.history[-8:]} for r, u in rows]  # fmt: skip
 
@@ -234,7 +367,18 @@ def recompute_mode_state(session, user: m.User, mode: str) -> dict:
         window = [(r[0], float(r[1])) for r in rows[since_idx : i + 1]]
         d = rules.adjust_band(band, window, last_day, day, cfg)
         if d.changed:
-            hist.append({"at": at.isoformat(), "day": day.isoformat(), "from": band, "to": d.band, "reason": d.reason, "n": d.n, "mean": round(d.mean, 4), "recomputed": True})
+            hist.append(
+                {
+                    "at": at.isoformat(),
+                    "day": day.isoformat(),
+                    "from": band,
+                    "to": d.band,
+                    "reason": d.reason,
+                    "n": d.n,
+                    "mean": round(d.mean, 4),
+                    "recomputed": True,
+                }
+            )
             band, since_idx, last_day, band_since = d.band, i + 1, day, at
     st = L.get_mode_state(session, user.id, mode, lock=True)
     st.difficulty_band, st.band_since, st.last_band_change_day, st.band_history = band, band_since, last_day, hist

@@ -30,15 +30,36 @@ def job_dto(session, job: m.GenerationJob) -> dict:
 
 
 def list_jobs(session, realm: str, limit: int = 60) -> list[dict]:
-    rows = session.execute(select(m.GenerationJob).where(m.GenerationJob.realm == realm).order_by(m.GenerationJob.created_at.desc()).limit(limit)).scalars().all()
+    rows = (
+        session.execute(
+            select(m.GenerationJob)
+            .where(m.GenerationJob.realm == realm)
+            .order_by(m.GenerationJob.created_at.desc())
+            .limit(limit)
+        )
+        .scalars()
+        .all()
+    )
     return [job_dto(session, j) for j in rows]
 
 
 def list_units(session, realm: str, limit: int = 300) -> list[dict]:
-    rows = session.execute(select(m.Unit).where(m.Unit.realm == realm).order_by(m.Unit.created_at.desc()).limit(limit)).scalars().all()
+    rows = (
+        session.execute(select(m.Unit).where(m.Unit.realm == realm).order_by(m.Unit.created_at.desc()).limit(limit))
+        .scalars()
+        .all()
+    )
     out = []
     for u in rows:
-        recs = session.execute(select(m.ReviewRecord).where(m.ReviewRecord.unit_id == u.id, m.ReviewRecord.content_hash == u.content_hash).order_by(m.ReviewRecord.created_at)).scalars().all()
+        recs = (
+            session.execute(
+                select(m.ReviewRecord)
+                .where(m.ReviewRecord.unit_id == u.id, m.ReviewRecord.content_hash == u.content_hash)
+                .order_by(m.ReviewRecord.created_at)
+            )
+            .scalars()
+            .all()
+        )
         out.append({
             **plans.unit_card(u), "source": u.source, "content_id": u.content_id, "revision": u.revision, "status": u.status, "status_reason": u.status_reason, "pool": u.pool,
             "session_types": u.session_types, "audio_review_state": u.audio_review_state, "content_hash": u.content_hash[:12], "invalidated": u.invalidated_at is not None,
@@ -56,15 +77,34 @@ def invalidate_unit(session, actor: m.User, unit_id: str, reason: str, now: date
     if unit.invalidated_at is None:
         unit.invalidated_at = now
         unit.invalidated_reason = reason[:500]
-        session.add(m.AuditLog(realm=unit.realm, actor=actor.username, action="unit_invalidated", target=f"{unit.source}/{unit.content_id}@{unit.revision}", details={"unit_id": unit.id, "title": unit.title, "reason": reason[:500]}))
+        session.add(
+            m.AuditLog(
+                realm=unit.realm,
+                actor=actor.username,
+                action="unit_invalidated",
+                target=f"{unit.source}/{unit.content_id}@{unit.revision}",
+                details={"unit_id": unit.id, "title": unit.title, "reason": reason[:500]},
+            )
+        )
     session.flush()
     affected = session.execute(select(m.User).where(m.User.realm == unit.realm)).scalars().all()
     recomputed, replaced = [], 0
     for u in affected:
         recomputed.append({"user": u.username, **stats.recompute_mode_state(session, u, unit.mode)})
-        slots = session.execute(
-            select(m.PlanSlot).join(m.DailyPlan, m.DailyPlan.id == m.PlanSlot.plan_id).where(m.DailyPlan.user_id == u.id, m.DailyPlan.status == "active", m.PlanSlot.unit_id == unit.id, m.PlanSlot.state.in_(("pending", "started")))
-        ).scalars().all()
+        slots = (
+            session.execute(
+                select(m.PlanSlot)
+                .join(m.DailyPlan, m.DailyPlan.id == m.PlanSlot.plan_id)
+                .where(
+                    m.DailyPlan.user_id == u.id,
+                    m.DailyPlan.status == "active",
+                    m.PlanSlot.unit_id == unit.id,
+                    m.PlanSlot.state.in_(("pending", "started")),
+                )
+            )
+            .scalars()
+            .all()
+        )
         for s in slots:
             s.reserved = False
             att = session.get(m.Attempt, s.attempt_id) if s.attempt_id else None

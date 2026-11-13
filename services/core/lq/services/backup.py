@@ -61,7 +61,9 @@ def validate_export(body: dict) -> list[str]:
     errs = []
     if not isinstance(body, dict) or body.get("export_version") != EXPORT_VERSION:
         return ["unsupported or missing export_version"]
-    if body.get("checksum") != sha256_hex(canonical_json({k: v for k, v in body.items() if k not in ("exported_at", "checksum")})):
+    if body.get("checksum") != sha256_hex(
+        canonical_json({k: v for k, v in body.items() if k not in ("exported_at", "checksum")})
+    ):
         errs.append("checksum mismatch: the file was modified or is damaged")
     data = body.get("data")
     if not isinstance(data, dict):
@@ -92,7 +94,14 @@ def restore_user(session, user: m.User, body: dict, *, apply_settings: bool = Fa
     # map exported unit ids to units present here (same source/content_id/revision AND same content)
     unit_map: dict[str, str] = {}
     for ref in body["unit_refs"]:
-        u = session.execute(select(m.Unit).where(m.Unit.realm == user.realm, m.Unit.source == ref["source"], m.Unit.content_id == ref["content_id"], m.Unit.revision == ref["revision"])).scalar_one_or_none()
+        u = session.execute(
+            select(m.Unit).where(
+                m.Unit.realm == user.realm,
+                m.Unit.source == ref["source"],
+                m.Unit.content_id == ref["content_id"],
+                m.Unit.revision == ref["revision"],
+            )
+        ).scalar_one_or_none()
         if u is not None and u.content_hash == ref["content_hash"]:
             unit_map[ref["id"]] = u.id
     report = {"ok": True, "inserted": {}, "skipped_existing": {}, "skipped_missing_unit": {}, "settings_applied": False}
@@ -113,7 +122,10 @@ def restore_user(session, user: m.User, body: dict, *, apply_settings: bool = Fa
                 continue
             with session.begin_nested():
                 pk = list(model.__table__.primary_key.columns)[0]
-                inserted = session.execute(pg_insert(model).values(**row).on_conflict_do_nothing().returning(pk)).first() is not None
+                inserted = (
+                    session.execute(pg_insert(model).values(**row).on_conflict_do_nothing().returning(pk)).first()
+                    is not None
+                )
             if inserted:
                 ins += 1
             else:

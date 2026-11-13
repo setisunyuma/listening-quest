@@ -27,7 +27,9 @@ class Lease:
 
     def guard(self, session, now: datetime | None = None) -> m.GenerationJob:
         """Lock the job row and prove this worker still owns it. Call inside every writing transaction."""
-        job = session.execute(select(m.GenerationJob).where(m.GenerationJob.id == self.job_id).with_for_update()).scalar_one()
+        job = session.execute(
+            select(m.GenerationJob).where(m.GenerationJob.id == self.job_id).with_for_update()
+        ).scalar_one()
         if job.status != "RUNNING" or job.lease_owner != self.worker_id or job.lease_generation != self.generation:
             raise StaleLease(self.job_id)
         now = now or datetime.now(UTC)
@@ -37,12 +39,31 @@ class Lease:
         return job
 
 
-def enqueue(session, realm: str, kind: str, params: dict, *, dedupe_key: str | None = None, unit_id: str | None = None, state: dict | None = None) -> tuple[m.GenerationJob, bool]:
+def enqueue(
+    session,
+    realm: str,
+    kind: str,
+    params: dict,
+    *,
+    dedupe_key: str | None = None,
+    unit_id: str | None = None,
+    state: dict | None = None,
+) -> tuple[m.GenerationJob, bool]:
     if dedupe_key:
-        existing = session.execute(select(m.GenerationJob).where(m.GenerationJob.dedupe_key == dedupe_key)).scalar_one_or_none()
+        existing = session.execute(
+            select(m.GenerationJob).where(m.GenerationJob.dedupe_key == dedupe_key)
+        ).scalar_one_or_none()
         if existing:
             return existing, False
-    job = m.GenerationJob(realm=realm, kind=kind, params=params, dedupe_key=dedupe_key, unit_id=unit_id, state=state or {}, max_attempts=get_settings().job_max_attempts)
+    job = m.GenerationJob(
+        realm=realm,
+        kind=kind,
+        params=params,
+        dedupe_key=dedupe_key,
+        unit_id=unit_id,
+        state=state or {},
+        max_attempts=get_settings().job_max_attempts,
+    )
     session.add(job)
     session.flush()
     return job, True
@@ -59,7 +80,11 @@ def claim(session, worker_id: str, now: datetime | None = None) -> Lease | None:
         and_(J.status == "RUNNING", J.lease_expires_at < now),
         and_(J.status == "BLOCKED", J.blocked_reason.in_(AUTO_RECHECK), J.run_after <= now),
     )
-    candidates = session.execute(select(J).where(cond).order_by(J.created_at).limit(10).with_for_update(skip_locked=True)).scalars().all()
+    candidates = (
+        session.execute(select(J).where(cond).order_by(J.created_at).limit(10).with_for_update(skip_locked=True))
+        .scalars()
+        .all()
+    )
     for job in candidates:
         cfg = budget.get_system(session, job.realm, lock=True)
         if job.status == "RUNNING":  # previous worker vanished
@@ -88,7 +113,16 @@ def _finish(session, lease: Lease, **values) -> bool:
     values.setdefault("lease_owner", None)
     values["updated_at"] = datetime.now(UTC)
     J = m.GenerationJob
-    res = session.execute(update(J).where(J.id == lease.job_id, J.lease_owner == lease.worker_id, J.lease_generation == lease.generation, J.status == "RUNNING").values(**values))
+    res = session.execute(
+        update(J)
+        .where(
+            J.id == lease.job_id,
+            J.lease_owner == lease.worker_id,
+            J.lease_generation == lease.generation,
+            J.status == "RUNNING",
+        )
+        .values(**values)
+    )
     return res.rowcount == 1
 
 
@@ -102,7 +136,14 @@ def fail(session, lease: Lease, detail: str) -> bool:
 
 def block(session, lease: Lease, reason: str, detail: str, recheck_sec: int = 600) -> bool:
     """Waiting for budget / approval. Not a failure and not done."""
-    return _finish(session, lease, status="BLOCKED", blocked_reason=reason, stop_detail=detail[:2000], run_after=datetime.now(UTC) + timedelta(seconds=recheck_sec))
+    return _finish(
+        session,
+        lease,
+        status="BLOCKED",
+        blocked_reason=reason,
+        stop_detail=detail[:2000],
+        run_after=datetime.now(UTC) + timedelta(seconds=recheck_sec),
+    )
 
 
 def retry_later(session, lease: Lease, detail: str) -> bool:
@@ -110,9 +151,18 @@ def retry_later(session, lease: Lease, detail: str) -> bool:
     job = session.get(m.GenerationJob, lease.job_id)
     attempts = job.attempts + 1
     if attempts >= job.max_attempts:
-        return _finish(session, lease, status="FAILED", attempts=attempts, stop_detail=f"retry limit reached: {detail}"[:2000])
+        return _finish(
+            session, lease, status="FAILED", attempts=attempts, stop_detail=f"retry limit reached: {detail}"[:2000]
+        )
     wait = min(s.job_retry_base_sec * (2 ** (attempts - 1)), s.job_retry_max_sec)
-    return _finish(session, lease, status="RETRY_WAIT", attempts=attempts, stop_detail=detail[:2000], run_after=datetime.now(UTC) + timedelta(seconds=wait))
+    return _finish(
+        session,
+        lease,
+        status="RETRY_WAIT",
+        attempts=attempts,
+        stop_detail=detail[:2000],
+        run_after=datetime.now(UTC) + timedelta(seconds=wait),
+    )
 
 
 def manual_retry(session, job_id: str) -> m.GenerationJob:
@@ -129,4 +179,6 @@ def release_blocked(session, realm: str, reasons: tuple[str, ...], unit_id: str 
     q = update(J).where(J.realm == realm, J.status == "BLOCKED", J.blocked_reason.in_(reasons))
     if unit_id:
         q = q.where(J.unit_id == unit_id)
-    return session.execute(q.values(status="QUEUED", blocked_reason=None, run_after=datetime.now(UTC), updated_at=datetime.now(UTC))).rowcount
+    return session.execute(
+        q.values(status="QUEUED", blocked_reason=None, run_after=datetime.now(UTC), updated_at=datetime.now(UTC))
+    ).rowcount
