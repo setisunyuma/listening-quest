@@ -55,7 +55,9 @@ def _clean(monkeypatch):
     import httpx
     import websockets.sync.client as wsc
 
-    monkeypatch.setattr(httpx, "post", _blocked)
+    for name in ("post", "get", "request", "stream"):
+        monkeypatch.setattr(httpx, name, _blocked)
+    monkeypatch.setattr(httpx.Client, "send", _blocked)
     monkeypatch.setattr(wsc, "connect", _blocked)
     yield
 

@@ -717,7 +717,7 @@ def admin_verify_start(
 
     if user.realm != "live":
         raise L.Invalid("live verification runs only in the live data area")
-    problems = V.preflight(session, user.realm, body.cap_usd)
+    problems = V.preflight(session, user.realm, body.cap_usd, probe=True)
     if problems:
         raise L.Invalid(" / ".join(problems))
     p = current_profile("common_test")

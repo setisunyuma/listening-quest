@@ -390,7 +390,7 @@ def verify_live(
     realm = "demo" if rehearsal else "live"
     spec = _specs(mode, part, skill, 3, 1, "", "practice", "demo-generated" if rehearsal else "generated")[0]
     with session_scope() as db:
-        problems = V.preflight(db, realm, cost_cap_usd, rehearsal=rehearsal)
+        problems = V.preflight(db, realm, cost_cap_usd, rehearsal=rehearsal, probe=not rehearsal)
         if problems or dry_run:
             _echo({"would_run": spec, "cost_cap_usd": cost_cap_usd, "problems": problems, "dry_run": dry_run})
             raise typer.Exit(1 if problems else 0)

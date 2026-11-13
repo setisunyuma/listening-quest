@@ -17,7 +17,7 @@ from lq.jobs import queue
 TERMINAL = ("SUCCEEDED", "FAILED", "BLOCKED")
 
 
-def preflight(session, realm: str, cap_usd: float, *, rehearsal: bool = False) -> list[str]:
+def preflight(session, realm: str, cap_usd: float, *, rehearsal: bool = False, probe: bool = False) -> list[str]:
     s = get_settings()
     problems = []
     if not (0 < cap_usd <= 20):
@@ -38,6 +38,15 @@ def preflight(session, realm: str, cap_usd: float, *, rehearsal: bool = False) -
             ("asr", s.asr_model in table["transcription"]),
         )
         problems += [f"no price for the {label} model: refusing to treat it as free" for label, ok in checks if not ok]
+        if s.openai_api_key and not problems and probe:
+            from lq.generator.openai_provider import probe_auth
+
+            problems += probe_auth(
+                s.openai_api_key,
+                s.openai_base_url,
+                s.openai_realtime_url,
+                s.tts_model if s.tts_provider != "openai_speech" else s.tts_speech_model,
+            )
     cfg = budget.get_system(session, realm)
     if cfg["paid_enabled"]:
         problems.append("paid generation is enabled for everything; turn it off so only the verification job can spend")

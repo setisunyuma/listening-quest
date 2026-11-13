@@ -264,3 +264,29 @@ class OpenAIASR:
             )
         meter.settle(entry, est, {"seconds": seconds, "basis": "per-minute price x measured duration"})
         return r.json().get("text", "")
+
+
+def probe_auth(api_key: str, base_url: str, realtime_url: str, tts_model: str, timeout: float = 20.0) -> list[str]:
+    """Free pre-flight: can this key reach the HTTP API and open a Realtime session? Nothing is generated:
+    GET /models is free, and the Realtime check only waits for session.created and closes before any response."""
+    from websockets.sync.client import connect
+
+    problems = []
+    try:
+        r = httpx.get(f"{base_url.rstrip('/')}/models", headers=_headers(api_key), timeout=timeout)
+        if r.status_code != 200:
+            problems.append(f"OpenAI HTTP API rejected the key (HTTP {r.status_code})")
+    except httpx.HTTPError as e:
+        problems.append(f"OpenAI HTTP API not reachable: {e}")
+    try:
+        with connect(
+            f"{realtime_url}?model={tts_model}", additional_headers=_headers(api_key), open_timeout=timeout
+        ) as ws:
+            ev = json.loads(ws.recv(timeout=timeout))
+            if ev.get("type") == "error":
+                problems.append(f"Realtime API refused the session: {(ev.get('error') or {}).get('code')}")
+            elif ev.get("type") != "session.created":
+                problems.append(f"Realtime API answered unexpectedly: {ev.get('type')}")
+    except Exception as e:  # noqa: BLE001 - any failure here means "do not start paid work"
+        problems.append(f"Realtime API not reachable: {type(e).__name__}: {str(e)[:200]}")
+    return problems

@@ -628,6 +628,9 @@ def test_admin_live_verification_endpoint(db, live_user, monkeypatch):
     assert st["running"] is False and any("OPENAI_API_KEY" in p for p in st["problems"])
     assert c.post("/api/admin/verify-live", json={"cap_usd": 1}).status_code == 422  # no key: refused, nothing queued
     monkeypatch.setattr(get_settings(), "openai_api_key", "sk-test")
+    monkeypatch.setattr(
+        "lq.generator.openai_provider.probe_auth", lambda *a, **k: []
+    )  # the free auth probe would go online
     assert c.post("/api/admin/verify-live", json={"cap_usd": 50}).status_code == 422  # cap out of range
     fake = paid_set(0.01)
     jid = c.post("/api/admin/verify-live", json={"cap_usd": 1}).json()["job_id"]

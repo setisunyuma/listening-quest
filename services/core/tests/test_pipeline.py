@@ -732,6 +732,9 @@ def test_verify_live_runs_only_its_own_job_under_the_cap(db, live_user, monkeypa
     from lq.services.seed import seed_fixtures
 
     monkeypatch.setattr(get_settings(), "openai_api_key", "sk-test")
+    monkeypatch.setattr(
+        "lq.generator.openai_provider.probe_auth", lambda *a, **k: []
+    )  # the free auth probe would go online
     monkeypatch.setattr(get_settings(), "work_dir", get_settings().work_dir / "t")
     seed_fixtures(db, "live")  # registered examples must NOT be processed by the verification
     db.commit()
@@ -762,6 +765,9 @@ def test_verify_live_stops_at_the_cap_and_refuses_without_key(db, live_user, mon
     assert r.exit_code == 1 and "OPENAI_API_KEY is not set" in r.output
     assert db.execute(select(func.count()).select_from(m.GenerationJob)).scalar_one() == 0
     monkeypatch.setattr(get_settings(), "openai_api_key", "sk-test")
+    monkeypatch.setattr(
+        "lq.generator.openai_provider.probe_auth", lambda *a, **k: []
+    )  # the free auth probe would go online
     fake = paid_set(0.10)
     r = CliRunner().invoke(cli.app, ["verify-live", "--cost-cap-usd", "0.25"])
     assert r.exit_code == 1
@@ -771,3 +777,19 @@ def test_verify_live_stops_at_the_cap_and_refuses_without_key(db, live_user, mon
     )  # third request never started
     assert "verification_cap" in (job.stop_detail or "") or job.blocked_reason == "verification_cap"
     assert budget.get_system(db, "live")["verification"] is None
+
+
+def test_verify_live_refuses_before_spending_when_the_key_is_rejected(db, live_user, monkeypatch):
+    from typer.testing import CliRunner
+
+    from lq import cli
+    from lq.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "openai_api_key", "sk-wrong")
+    monkeypatch.setattr(
+        "lq.generator.openai_provider.probe_auth", lambda *a, **k: ["Realtime API refused the session: invalid_api_key"]
+    )
+    fake = paid_set(0.01)
+    r = CliRunner().invoke(cli.app, ["verify-live", "--cost-cap-usd", "1"])
+    assert r.exit_code == 1 and "invalid_api_key" in r.output
+    assert fake.calls == [] and db.execute(select(func.count()).select_from(m.GenerationJob)).scalar_one() == 0
