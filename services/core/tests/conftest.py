@@ -57,7 +57,16 @@ def _clean(monkeypatch):
 
     for name in ("post", "get", "request", "stream"):
         monkeypatch.setattr(httpx, name, _blocked)
-    monkeypatch.setattr(httpx.Client, "send", _blocked)
+    real_send = httpx.Client.send
+
+    def _send(self, request, *a, **k):
+        # FastAPI's TestClient is an httpx.Client talking to the in-process app ("testserver"): allowed.
+        # Any other destination is the outside world and is refused.
+        if request.url.host != "testserver":
+            raise AssertionError(f"network call attempted in tests: {request.url}")
+        return real_send(self, request, *a, **k)
+
+    monkeypatch.setattr(httpx.Client, "send", _send)
     monkeypatch.setattr(wsc, "connect", _blocked)
     yield
 

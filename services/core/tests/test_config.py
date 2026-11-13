@@ -78,3 +78,19 @@ def test_platform_database_url_and_domain_are_used_when_ours_are_missing(monkeyp
         assert config.get_settings().database_url.endswith("/lq_test")
     finally:
         config.reset_settings_cache()
+
+
+def test_outbound_http_is_blocked_in_tests_but_the_in_process_app_is_not():
+    import httpx
+    import pytest
+    from fastapi.testclient import TestClient
+
+    from lq.api.app import app
+
+    assert TestClient(app).get("/api/health").status_code == 200
+    for call in (
+        lambda: httpx.get("https://api.openai.com/v1/models"),
+        lambda: httpx.Client().get("https://api.openai.com/v1/models"),
+    ):
+        with pytest.raises(AssertionError, match="network call attempted"):
+            call()
