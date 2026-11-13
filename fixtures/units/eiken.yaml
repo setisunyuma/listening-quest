@@ -1,0 +1,193 @@
+# 英検形式のオリジナル例題（公式問題の転載ではありません）。
+- id: p1-part1-sales-report
+  mode: eiken_pre1
+  part: part1
+  title: 会話 準1-1
+  topic: office
+  band: 3
+  family: p1-part1-next-action
+  speakers: {W: female, M: male}
+  script:
+    - - "W: Hi, Mark. Did you finish the sales report for tomorrow's meeting?"
+      - "M: Almost. I'm still waiting for the figures from the Osaka office."
+      - "W: They said they'd send them by noon. It's already three."
+      - "M: I know. I'll call them right now instead of sending another e-mail."
+  questions:
+    - prompt: What will the man do next?
+      skill: explicit_detail
+      choices: [Send another e-mail to Osaka., Phone the Osaka office., Ask the woman to finish the report., Postpone tomorrow's meeting.]
+      answer: 2
+      evidence: [4]
+      answer_en: He will phone the Osaka office.
+      ja: 「もう一度メールを送る代わりに、今すぐ電話する」と言っています。
+      wrong: [メールではなく電話にすると言っています。, 女性に報告書を頼んではいません。, 会議の延期は話題になっていません。]
+
+- id: p1-part2-urban-bees
+  mode: eiken_pre1
+  part: part2
+  title: 説明文 準1-1
+  topic: environment
+  band: 3
+  family: p1-part2-urban-beekeeping
+  speakers: {R: female}
+  script:
+    - - "R: Urban Beekeeping."
+      - "R: In recent years, keeping bees on city rooftops has become popular in many countries. Surprisingly, city bees often produce more honey than bees in the countryside."
+      - "R: One reason is that parks and gardens offer a wide variety of flowers throughout the year, while large farms usually grow only one crop."
+      - "R: However, experts warn that the trend has a downside. When too many hives are placed in one area, honeybees compete with wild insects for food, and some wild species have declined as a result."
+      - "R: Some cities now limit the number of hives that can be kept in each district."
+  questions:
+    - prompt: Why do city bees often produce more honey?
+      skill: explicit_detail
+      choices: [They are a stronger kind of bee., Cities offer many kinds of flowers all year round., Farms use fewer chemicals than cities., Rooftops are warmer than fields.]
+      answer: 2
+      evidence: [3]
+      answer_en: Cities offer a wide variety of flowers throughout the year.
+      ja: 公園や庭には一年を通して多様な花があることが理由として挙げられています。
+      wrong: [ハチの種類の違いは述べられていません。, 農薬の話は出てきません。, 気温の話は出てきません。]
+    - prompt: What have some cities done in response to the problem?
+      skill: explicit_detail
+      choices: [They have banned beekeeping completely., They have planted more single-crop fields., They have restricted the number of hives in each district., They have removed wild insects from parks.]
+      answer: 3
+      evidence: [5]
+      answer_en: They have limited the number of hives in each district.
+      ja: 地区ごとに置ける巣箱の数を制限している都市があると述べています。
+      wrong: [全面禁止とは言っていません。, 単一作物の畑は農村部の特徴として出ただけです。, 野生の昆虫は守る対象です。]
+
+- id: p1-part3-flight-delay
+  mode: eiken_pre1
+  part: part3
+  title: Real-Life 準1-1
+  topic: travel
+  band: 3
+  family: p1-part3-airport-announcement
+  speakers: {A: female}
+  pre: "You are at an airport. Your flight to Vancouver, AC 204, has been delayed. You have a connecting flight to Calgary that leaves Vancouver at 6:10 p.m. You hear the following announcement."
+  script:
+    - - "A: Attention passengers on Air Coast flight 204 to Vancouver."
+      - "A: Due to a mechanical check, departure has been moved from 1:30 to 3:45 p.m."
+      - "A: Passengers ending their journey in Vancouver, please wait near gate 22."
+      - "A: If you have a connecting flight leaving Vancouver before 7 p.m., please go to the transfer desk next to gate 18, where staff will rebook you."
+      - "A: Meal vouchers are available at the information counter for all other passengers."
+  questions:
+    - prompt: What should you do?
+      skill: condition_matching
+      choices: [Wait near gate 22., Go to the transfer desk next to gate 18., Get a meal voucher at the information counter., Board the plane at 1:30 as planned.]
+      answer: 2
+      evidence: [4]
+      answer_en: Go to the transfer desk next to gate 18.
+      ja: 乗り継ぎ便は午後6時10分発で「午後7時より前」に当たるため、18番ゲート横の乗り継ぎデスクへ行きます。
+      wrong: [22番ゲートで待つのはバンクーバーが最終目的地の人です。, 食事券は「それ以外の乗客」向けです。, 出発は3時45分に変更されています。]
+
+- id: g1-part1-budget-meeting
+  mode: eiken_1
+  part: part1
+  title: 会話 1級-1
+  topic: workplace
+  band: 4
+  family: g1-part1-cool-reception
+  speakers: {M: male, W: female}
+  script:
+    - - "M: So, how did the budget meeting go?"
+      - "W: Let's just say the director didn't exactly roll out the red carpet for my proposal."
+      - "M: That bad? I thought the numbers spoke for themselves."
+      - "W: They did, but she wants a pilot in one branch before committing. Honestly, I can live with that."
+  questions:
+    - prompt: What does the woman imply about her proposal?
+      skill: inference
+      choices: [It was rejected outright., It got a cool reception but may go ahead on a trial basis., It was approved for every branch., The figures in it turned out to be wrong.]
+      answer: 2
+      evidence: [2, 4]
+      answer_en: It got a cool reception but may go ahead as a pilot in one branch.
+      ja: 「歓迎はされなかった」が、1支店での試行を求められており、本人も受け入れています。
+      wrong: [却下ではなく、試行を求められています。, 全支店での承認ではありません。, 数字は十分説得力があったと認めています。]
+
+- id: g1-part2-rebound-effect
+  mode: eiken_1
+  part: part2
+  title: 説明文 1級-1
+  topic: economics
+  band: 4
+  family: g1-part2-rebound-effect
+  speakers: {R: male}
+  script:
+    - - "R: The Rebound Effect."
+      - "R: When a technology becomes more efficient, we might expect people to use less energy. Yet economists have long observed the opposite."
+      - "R: In the nineteenth century, William Stanley Jevons noted that as steam engines burned coal more efficiently, coal consumption in Britain actually rose, because cheaper power encouraged new uses."
+      - "R: Today, the same pattern appears with fuel-efficient cars: drivers who spend less per kilometer often drive more."
+      - "R: This does not mean efficiency is pointless."
+      - "R: Researchers argue that it must be paired with policies such as carbon pricing, so that savings are not simply spent on more consumption."
+  questions:
+    - prompt: What did Jevons observe about more efficient steam engines?
+      skill: explicit_detail
+      choices: [They reduced Britain's use of coal., They were followed by greater overall coal consumption., They were too costly to become widespread., They led Britain to replace coal with other fuels.]
+      answer: 2
+      evidence: [3]
+      answer_en: Coal consumption actually rose as engines became more efficient.
+      ja: 効率が上がって動力が安くなり、新たな用途が増えた結果、石炭消費は増えたと述べています。
+      wrong: [消費は減らず、増えています。, 費用が高すぎたとは言っていません。, 他の燃料への転換は述べられていません。]
+    - prompt: What do researchers suggest?
+      skill: main_idea
+      choices: [Giving up on improving efficiency., Combining efficiency with measures such as carbon pricing., Legally limiting how far people may drive., Returning to older technologies.]
+      answer: 2
+      evidence: [6]
+      answer_en: Efficiency should be paired with policies such as carbon pricing.
+      ja: 節約分が消費の増加に回らないよう、炭素価格などの政策と組み合わせるべきだと述べています。
+      wrong: [効率化が無意味だとは言っていません。, 走行距離の法的制限は出てきません。, 古い技術へ戻る話は出てきません。]
+
+- id: g1-part3-internet-move
+  mode: eiken_1
+  part: part3
+  title: Real-Life 1級-1
+  topic: services
+  band: 4
+  family: g1-part3-recorded-menu
+  speakers: {A: male}
+  pre: "You are moving to a new apartment on March 28. You want your internet to work on the day you move in, and you cannot go to the new apartment before that day. You call your provider and hear this recorded message."
+  script:
+    - - "A: Thank you for calling NetLink. To transfer your service to a new address, standard installation requires a technician visit, and the earliest appointments are currently two weeks after your request."
+      - "A: If you need service on your moving day and can be present at the new address at least three days beforehand, press 1 to book an early visit."
+      - "A: If you cannot be there in advance, press 2 to have a self-install kit delivered to your current address; you can plug it in yourself the day you move."
+      - "A: For billing questions, press 3."
+  questions:
+    - prompt: What should you do?
+      skill: condition_matching
+      choices: [Press 1 to book an early technician visit., Press 2 to have a self-install kit delivered., Press 3 to ask about billing., Wait for a standard appointment in two weeks.]
+      answer: 2
+      evidence: [3]
+      answer_en: Press 2 to have a self-install kit delivered.
+      ja: 事前に新居へ行けないため、現住所に届く自己設置キットを選ぶと引っ越し当日から使えます。
+      wrong: [1番は3日前までに新居にいられる人向けです。, 3番は請求に関する問い合わせです。, 標準工事では当日に使える保証がありません。]
+
+- id: g1-part4-book-conservator
+  mode: eiken_1
+  part: part4
+  title: インタビュー 1級-1
+  topic: culture
+  band: 4
+  family: g1-part4-conservator
+  speakers: {I: male, N: female}
+  script:
+    - - "I: Today we're speaking with Naomi Clarke, who restores old books for a national archive. Naomi, what does a typical project involve?"
+      - "N: People imagine it's all delicate brushes, but the first week is usually just looking. I document every tear and stain before I touch anything, because whatever I do should be reversible."
+      - "I: Reversible? Why is that so important?"
+      - "N: Because techniques improve. Glues that were considered ideal fifty years ago are now damaging the very pages they were meant to save. I'd rather a future conservator be able to undo my work than curse it."
+      - "I: Has digitization changed your job?"
+      - "N: It's changed the pressure, not the purpose. Now that scans exist, people handle the originals less, which helps. But a scan can't tell you how a book was sewn or what the paper feels like. If anything, digital copies have made people more curious about the real object."
+  questions:
+    - prompt: Why does Naomi insist that her work be reversible?
+      skill: explicit_detail
+      choices: [Archives are required by law to allow it., Better methods may appear and today's materials may prove harmful., Clients often change their minds about repairs., Reversible glue is cheaper to buy.]
+      answer: 2
+      evidence: [4]
+      answer_en: Techniques improve, and materials once thought ideal can turn out to be damaging.
+      ja: 技術は進歩し、50年前に理想とされた接着剤が今は紙を傷めている、という理由を挙げています。
+      wrong: [法律の話は出てきません。, 依頼者の気変わりは理由に挙げていません。, 費用の話は出てきません。]
+    - prompt: What does Naomi say about digitization?
+      skill: main_idea
+      choices: [It has made physical restoration unnecessary., It reduces handling of originals while increasing interest in them., It damages fragile pages during scanning., It has replaced her documentation work.]
+      answer: 2
+      evidence: [6]
+      answer_en: Originals are handled less, and people have become more curious about the real objects.
+      ja: 原本に触れる機会が減って助かる一方、実物への関心はむしろ高まったと述べています。
+      wrong: [目的は変わっていないと言っています。, スキャンで傷むとは言っていません。, 記録作業がなくなったとは言っていません。]

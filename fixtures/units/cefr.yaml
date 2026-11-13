@@ -1,0 +1,221 @@
+# C1 / C2: CEFR の口頭理解の能力記述を参考にしたアプリ独自の練習教材。難度帯ラベルは暫定評価です。
+- id: c1-lecture-desire-paths
+  mode: cefr_c1
+  part: lecture
+  title: 講義 C1-1
+  topic: design
+  band: 3
+  family: c1-lecture-desire-paths
+  speakers: {L: female}
+  script:
+    - - "L: Let me begin with something you've all seen: those worn tracks across a lawn where people have ignored the paved route."
+      - "L: Planners call them desire paths, and for decades they were treated as a nuisance, evidence that the public couldn't follow instructions."
+      - "L: I want to suggest the opposite reading: that a desire path is free data about how a space is actually used."
+      - "L: Some universities have taken this literally. They leave new lawns unpaved for a year, watch where the tracks appear, and only then lay the pavement."
+      - "L: Now, you might object that this simply rewards impatience. But notice what the alternative costs: fences, signs, and a path nobody uses."
+      - "L: The broader lesson, and this is where I'll spend the rest of today, is that a design which fights its users' habits will usually lose."
+  questions:
+    - prompt: What is the lecturer's central claim?
+      skill: main_idea
+      choices: [Desire paths show that people refuse to follow rules., Desire paths are useful information about how people really behave., Lawns should never be paved., Universities waste money on landscaping.]
+      answer: 2
+      evidence: [3]
+      answer_en: A desire path is free data about how a space is actually used.
+      ja: 「迷惑」という従来の見方に対し、実際の使われ方を示す無料のデータだと主張しています。
+      wrong: [それは講師が退けている従来の見方です。, 舗装そのものを否定してはいません。, 大学は肯定的な例として挙げられています。]
+    - prompt: Why does the lecturer mention universities that delay paving?
+      skill: discourse_structure
+      choices: [To criticise slow construction work., To give a concrete example that supports the claim., To introduce an opposing view., To move the topic to budgets.]
+      answer: 2
+      evidence: [4]
+      answer_en: It is a concrete example supporting the claim.
+      ja: 主張の直後に、それを文字どおり実践している具体例として挙げています。
+      wrong: [批判ではなく肯定的な例です。, 反対意見はその後の you might object で出てきます。, 予算の話へは移っていません。]
+    - prompt: How does the lecturer deal with the objection about rewarding impatience?
+      skill: speaker_attitude
+      choices: [She accepts it completely., She sets it aside by pointing to the costs of the alternative., She ignores it., She says more research is needed.]
+      answer: 2
+      evidence: [5]
+      answer_en: She counters it by pointing out what the alternative costs.
+      ja: 反論を取り上げたうえで、柵や看板、誰も使わない道という代案のコストを示して退けています。
+      wrong: [受け入れてはいません。, 自分から取り上げて答えています。, さらなる研究には触れていません。]
+
+- id: c1-discussion-mentoring
+  mode: cefr_c1
+  part: discussion
+  title: 議論 C1-1
+  topic: work
+  band: 3
+  family: c1-discussion-remote-mentoring
+  speakers: {Hale: male, Rina: female}
+  script:
+    - - "Hale: I would contend that remote work has, on balance, eroded the informal mentoring junior staff once received."
+      - "Rina: Honestly? I think that ship had sailed way before anyone worked from home. Nobody was mentoring me in an open-plan office with headphones on."
+      - "Hale: That is a fair point, though I suspect proximity at least made such encounters possible."
+      - "Rina: Possible, sure. But possible doesn't pay the rent. I'd take a scheduled half hour with someone senior over bumping into them at the coffee machine."
+      - "Hale: Then perhaps our disagreement is narrower than it first appeared: we both want mentoring to be deliberate."
+  questions:
+    - prompt: "What does Rina mean by \"that ship had sailed\"?"
+      skill: inference
+      choices: [Informal mentoring had already declined before remote work., Remote work was introduced too late., Senior staff had left the company., She had missed her chance of promotion.]
+      answer: 1
+      evidence: [2]
+      answer_en: Informal mentoring had already disappeared before remote work began.
+      ja: 在宅勤務より前から、オフィスでも指導は受けられていなかったという意味です。
+      wrong: [導入時期の遅さの話ではありません。, 退職の話は出てきません。, 昇進の話は出てきません。]
+    - prompt: On what do the two speakers finally agree?
+      skill: speaker_attitude
+      choices: [Offices should be reopened., Mentoring should be planned rather than left to chance., Remote work harms junior staff., Chats at the coffee machine are the best mentoring.]
+      answer: 2
+      evidence: [4, 5]
+      answer_en: Mentoring should be deliberate.
+      ja: Rinaは予定された時間を望み、Haleも「意図的な指導」を両者が望んでいるとまとめています。
+      wrong: [出社再開では一致していません。, それはHaleの当初の主張で、Rinaは同意していません。, Rinaは偶然の立ち話より予定された時間を選ぶと言っています。]
+
+- id: c1-interview-boredom
+  mode: cefr_c1
+  part: interview
+  title: インタビュー C1-1
+  topic: psychology
+  band: 3
+  family: c1-interview-boredom
+  speakers: {I: female, G: male}
+  script:
+    - - "I: Your new book argues that boredom is underrated. Isn't that a hard sell?"
+      - "G: It is, and I rather enjoy that. We've become so good at filling every gap with a screen that we've forgotten what the gap was for."
+      - "I: And what was it for?"
+      - "G: Well, the research is suggestive rather than conclusive, I should say. But people left with nothing to do tend to start planning, daydreaming, connecting ideas. I don't think it's a coincidence my best chapters began in dentists' waiting rooms."
+      - "I: So should we all throw away our phones?"
+      - "G: Heavens, no. I'm not a monk. I'd simply like people to notice the reflex, the hand reaching for the pocket, and occasionally not obey it."
+  questions:
+    - prompt: What is the author's attitude toward the research on boredom?
+      skill: speaker_attitude
+      choices: [He regards it as proven., He presents it cautiously while finding it persuasive., He thinks it is seriously flawed., He admits he has not read it.]
+      answer: 2
+      evidence: [4]
+      answer_en: He is cautious about the evidence but finds it persuasive.
+      ja: 「決定的ではなく示唆的」と断りつつ、自分の経験を添えて支持しています。
+      wrong: [決定的ではないと自分で述べています。, 欠陥があるとは言っていません。, 読んでいないとは言っていません。]
+    - prompt: What does he recommend?
+      skill: inference
+      choices: [Giving up smartphones altogether., Noticing the habit of reaching for the phone and sometimes resisting it., Spending more time in waiting rooms., Writing only when bored.]
+      answer: 2
+      evidence: [6]
+      answer_en: Notice the reflex and occasionally do not obey it.
+      ja: 手がポケットに伸びる反射に気づき、ときどきそれに従わないことを勧めています。
+      wrong: [捨てる必要はないとはっきり否定しています。, 待合室は自分の例として挙げただけです。, 退屈な時だけ書くとは言っていません。]
+
+- id: c2-implicature-draft
+  mode: cefr_c2
+  part: implicature
+  title: 含意 C2-1
+  topic: writing
+  band: 3
+  family: c2-implicature-faint-praise
+  speakers: {A: male, B: female}
+  script:
+    - - "A: So you read my draft. Be honest."
+      - "B: The font is lovely."
+      - "A: Ouch. That bad?"
+      - "B: No, no. The middle section sings. It's just that it takes you eleven pages to clear your throat before you get there."
+      - "A: So cut the introduction."
+      - "B: I'd say introduce it to a pair of scissors, yes. Keep the bit about your grandfather, though; that's the only part of the opening that earns its place."
+  questions:
+    - prompt: "What does B imply by saying \"The font is lovely\"?"
+      skill: inference
+      choices: [B thinks the layout is the best thing about an excellent draft., B has reservations about the content itself., B has not actually read the draft., B wants A to change the font.]
+      answer: 2
+      evidence: [2, 3]
+      answer_en: B is signalling reservations about the content.
+      ja: 内容を尋ねられて書体だけを褒めるのは、内容に不満があることの遠回しな表現で、Aも「そんなにひどい？」と受け取っています。
+      wrong: [草稿全体を絶賛してはいません。, 中盤や祖父の話に具体的に触れており、読んでいます。, 書体の変更は求めていません。]
+    - prompt: What does B actually recommend?
+      skill: explicit_detail
+      choices: [Rewriting the middle section., Cutting most of the introduction but keeping the passage about the grandfather., Deleting the passage about the grandfather., Adding eleven more pages.]
+      answer: 2
+      evidence: [6]
+      answer_en: Cut the introduction but keep the part about the grandfather.
+      ja: 導入は「はさみを入れる」べきだが、祖父の部分だけは残すよう勧めています。
+      wrong: [中盤は「歌っている」と高く評価しています。, 祖父の部分は残すべきだと言っています。, 11ページは長すぎる導入の長さです。]
+
+- id: c2-attitude-four-day-week
+  mode: cefr_c2
+  part: attitude
+  title: 態度の変化 C2-1
+  topic: work
+  band: 3
+  family: c2-attitude-four-day-week
+  speakers: {A: male, B: female}
+  script:
+    - - "A: I'll say it: the four-day week is a gimmick. Companies trial it, get their headline, and quietly go back."
+      - "B: Some do. The firm my sister works at has kept it for three years, and their staff turnover halved."
+      - "A: One firm. And I'd bet they're all doing five days' work in four and calling it wellbeing."
+      - "B: She says the opposite. They cut meetings, not corners. The Friday thing only worked because they redesigned the week."
+      - "A: Hm. So the day off is the result, not the policy."
+      - "B: That's how she'd put it."
+      - "A: Then I'll downgrade gimmick to badly explained. Which, coming from me, is practically an endorsement."
+  questions:
+    - prompt: How does A's position change during the conversation?
+      skill: speaker_attitude
+      choices: [From scepticism to qualified acceptance., From support to opposition., It does not change at all., From indifference to enthusiasm for every company.]
+      answer: 1
+      evidence: [1, 7]
+      answer_en: A moves from scepticism to qualified acceptance.
+      ja: 最初は「見せかけ」と断じ、最後は「説明が下手なだけ」に格下げし、自分としてはほぼ支持だと述べています。
+      wrong: [最初から支持してはいません。, 最後に評価を改めています。, 全面的な熱意までは示していません。]
+    - prompt: What prompts the change?
+      skill: inference
+      choices: [National productivity statistics., Learning that the firm redesigned its work rather than compressing it., B's criticism of A's own job., A newspaper headline.]
+      answer: 2
+      evidence: [4, 5]
+      answer_en: Hearing that the firm cut meetings and redesigned the week.
+      ja: 5日分を4日に詰めたのではなく、会議を減らして週を設計し直したと聞き、「休日は結果だ」と捉え直しています。
+      wrong: [全国統計は出てきません。, Aの仕事への批判はありません。, 見出しは最初の懐疑の理由として出ただけです。]
+
+- id: c2-integration-leaving-do
+  mode: cefr_c2
+  part: discourse_integration
+  title: 談話統合 C2-1
+  topic: office
+  band: 3
+  family: c2-integration-leaving-do
+  speakers: {Dev: male, Jo: female}
+  script:
+    - - "Dev: Before I forget, Marta's leaving do is the 14th, not the 12th. The room was double-booked."
+      - "Jo: Fine by me. Wait, isn't the 14th the day the auditors are in?"
+      - "Dev: They're in all week, but they've only got the big conference room on the Thursday."
+      - "Jo: And the 14th is...?"
+      - "Dev: A Wednesday. So we're clear. Anyway, are you still doing the speech?"
+      - "Jo: If I must. Though I was told to keep it under five minutes, which rules out most of my material."
+      - "Dev: Whoever told you that has clearly heard you speak before."
+      - "Jo: It was Marta."
+      - "Dev: Then she's earned her send-off. Oh, and it's the small kitchen, not the big room. Bring your own mug."
+  questions:
+    - prompt: Why is there no clash between the party and the auditors?
+      skill: integration
+      choices:
+        - The auditors leave before the 14th.
+        - The auditors have the big room only on Thursday, and the party is on Wednesday in the kitchen.
+        - The party has been moved back to the 12th.
+        - The auditors have been invited to the party.
+      answer: 2
+      evidence: [3, 5, 9]
+      answer_en: The auditors use the big room only on Thursday; the party is on Wednesday, in the small kitchen.
+      ja: 監査人が大会議室を使うのは木曜だけで、送別会は水曜、しかも場所は小さいキッチンです。
+      wrong: [監査人は週の間ずっといます。, 12日から14日に変更されています。, 招待の話は出てきません。]
+    - prompt: What does Dev imply about Jo's speeches?
+      skill: inference
+      choices: [They are usually too short., They tend to go on too long., They are always carefully prepared., Marta dislikes them.]
+      answer: 2
+      evidence: [7]
+      answer_en: Jo's speeches tend to run long.
+      ja: 5分以内と言った人は「前にあなたの話を聞いたことがあるに違いない」という皮肉から、話が長いと分かります。
+      wrong: [短すぎるなら時間制限は不要です。, 準備の丁寧さには触れていません。, 嫌っているとまでは言えません。]
+    - prompt: What can be concluded about Marta?
+      skill: integration
+      choices: [She set the time limit for the speech at her own farewell., She double-booked the room., She is one of the auditors., She will give the speech herself.]
+      answer: 1
+      evidence: [6, 8]
+      answer_en: Marta herself told Jo to keep the speech under five minutes.
+      ja: 5分以内にと言われた（6番目の発話）相手がMartaだと後で明かされます（8番目の発話）。
+      wrong: [誰が二重予約したかは述べられていません。, 監査人だという情報はありません。, スピーチをするのはJoです。]

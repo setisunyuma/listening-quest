@@ -1,0 +1,28 @@
+# 学習エンジンの初期値。研究で確定した最適値ではなく、変更可能な設定です。
+review_intervals_days: [1, 3, 7, 14, 30]
+initial_band: 3
+band_min_units: 10        # 現在の難度帯で必要な「異なる音声」の適格Unit数
+band_window: 20           # 直近最大何Unitの平均を見るか
+band_up_threshold: 0.85
+band_down_threshold: 0.60
+band_max_change_per_day: 1
+skill_window: 20
+skill_min_observations: 5
+skill_weak_threshold: 0.70
+plan_split: {review: 0.4, weak: 0.4, explore: 0.2}
+slot_cap_factor: 1.25
+answer_sec_per_question: 12
+feedback_sec_per_question: 25
+xp: {unit_base: 10, review_bonus: 5, radio_unit: 5, daily_plan: 20, level_size: 100}
+radio_complete_ratio: 0.9
+same_session_recheck_min_gap_units: 3
+replenish: {low_days: 1, target_days: 3, max_jobs_per_day: 12}
+# 難度帯ルーブリック（生成時の暫定付与用。統計的に校正済みの難度ではありません）
+difficulty_rubric:
+  factors: [vocabulary, discourse_structure, inference_depth, information_density, length, speaker_count]
+  bands:
+    1: 高頻度語中心・単線的な展開・明示情報のみ
+    2: 一部に言い換え・短い推論が1箇所
+    3: 言い換えが主・情報が2〜3点に分散
+    4: 抽象語や慣用表現・複数話者の立場整理が必要
+    5: 含意や態度の変化・高密度の情報統合が必要

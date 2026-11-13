@@ -1,0 +1,94 @@
+{
+ "id": "eiken_1/2026_2",
+ "mode": "eiken_1",
+ "version": "2026_2",
+ "current": true,
+ "label_ja": "英検1級 リスニング（2026年度第2回形式）",
+ "kind": "exam_format",
+ "sources": [
+  {
+   "url": "https://www.eiken.or.jp/eiken/en/grades/grade_1/",
+   "note": "級の案内ページ（リスニング問題数・概要時間）",
+   "checked_at": "2026-11-12",
+   "verified": "問題数は仕様書の指定値。"
+  },
+  {
+   "url": "https://www.eiken.or.jp/eiken/exam/kakomon/2026-2-1ji_1kyu.pdf",
+   "note": "2026年度第2回 一次試験 問題冊子",
+   "checked_at": "2026-11-12",
+   "verified": "冊子との逐語照合は未実施（docs/DECISIONS.md 参照）"
+  }
+ ],
+ "exam": {
+  "label_ja": "全体模試",
+  "kind": "full_mock",
+  "answer_time_min": null,
+  "venue_note_ja": "所要時間は完成音声のタイムラインから算出して開始前に表示します（案内上の概数では打ち切りません）。",
+  "score": "count",
+  "total_questions": 27
+ },
+ "timing": {
+  "between_plays_sec": 0,
+  "note": "解答待ち10秒、Real-Lifeの事前確認10秒は仕様書の指定値。"
+ },
+ "parts": [
+  {
+   "part": "part1",
+   "section": "Part 1",
+   "label_ja": "Part 1 会話",
+   "template_type": "dialogue",
+   "units": 10,
+   "questions_per_unit": 1,
+   "plays": 1,
+   "question_medium": "audio",
+   "question_timing": "after",
+   "min_speakers": 2,
+   "answer_wait_sec": 10,
+   "pre_read_sec": 0
+  },
+  {
+   "part": "part2",
+   "section": "Part 2",
+   "label_ja": "Part 2 説明文",
+   "template_type": "passage",
+   "units": 5,
+   "questions_per_unit": 2,
+   "plays": 1,
+   "question_medium": "audio",
+   "question_timing": "after",
+   "min_speakers": 1,
+   "answer_wait_sec": 10,
+   "pre_read_sec": 0
+  },
+  {
+   "part": "part3",
+   "section": "Part 3",
+   "label_ja": "Part 3 Real-Life",
+   "template_type": "real_life",
+   "units": 5,
+   "questions_per_unit": 1,
+   "plays": 1,
+   "question_medium": "screen",
+   "question_timing": "before",
+   "min_speakers": 1,
+   "answer_wait_sec": 10,
+   "pre_read_sec": 10
+  },
+  {
+   "part": "part4",
+   "section": "Part 4",
+   "label_ja": "Part 4 インタビュー（録音）",
+   "template_type": "interview",
+   "units": 1,
+   "questions_per_unit": 2,
+   "plays": 1,
+   "question_medium": "audio",
+   "question_timing": "after",
+   "min_speakers": 2,
+   "answer_wait_sec": 10,
+   "pre_read_sec": 0
+  }
+ ],
+ "scoring": [],
+ "section_points": {}
+}
