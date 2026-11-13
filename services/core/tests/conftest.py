@@ -4,6 +4,7 @@ from pathlib import Path
 
 _TMP = tempfile.mkdtemp(prefix="lq-test-")
 os.environ["LQ_ENV"] = "test"
+os.environ["LQ_ENV_FILE"] = "none"  # never read a developer's .env (real API keys) in tests
 os.environ["LQ_DATABASE_URL"] = os.environ.get(
     "LQ_TEST_DATABASE_URL", "postgresql+psycopg://lq:lq@127.0.0.1:55432/lq_test"
 )

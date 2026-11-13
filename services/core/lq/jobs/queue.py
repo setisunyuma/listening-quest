@@ -5,7 +5,9 @@ expired and was reclaimed can therefore never finalise anything afterwards."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+import threading
+from contextlib import contextmanager
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import and_, or_, select, update
@@ -24,19 +26,73 @@ class Lease:
     job_id: str
     worker_id: str
     generation: int
+    lost: threading.Event = field(default_factory=threading.Event, compare=False, repr=False)
 
     def guard(self, session, now: datetime | None = None) -> m.GenerationJob:
         """Lock the job row and prove this worker still owns it. Call inside every writing transaction."""
+        if self.lost.is_set():
+            raise StaleLease(self.job_id)
         job = session.execute(
             select(m.GenerationJob).where(m.GenerationJob.id == self.job_id).with_for_update()
         ).scalar_one()
         if job.status != "RUNNING" or job.lease_owner != self.worker_id or job.lease_generation != self.generation:
+            self.lost.set()
             raise StaleLease(self.job_id)
         now = now or datetime.now(UTC)
         job.heartbeat_at = now
         job.lease_expires_at = now + timedelta(seconds=get_settings().job_lease_sec)
         job.updated_at = now
         return job
+
+
+def renew(lease: Lease, now: datetime | None = None) -> bool:
+    """Extend the lease if this worker still owns it. Uses its own short transaction."""
+    from lq.db.base import session_factory
+
+    now = now or datetime.now(UTC)
+    J = m.GenerationJob
+    with session_factory()() as s:
+        res = s.execute(
+            update(J)
+            .where(
+                J.id == lease.job_id,
+                J.lease_owner == lease.worker_id,
+                J.lease_generation == lease.generation,
+                J.status == "RUNNING",
+            )
+            .values(heartbeat_at=now, lease_expires_at=now + timedelta(seconds=get_settings().job_lease_sec))
+        )
+        s.commit()
+    if res.rowcount != 1:
+        lease.lost.set()
+        return False
+    return True
+
+
+@contextmanager
+def keepalive(lease: Lease, interval: float | None = None):
+    """Renew the lease in the background while a long step (an API call that can take minutes) runs, so
+    another worker never reclaims a job that is still being worked on. If the lease is lost anyway (this
+    process was paused past the expiry and another worker took over), `lease.lost` is set and every later
+    write by this worker is refused."""
+    period = interval if interval is not None else max(1.0, get_settings().job_lease_sec / 3)
+    stop = threading.Event()
+
+    def beat():
+        while not stop.wait(period):
+            try:
+                if not renew(lease):
+                    return
+            except Exception:  # noqa: BLE001 - a missed beat is retried; the lease is still valid for a while
+                continue
+
+    t = threading.Thread(target=beat, name=f"lease-{lease.job_id[:8]}", daemon=True)
+    t.start()
+    try:
+        yield lease
+    finally:
+        stop.set()
+        t.join(timeout=5)
 
 
 def enqueue(

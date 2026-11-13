@@ -47,3 +47,69 @@ jobs:
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build
+
+  e2e:
+    # Browser tests against the real stack (API + worker + Next.js production build), phone width and desktop.
+    # This is Chromium device emulation, not an iPhone.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16.10-bookworm
+        env: { POSTGRES_USER: lq, POSTGRES_PASSWORD: lq, POSTGRES_DB: lq_e2e }
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U lq" --health-interval 3s --health-retries 20
+    env:
+      LQ_E2E_DATABASE_URL: postgresql+psycopg://lq:lq@127.0.0.1:5432/lq_e2e
+    steps:
+      - uses: actions/checkout@v5
+        with: { persist-credentials: false }
+      - run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+      - uses: astral-sh/setup-uv@v7
+        with: { version: "0.9.7" }
+      - run: uv sync --frozen
+        working-directory: services/core
+      - uses: actions/setup-node@v5
+        with: { node-version: "22.21.1", cache: npm, cache-dependency-path: apps/web/package-lock.json }
+      - run: npm ci
+        working-directory: apps/web
+      - run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+      - run: npm run build
+        working-directory: apps/web
+      - run: npm run e2e
+        working-directory: apps/web
+
+  compose:
+    # docker compose: PostgreSQL + S3 (SeaweedFS) + API + worker + web, then a scripted login / generate /
+    # Range audio / answer round trip through the web origin.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+        with: { persist-credentials: false }
+      - run: docker compose -f infra/compose.yaml up -d --build   # the smoke script waits for health
+      - run: scripts/compose-smoke.sh
+      - if: failure()
+        run: docker compose -f infra/compose.yaml ps && docker compose -f infra/compose.yaml logs --tail 200
+      - if: always()
+        run: docker compose -f infra/compose.yaml down -v
+
+  infra:
+    # Caddyfile validated by the pinned Caddy itself (with and without ACME_EMAIL); production compose
+    # file must render with the required variables and refuse to render without them.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with: { persist-credentials: false }
+      - name: Caddyfile
+        run: |
+          id=$(docker create caddy:2.10.2)
+          docker cp "$id:/usr/bin/caddy" ./caddy-bin && docker rm "$id"
+          scripts/caddy-validate.sh ./caddy-bin
+      - name: compose files
+        run: |
+          docker compose -f infra/compose.yaml config -q
+          POSTGRES_PASSWORD=x LQ_DOMAIN=lq.example.com docker compose -f infra/compose.prod.yaml config -q
+          if docker compose -f infra/compose.prod.yaml config -q 2>/dev/null; then echo "prod compose must require LQ_DOMAIN and POSTGRES_PASSWORD"; exit 1; fi

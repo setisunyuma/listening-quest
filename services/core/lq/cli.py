@@ -43,6 +43,14 @@ def _find_unit(s, ref: str, realm: str) -> m.Unit:
     return unit
 
 
+@app.command("config")
+def show_config() -> None:
+    """Show the effective settings and which .env file was read. Secret values are never printed."""
+    from lq.config import describe_settings
+
+    _echo(describe_settings())
+
+
 @app.command()
 def doctor() -> None:
     """Check FFmpeg, database, storage, provider configuration and price table."""

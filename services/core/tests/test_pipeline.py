@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from lq.audio import qa
 from lq.audio.pcm import AudioError, wav_bytes
 from lq.db import models as m
+from lq.db.base import session_factory
 from lq.domain.content import HASHED_FIELDS, content_hash, learner_view, reviewer_view, sha256_hex
 from lq.generator import budget, factory
 from lq.generator.budget import BudgetBlocked, BudgetMeter
@@ -622,3 +623,99 @@ def test_cli_generate_sends_to_server_and_keeps_failures_in_outbox(db, user, mon
     db.commit()
     live = db.execute(select(m.Unit).where(m.Unit.realm == "live")).scalar_one()
     assert live.status == "CONTENT_REVIEW"  # received with all audio, but the live area wants its own content review
+
+
+# ---- stability: saved recognition results and lease keep-alive
+
+
+class CountingASR(DemoASR):
+    def __init__(self, fail_on=None):
+        self.calls, self.fail_on = 0, fail_on
+
+    def transcribe(self, pcm, lang, meter, expected_hint=""):
+        self.calls += 1
+        if self.fail_on is not None and self.calls == self.fail_on:
+            raise ProviderError("recogniser timed out")
+        return expected_hint
+
+
+def test_recognition_results_are_saved_per_clip_and_not_paid_again_on_resume(db, user):
+    first = CountingASR(fail_on=3)
+    factory.set_provider_override("demo", demo_providers(asr=first))
+    jid = enqueue(db)
+    assert worker.drain("w1") == ["retry"]
+    assert (
+        first.calls == 3 and db.execute(select(func.count()).select_from(m.AsrCheck)).scalar_one() == 2
+    )  # two finished checks kept
+    second = CountingASR()
+    factory.set_provider_override("demo", demo_providers(asr=second))
+    job = db.get(m.GenerationJob, jid)
+    job.run_after = datetime.now(UTC)
+    db.commit()
+    assert worker.drain("w2") == ["succeeded"]
+    total = db.execute(select(func.count()).select_from(m.AsrCheck)).scalar_one()
+    assert second.calls == total - 2  # the two saved results were reused, not requested again
+    _, unit = unit_of(db, jid)
+    assert unit.status == "READY"
+    rec = db.execute(select(m.ReviewRecord).where(m.ReviewRecord.target == "audio")).scalar_one()
+    assert len(rec.details["clips"]) == total
+
+
+class SlowTTS(DemoTTS):
+    """Simulates a long external call (seconds instead of minutes)."""
+
+    def __init__(self, delay):
+        self.delay, self.calls = delay, 0
+
+    def synthesize(self, *a, **k):
+        import time
+
+        self.calls += 1
+        if self.calls == 1:
+            time.sleep(self.delay)
+        return super().synthesize(*a, **k)
+
+
+def test_lease_is_kept_alive_during_a_long_call_so_a_second_worker_cannot_take_the_job(db, user, monkeypatch):
+    import threading
+    import time
+
+    from lq.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "job_lease_sec", 2)
+    budget.set_system(db, "demo", {"max_concurrent_jobs": 4})
+    factory.set_provider_override("demo", demo_providers(tts=SlowTTS(delay=5)))
+    jid = enqueue(db)
+    outcome = {}
+    t = threading.Thread(target=lambda: outcome.setdefault("w1", worker.run_one("w1")))
+    t.start()
+    for _ in range(100):  # wait until w1 holds the job, then let w2 try to take it
+        with session_factory()() as s:
+            if s.get(m.GenerationJob, jid).lease_owner == "w1":
+                break
+        time.sleep(0.05)
+    stolen = []
+    deadline = time.time() + 4.5
+    while time.time() < deadline:  # a second worker keeps trying while the first one is inside the slow call
+        with session_factory()() as s:
+            lease = queue.claim(s, "w2")
+            s.commit()
+        if lease is not None:
+            stolen.append(lease)
+        time.sleep(0.3)
+    t.join(timeout=120)
+    assert stolen == [] and outcome["w1"] == "succeeded"
+    job, unit = unit_of(db, jid)
+    assert job.attempts == 0 and job.lease_generation == 1 and unit.status == "READY"
+
+
+def test_a_worker_that_lost_its_lease_stops_writing(db, user):
+    enqueue(db)
+    lease = queue.claim(db, "w1")
+    db.commit()
+    job = db.get(m.GenerationJob, lease.job_id)
+    job.lease_owner = "someone-else"  # another worker took over after an expiry
+    db.commit()
+    assert queue.renew(lease) is False and lease.lost.is_set()
+    with pytest.raises(queue.StaleLease):
+        lease.guard(db)

@@ -353,6 +353,55 @@ def _save_assets(lease: Lease, unit_id: str, assets: list[dict], clip_keys: dict
     _commit_step(lease, save, "audio")
 
 
+ASR_IMPL_VERSION = 1
+
+
+def asr_cache_key(audio: bytes, provider: str, model: str, lang: str, expected: str) -> str:
+    # expected text is part of the key only so a mock recogniser that echoes it stays correct; a real
+    # recogniser never receives it, and identical audio always comes from identical text anyway
+    return sha256_hex(
+        canonical_json(
+            {
+                "audio": sha256_hex(audio),
+                "provider": provider,
+                "model": model,
+                "lang": lang,
+                "expected": expected,
+                "impl": ASR_IMPL_VERSION,
+            }
+        )
+    )
+
+
+def transcribe_cached(lease: Lease, asr, meter, audio: bytes, lang: str, expected: str) -> str:
+    """Reuse a stored transcription of the same clip; otherwise transcribe (paid) and store it at once."""
+    key = asr_cache_key(audio, asr.name, asr.model, lang, expected)
+    with session_factory()() as s:
+        row = s.get(m.AsrCheck, key)
+        if row is not None:
+            return row.transcript
+    _commit_step(lease, lambda s, job: None)  # prove the lease before spending
+    heard = asr.transcribe(decode_to_pcm(audio), lang, meter, expected_hint=expected)
+    with session_factory()() as s:
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+        s.execute(
+            pg_insert(m.AsrCheck)
+            .values(
+                cache_key=key,
+                audio_sha256=sha256_hex(audio),
+                provider=asr.name,
+                model=asr.model,
+                lang=lang,
+                transcript=heard,
+                job_id=lease.job_id,
+            )
+            .on_conflict_do_nothing()
+        )
+        s.commit()
+    return heard
+
+
 def step_audio_qa(lease: Lease, prov, meter, unit_id: str) -> None:
     st = get_storage()
     with session_factory()() as s:
@@ -395,10 +444,7 @@ def step_audio_qa(lease: Lease, prov, meter, unit_id: str) -> None:
         for cid, spec in specs.items():
             if spec.lang != "en" or cid not in clip_keys:
                 continue  # Japanese explanations: decode/level checks only
-            _commit_step(lease, lambda s, job: None)
-            heard = prov.asr.transcribe(
-                decode_to_pcm(st.get(clip_keys[cid])), spec.lang, meter, expected_hint=spec.text
-            )
+            heard = transcribe_cached(lease, prov.asr, meter, st.get(clip_keys[cid]), spec.lang, spec.text)
             cmp = qa.compare_transcript(
                 spec.text, heard, is_evidence=cid.startswith("utt:") and cid[4:] in evidence_utts
             )

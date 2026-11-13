@@ -31,7 +31,8 @@ def run_one(worker_id: str) -> str | None:
         return None
     outcome = "error"
     try:
-        pipeline.execute(lease)
+        with queue.keepalive(lease):
+            pipeline.execute(lease)
         with session_factory()() as s:
             outcome = "succeeded" if queue.succeed(s, lease) else "stale"
             s.commit()

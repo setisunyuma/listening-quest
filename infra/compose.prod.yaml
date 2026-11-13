@@ -1,18 +1,79 @@
-# Production overlay: adds Caddy for HTTPS on one origin and closes the web port.
-#   docker compose -f infra/compose.yaml -f infra/compose.prod.yaml --env-file .env up -d --build
+# Production: one small server, one HTTPS origin.
+#   docker compose -f infra/compose.prod.yaml --env-file .env up -d --build
+# Caddy terminates HTTPS (automatic certificates for LQ_DOMAIN); only ports 80/443 are published.
+# Audio is stored on the `appdata` volume (LQ_STORAGE_BACKEND=local) and served only through the
+# authenticated API. To use an external S3-compatible bucket instead (e.g. Cloudflare R2), set
+# LQ_STORAGE_BACKEND=s3 and the LQ_S3_* variables in .env.
+name: listening-quest
+x-core-env: &core-env
+  LQ_ENV: prod
+  LQ_ENV_FILE: none
+  LQ_DATABASE_URL: postgresql+psycopg://lq:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@db:5432/lq
+  LQ_STORAGE_BACKEND: ${LQ_STORAGE_BACKEND:-local}
+  LQ_STORAGE_LOCAL_DIR: /data/storage
+  LQ_S3_ENDPOINT_URL: ${LQ_S3_ENDPOINT_URL:-}
+  LQ_S3_BUCKET: ${LQ_S3_BUCKET:-listening-quest}
+  LQ_S3_ACCESS_KEY: ${LQ_S3_ACCESS_KEY:-}
+  LQ_S3_SECRET_KEY: ${LQ_S3_SECRET_KEY:-}
+  LQ_COOKIE_SECURE: "true"
+  LQ_PUBLIC_ORIGIN: https://${LQ_DOMAIN:?set LQ_DOMAIN to the public host name}
+  LQ_IMPORT_TOKEN: ${LQ_IMPORT_TOKEN:-}
+  LQ_WORK_DIR: /data/work
+  LQ_OUTBOX_DIR: /data/outbox
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  LQ_CONTENT_MODEL: ${LQ_CONTENT_MODEL:-gpt-6.1-terra}
+  LQ_REVIEW_MODEL: ${LQ_REVIEW_MODEL:-gpt-6.1-terra}
+  LQ_TTS_PROVIDER: ${LQ_TTS_PROVIDER:-openai_realtime}
+  LQ_TTS_MODEL: ${LQ_TTS_MODEL:-gpt-realtime-2.1-mini}
+  LQ_ASR_MODEL: ${LQ_ASR_MODEL:-gpt-transcribe}
+
 services:
+  db:
+    image: postgres:16.10-bookworm
+    environment: { POSTGRES_USER: lq, POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}", POSTGRES_DB: lq }
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U lq"], interval: 3s, retries: 20 }
+    restart: unless-stopped
+
+  migrate:
+    build: { context: .., dockerfile: infra/docker/core.Dockerfile }
+    environment: *core-env
+    command: ["lq", "migrate"]
+    volumes: [appdata:/data]
+    depends_on: { db: { condition: service_healthy } }
+
+  api:
+    build: { context: .., dockerfile: infra/docker/core.Dockerfile }
+    environment: *core-env
+    volumes: [appdata:/data]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    healthcheck: { test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"], interval: 5s, retries: 20 }
+    restart: unless-stopped
+
+  worker:
+    build: { context: .., dockerfile: infra/docker/core.Dockerfile }
+    environment: *core-env
+    command: ["lq", "worker"]
+    volumes: [appdata:/data]
+    depends_on: { migrate: { condition: service_completed_successfully } }
+    restart: unless-stopped
+
   web:
-    ports: !reset []
+    build: { context: .., dockerfile: infra/docker/web.Dockerfile }
+    environment: { API_INTERNAL_URL: "http://api:8000" }
+    depends_on: { api: { condition: service_healthy } }
+    restart: unless-stopped
+
   caddy:
     image: caddy:2.10.2
     ports: ["80:80", "443:443", "443:443/udp"]
     environment:
       LQ_DOMAIN: ${LQ_DOMAIN:?set LQ_DOMAIN to the public host name}
       ACME_EMAIL: ${ACME_EMAIL:-}
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddydata:/data
-      - caddyconfig:/config
+    # turn the optional ACME_EMAIL into a complete directive (or nothing) before Caddy reads the file
+    entrypoint: ["/bin/sh", "-c", 'if [ -n "$$ACME_EMAIL" ]; then export CADDY_EMAIL_DIRECTIVE="email $$ACME_EMAIL"; fi; exec caddy run --config /etc/caddy/Caddyfile --adapter caddyfile']
+    volumes: ["./Caddyfile:/etc/caddy/Caddyfile:ro", "caddydata:/data", "caddyconfig:/config"]
     depends_on: [web, api]
     restart: unless-stopped
-volumes: { caddydata: {}, caddyconfig: {} }
+
+volumes: { pgdata: {}, appdata: {}, caddydata: {}, caddyconfig: {} }
