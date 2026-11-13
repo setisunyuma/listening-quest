@@ -417,7 +417,8 @@ def _may_fetch(session: Session, user: m.User, asset: m.Asset) -> bool:
     return False  # unit radio tracks are only reachable inside a program the learner asked for
 
 
-@app.api_route("/api/audio/{asset_id}", methods=["GET", "HEAD"])
+@app.head("/api/audio/{asset_id}", include_in_schema=False)
+@app.get("/api/audio/{asset_id}")
 def audio(asset_id: str, request: Request, session: Session = Depends(db), user: m.User = Depends(current_user)) -> Response:
     asset = session.get(m.Asset, asset_id) if _ID.match(asset_id) else None
     if asset is None or not _may_fetch(session, user, asset):
