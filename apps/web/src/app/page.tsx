@@ -55,6 +55,17 @@ export default function HomePage() {
   const plan = data.plan;
   const next = plan?.slots.find((s) => s.state !== "completed");
   const slotHref = (s: Json) => `/play?unit=${s.unit.id}&slot=${s.id}`;
+  const slotRow = (s: Json) => (
+    <div key={s.id} className={`slot ${s.state}`}>
+                <span className="n" aria-hidden="true">{s.state === "completed" ? "✓" : s.idx + 1}</span>
+                <div>
+                  <div className="row"><span className={`chip cat-${s.category}`}>{CATEGORY_LABEL[s.category]}</span>{s.unit && <BandChip band={s.unit.band} />}{s.reserved && <span className="chip">オフライン用に予約</span>}{s.unit && <DemoChip kind={s.unit.audio_kind} />}</div>
+                  <div>{s.unit?.part_label} <small>{s.reason_text}・{fmtMin(s.est_sec)}</small></div>
+                  {s.needs_all_answers && <small>未回答があるため未完了です。続きから解くか、別の問題に替えられます。</small>}
+                </div>
+                {s.state === "completed" ? <span className="chip">完了</span> : s.unit && <Link className="btn small" href={slotHref(s)} aria-label={`${s.idx + 1}番目を${s.state === "started" ? "続ける" : "解く"}`}>{s.awaiting_feedback_ack ? "解説へ" : s.state === "started" ? "続ける" : "解く"}</Link>}
+              </div>
+  );
   return (
     <>
       {msg && <Msg kind={msg.kind}>{msg.text}</Msg>}
@@ -80,17 +91,15 @@ export default function HomePage() {
               </div>
             </div>
             {plan.notes.map((n) => <Msg key={n} kind="warn">{NOTE[n] ?? n}</Msg>)}
-            {plan.kind === "quest" && plan.slots.map((s) => (
-              <div key={s.id} className={`slot ${s.state}`}>
-                <span className="n" aria-hidden="true">{s.state === "completed" ? "✓" : s.idx + 1}</span>
-                <div>
-                  <div className="row"><span className={`chip cat-${s.category}`}>{CATEGORY_LABEL[s.category]}</span>{s.unit && <BandChip band={s.unit.band} />}{s.reserved && <span className="chip">オフライン用に予約</span>}{s.unit && <DemoChip kind={s.unit.audio_kind} />}</div>
-                  <div>{s.unit?.part_label} <small>{s.reason_text}・{fmtMin(s.est_sec)}</small></div>
-                  {s.needs_all_answers && <small>未回答があるため未完了です。続きから解くか、別の問題に替えられます。</small>}
-                </div>
-                {s.state === "completed" ? <span className="chip">完了</span> : s.unit && <Link className="btn small" href={slotHref(s)} aria-label={`${s.idx + 1}番目を${s.state === "started" ? "続ける" : "解く"}`}>{s.awaiting_feedback_ack ? "解説へ" : s.state === "started" ? "続ける" : "解く"}</Link>}
-              </div>
-            ))}
+            {plan.kind === "quest" && (() => {
+              // show what comes next; finished and later slots stay one tap away
+              const open = plan.slots.filter((s) => s.state !== "completed");
+              const head = open.slice(0, 3), rest = plan.slots.filter((s) => !head.includes(s));
+              return (<>
+                {head.map(slotRow)}
+                {rest.length > 0 && <details className="group" style={{ marginTop: 10 }}><summary><span className="gt">ほかの枠（完了 {plan.completed_slots}・残り {open.length - head.length}）</span><span className="chev" aria-hidden="true">▶</span></summary><div className="body">{rest.map(slotRow)}</div></details>}
+              </>);
+            })()}
             {plan.kind === "quest" && plan.status === "active" && (
               <div className="row" style={{ marginTop: 12 }}>
                 {plan.mode !== app.mode && <button onClick={() => rebuild(plan)} disabled={!!busy}>残りを{MODE_LABEL[app.mode]}に変更</button>}
