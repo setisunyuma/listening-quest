@@ -61,6 +61,10 @@ OPENAI_API_KEY=... scripts/live-verify.sh 1        # 1 = この検証全体の�
 scripts/live-verify.sh 1 --rehearsal                # 同じ流れを無料のデモ用プロバイダーで予行（費用 0）
 ```
 
+Claude Code のクラウド環境のように、キーを中継プロキシが差し込む環境では WebSocket（Realtime API）が使えません。
+その場合は `LQ_TTS_PROVIDER=openai_speech OPENAI_API_KEY=proxy-injected scripts/live-verify.sh 1` として、
+HTTP の音声生成（`/v1/audio/speech`、2027-01-06 に終了予定）で検証します。本番の Realtime 音声は、公開後に教材管理のボタンで確認します。
+
 この検証は専用の DB（`lq_verify`）を使い、学習データには触れません。全体の有料生成は OFF のままで、
 登録済み例題や自動補充は処理されません。報告（費用の内訳、クリップごとの音声認識の結果）とスクリーンショットは `var/verify/` に保存されます。
 公開後は、アプリの **教材管理 → 実APIで1教材を検証** から同じことができます。

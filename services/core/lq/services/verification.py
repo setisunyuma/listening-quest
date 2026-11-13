@@ -44,8 +44,8 @@ def preflight(session, realm: str, cap_usd: float, *, rehearsal: bool = False, p
             problems += probe_auth(
                 s.openai_api_key,
                 s.openai_base_url,
-                s.openai_realtime_url,
-                s.tts_model if s.tts_provider != "openai_speech" else s.tts_speech_model,
+                None if s.tts_provider == "openai_speech" else s.openai_realtime_url,
+                s.tts_model,
             )
     cfg = budget.get_system(session, realm)
     if cfg["paid_enabled"]:

@@ -266,7 +266,9 @@ class OpenAIASR:
         return r.json().get("text", "")
 
 
-def probe_auth(api_key: str, base_url: str, realtime_url: str, tts_model: str, timeout: float = 20.0) -> list[str]:
+def probe_auth(
+    api_key: str, base_url: str, realtime_url: str | None, tts_model: str, timeout: float = 20.0
+) -> list[str]:
     """Free pre-flight: can this key reach the HTTP API and open a Realtime session? Nothing is generated:
     GET /models is free, and the Realtime check only waits for session.created and closes before any response."""
     from websockets.sync.client import connect
@@ -278,6 +280,8 @@ def probe_auth(api_key: str, base_url: str, realtime_url: str, tts_model: str, t
             problems.append(f"OpenAI HTTP API rejected the key (HTTP {r.status_code})")
     except httpx.HTTPError as e:
         problems.append(f"OpenAI HTTP API not reachable: {e}")
+    if realtime_url is None:  # speech endpoint in use: the HTTP check above covers it
+        return problems
     try:
         with connect(
             f"{realtime_url}?model={tts_model}", additional_headers=_headers(api_key), open_timeout=timeout

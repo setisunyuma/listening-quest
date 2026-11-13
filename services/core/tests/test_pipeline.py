@@ -793,3 +793,15 @@ def test_verify_live_refuses_before_spending_when_the_key_is_rejected(db, live_u
     r = CliRunner().invoke(cli.app, ["verify-live", "--cost-cap-usd", "1"])
     assert r.exit_code == 1 and "invalid_api_key" in r.output
     assert fake.calls == [] and db.execute(select(func.count()).select_from(m.GenerationJob)).scalar_one() == 0
+
+
+def test_probe_skips_realtime_when_the_speech_endpoint_is_used(monkeypatch):
+    import httpx
+
+    from lq.generator import openai_provider
+
+    class Ok:
+        status_code = 200
+
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: Ok())
+    assert openai_provider.probe_auth("k", "https://api.openai.com/v1", None, "gpt-4o-mini-tts") == []
