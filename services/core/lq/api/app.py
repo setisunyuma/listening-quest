@@ -6,12 +6,12 @@ from __future__ import annotations
 import hmac
 import json
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, Response, UploadFile
 from fastapi.responses import JSONResponse
-from sqlalchemy import select
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from lq.api import schemas as S
@@ -99,6 +99,68 @@ def _set_cookies(resp: Response, token: str, csrf: str) -> None:
 def health(session: Session = Depends(db)) -> dict[str, Any]:
     session.execute(select(1))
     return {"ok": True}
+
+
+def _setup_state(session: Session) -> tuple[bool, str]:
+    code = get_settings().setup_code
+    if session.execute(select(m.User.id).where(m.User.realm == "live").limit(1)).first():
+        return False, "account_exists"
+    if not code or len(code) < 12:
+        return False, "setup_code_not_configured"
+    return True, "ready"
+
+
+@app.get("/api/auth/setup", response_model=S.SetupStatusOut)
+def setup_status(session: Session = Depends(db)):
+    ok, reason = _setup_state(session)
+    return {"available": ok, "reason": reason}
+
+
+@app.post("/api/auth/setup", response_model=S.MeOut)
+def setup_owner(body: S.SetupIn, request: Request, response: Response, session: Session = Depends(db)):
+    """Create the single owner account from the browser, once. Requires LQ_SETUP_CODE (chosen by the owner in
+    the hosting dashboard). Wrong codes count as failed logins, so guessing is rate-limited."""
+    client = (
+        (request.headers.get("x-forwarded-for") or (request.client.host if request.client else "?"))
+        .split(",")[0]
+        .strip()
+    )
+    session.execute(text("SELECT pg_advisory_xact_lock(4242001)"))  # serialise concurrent setups
+    ok, reason = _setup_state(session)
+    if not ok:
+        raise HTTPException(409 if reason == "account_exists" else 404, "setup is not available")
+    since = now_utc() - timedelta(minutes=get_settings().login_window_minutes)
+    key = f"setup:{client}"
+    fails = session.execute(
+        select(func.count())
+        .select_from(m.LoginAttempt)
+        .where(m.LoginAttempt.key == key, m.LoginAttempt.success.is_(False), m.LoginAttempt.at >= since)
+    ).scalar_one()
+    if fails >= get_settings().login_max_failures:
+        raise HTTPException(429, "too many attempts; wait and try again")
+    if not hmac.compare_digest(body.code.encode(), get_settings().setup_code.encode()):
+        session.add(m.LoginAttempt(key=key, success=False, at=now_utc()))
+        session.commit()
+        raise HTTPException(403, "wrong setup code")
+    try:
+        auth.create_user(session, body.username, body.password, realm="live")
+    except ValueError as e:
+        raise L.Invalid(str(e)) from e
+    session.add(
+        m.AuditLog(
+            realm="live", actor=body.username, action="owner_created_via_setup", target=body.username, details={}
+        )
+    )
+    user, token, csrf = auth.login(session, body.username, body.password, client)
+    session.commit()
+    _set_cookies(response, token, csrf)
+    return {
+        "username": user.username,
+        "realm": user.realm,
+        "user_id": user.id,
+        "csrf_token": csrf,
+        "settings": L.user_settings(user),
+    }
 
 
 @app.post("/api/auth/login", response_model=S.MeOut)
@@ -625,6 +687,46 @@ def admin_system(
     )  # re-check with the new settings
     session.commit()
     return out
+
+
+@app.get("/api/admin/verify-live")
+def admin_verify_status(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    from lq.services import verification as V
+
+    cfg = budget.get_system(session, user.realm)
+    jid = V.latest_job_id(session, user.realm)
+    return {
+        "realm": user.realm,
+        "running": bool(cfg.get("verification")),
+        "cap_usd": (cfg.get("verification") or {}).get("cap_usd"),
+        "problems": V.preflight(session, user.realm, 1.0)
+        if user.realm == "live"
+        else ["デモ領域では実APIを使いません"],
+        "report": V.report(session, jid) if jid and session.get(m.GenerationJob, jid) else None,
+        "spec": {"mode": "common_test", "part": "3", "label_ja": "共通テスト 第3問（短い対話・1問）"},
+    }
+
+
+@app.post("/api/admin/verify-live")
+def admin_verify_start(
+    body: S.VerifyLiveIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    """Start the one-unit real-API check. Only this job may spend, up to cap_usd; the worker runs it and the
+    allowance is withdrawn as soon as it ends."""
+    from lq.services import verification as V
+
+    if user.realm != "live":
+        raise L.Invalid("live verification runs only in the live data area")
+    problems = V.preflight(session, user.realm, body.cap_usd)
+    if problems:
+        raise L.Invalid(" / ".join(problems))
+    p = current_profile("common_test")
+    part = next(x for x in p["parts"] if x["part"] == "3")
+    spec = {"mode": "common_test", "part": "3", "template_type": part["template_type"], "primary_skill": "numbers_negation", "band": 3, "topic_hint": "",
+            "seed": f"verify-{new_id()[:10]}", "source": "generated", "pool": "practice"}  # fmt: skip
+    jid = V.start(session, user.realm, body.cap_usd, spec, actor=user.username)
+    session.commit()
+    return {"job_id": jid}
 
 
 @app.get("/api/admin/jobs")

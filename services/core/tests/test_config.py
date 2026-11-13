@@ -60,3 +60,21 @@ def test_environment_variables_win_over_dotenv(monkeypatch, tmp_path):
     finally:
         monkeypatch.setenv("LQ_ENV_FILE", "none")
         config.reset_settings_cache()
+
+
+def test_platform_database_url_and_domain_are_used_when_ours_are_missing(monkeypatch):
+    monkeypatch.setenv("LQ_ENV_FILE", "none")
+    monkeypatch.delenv("LQ_DATABASE_URL", raising=False)
+    monkeypatch.delenv("LQ_PUBLIC_ORIGIN", raising=False)
+    monkeypatch.setenv("DATABASE_URL", "postgres://u:p@db.internal:5432/railway")
+    monkeypatch.setenv("RAILWAY_PUBLIC_DOMAIN", "lq-production.up.railway.app")
+    config.reset_settings_cache()
+    try:
+        s = config.get_settings()
+        assert s.database_url == "postgresql+psycopg://u:p@db.internal:5432/railway"
+        assert s.public_origin == "https://lq-production.up.railway.app"
+        monkeypatch.setenv("LQ_DATABASE_URL", "postgresql+psycopg://lq:lq@127.0.0.1:55432/lq_test")  # ours win
+        config.reset_settings_cache()
+        assert config.get_settings().database_url.endswith("/lq_test")
+    finally:
+        config.reset_settings_cache()

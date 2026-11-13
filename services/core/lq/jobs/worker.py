@@ -22,10 +22,11 @@ def worker_name() -> str:
     return f"{socket.gethostname()}:{os.getpid()}"
 
 
-def run_one(worker_id: str) -> str | None:
-    """Claim and run at most one job. Returns the outcome, or None when nothing was claimable."""
+def run_one(worker_id: str, job_id: str | None = None) -> str | None:
+    """Claim and run at most one job (optionally only `job_id`). Returns the outcome, or None when nothing
+    was claimable."""
     with session_factory()() as s:
-        lease = queue.claim(s, worker_id)
+        lease = queue.claim(s, worker_id, job_id=job_id)
         s.commit()
     if lease is None:
         return None
@@ -69,6 +70,14 @@ def run_one(worker_id: str) -> str | None:
             queue.retry_later(s, lease, f"{type(e).__name__}: {e}")
             s.commit()
         outcome = "retry"
+    try:
+        from lq.services import verification
+
+        with session_factory()() as s:
+            verification.finish_if_done(s, lease.job_id)
+            s.commit()
+    except Exception:  # noqa: BLE001 - never let bookkeeping hide the job outcome
+        log.error("verification bookkeeping failed: %s", traceback.format_exc())
     log.info("job %s -> %s", lease.job_id, outcome)
     return outcome
 

@@ -91,8 +91,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (checked && !me && path !== "/login") router.replace("/login");
-    if (checked && me && path === "/login") router.replace("/");
+    if (checked && !me && path !== "/login" && path !== "/setup") router.replace("/login");
+    if (checked && me && (path === "/login" || path === "/setup")) router.replace("/");
   }, [checked, me, path, router]);
 
   const settings = me?.settings ?? {};
@@ -103,6 +103,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   }, [settings.font_scale, settings.reduce_effects, settings.primary_side]);
 
   if (!checked) return <main><p className="note" role="status">読み込み中…</p></main>;
+  if (path === "/setup" && !me) return <SetupGate onDone={load} />;
   if (path === "/login" || !me) return <LoginGate onDone={load} show={path === "/login"} />;
 
   const saveSettings = async (p: Json) => {
@@ -141,6 +142,46 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </header>
       <main>{children}</main>
     </AppCtx.Provider>
+  );
+}
+
+function SetupGate({ onDone }: { onDone: () => Promise<void> }) {
+  const [state, setState] = useState<{ available: boolean; reason: string } | null>(null);
+  const [code, setCode] = useState("");
+  const [u, setU] = useState("");
+  const [p, setP] = useState("");
+  const [p2, setP2] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { api<{ available: boolean; reason: string }>("/auth/setup").then(setState).catch(() => setState({ available: false, reason: "error" })); }, []);
+  if (!state) return <main><p className="note" role="status">確認中…</p></main>;
+  if (!state.available) return (
+    <main><section className="panel login"><h2>初回セットアップ</h2>
+      <p>{state.reason === "account_exists" ? "アカウントは作成済みです。ログイン画面から入ってください。" : "セットアップ用の合言葉（LQ_SETUP_CODE、12文字以上）がサーバーに設定されていません。"}</p>
+      <a className="btn primary wide" href="/login">ログイン画面へ</a></section></main>
+  );
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (p !== p2) { setErr("確認用のパスワードが一致しません。"); return; }
+    setBusy(true); setErr("");
+    try { await api("/auth/setup", { body: { code, username: u, password: p } }); await onDone(); }
+    catch (e2) { const er = e2 as ApiError; setErr(er.status === 403 ? "合言葉が違います。" : er.status === 429 ? "試行回数が多すぎます。しばらく待ってからお試しください。" : er.status === 422 ? "ユーザー名は3文字以上の英数字、パスワードは10文字以上にしてください。" : er.detail); }
+    setBusy(false);
+  };
+  return (
+    <main>
+      <form className="panel login" onSubmit={submit} aria-labelledby="setup-h">
+        <p className="eyebrow">LISTENING QUEST</p>
+        <h2 id="setup-h">初回セットアップ</h2>
+        <p className="note">あなた専用のアカウントを1つだけ作ります。作成後、この画面は使えなくなります。</p>
+        <label className="field">セットアップ用の合言葉<input type="password" autoComplete="off" value={code} onChange={(e) => setCode(e.target.value)} required /></label>
+        <label className="field">ユーザー名（英数字）<input autoComplete="username" autoCapitalize="none" value={u} onChange={(e) => setU(e.target.value)} required minLength={3} /></label>
+        <label className="field">パスワード（10文字以上）<input type="password" autoComplete="new-password" value={p} onChange={(e) => setP(e.target.value)} required minLength={10} /></label>
+        <label className="field">パスワード（確認）<input type="password" autoComplete="new-password" value={p2} onChange={(e) => setP2(e.target.value)} required minLength={10} /></label>
+        {err && <p className="msg err" role="alert">{err}</p>}
+        <button className="primary wide big" disabled={busy}>{busy ? "作成中…" : "アカウントを作成"}</button>
+      </form>
+    </main>
   );
 }
 

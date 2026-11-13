@@ -128,7 +128,8 @@ def enqueue(
 AUTO_RECHECK = ("budget", "job_cap", "concurrency")
 
 
-def claim(session, worker_id: str, now: datetime | None = None) -> Lease | None:
+def claim(session, worker_id: str, now: datetime | None = None, job_id: str | None = None) -> Lease | None:
+    """Claim the oldest runnable job (or only `job_id`, for a targeted run such as live verification)."""
     now = now or datetime.now(UTC)
     J = m.GenerationJob
     cond = or_(
@@ -137,7 +138,13 @@ def claim(session, worker_id: str, now: datetime | None = None) -> Lease | None:
         and_(J.status == "BLOCKED", J.blocked_reason.in_(AUTO_RECHECK), J.run_after <= now),
     )
     candidates = (
-        session.execute(select(J).where(cond).order_by(J.created_at).limit(10).with_for_update(skip_locked=True))
+        session.execute(
+            select(J)
+            .where(cond, *([J.id == job_id] if job_id else []))
+            .order_by(J.created_at)
+            .limit(10)
+            .with_for_update(skip_locked=True)
+        )
         .scalars()
         .all()
     )

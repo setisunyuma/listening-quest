@@ -69,6 +69,8 @@ export default function AdminPage() {
         </section>
       )}
 
+      {app.me.realm === "live" && <VerifyLive />}
+
       <section className="panel" aria-labelledby="gen-h">
         <h2 id="gen-h">教材を生成 <small>{MODE_LABEL[app.mode]}</small></h2>
         <div className="row" style={{ alignItems: "flex-end" }}>
@@ -155,5 +157,48 @@ export default function AdminPage() {
           ))}</tbody></table></div>
       </section>
     </>
+  );
+}
+
+function VerifyLive() {
+  const st = useData<Json>(() => api("/admin/verify-live"), [], 4000);
+  const [cap, setCap] = useState("");
+  const [msg, setMsg] = useState<{ kind: "ok" | "err" | "warn"; text: string } | null>(null);
+  const d = st.data;
+  const r = d?.report;
+  const start = async () => {
+    setMsg(null);
+    const v = Number(cap);
+    if (!(v > 0 && v <= 20)) { setMsg({ kind: "err", text: "費用上限は 0 より大きく 20 以下の金額（USD）で入力してください。" }); return; }
+    if (!window.confirm(`共通テスト第3問の教材を1件だけ、実際のAPIで生成・検品・音声生成・音声確認します。\n費用上限: $${v}（すべての工程と再試行を含む）。上限に達するとその時点で止まります。\n開始しますか？`)) return;
+    try { await api("/admin/verify-live", { body: { cap_usd: v } }); setMsg({ kind: "ok", text: "開始しました。画面を閉じても処理は続きます。" }); st.reload(); }
+    catch (e) { setMsg({ kind: "err", text: (e as ApiError).detail }); }
+  };
+  if (!d) return null;
+  return (
+    <section className="panel accent" aria-labelledby="ver-h">
+      <h2 id="ver-h">実APIで1教材を検証</h2>
+      <p className="note">{d.spec.label_ja}を1件だけ、実際のAPIで「問題作成→検品→音声生成→音声認識による確認」まで行います。費用上限はこの検証全体（再試行を含む）に適用され、全体の有料生成はOFFのままです。登録済みの例題や自動補充は処理されません。</p>
+      {d.running ? <Msg kind="warn">検証を実行中です（上限 ${d.cap_usd}）。数分かかります。</Msg> : (
+        <>
+          {d.problems.map((p: string) => <Msg key={p} kind="warn">{p === "OPENAI_API_KEY is not set on the server" ? "サーバーにAPIキーが設定されていません。" : p}</Msg>)}
+          <div className="row" style={{ alignItems: "flex-end" }}>
+            <label className="field">今回の検証の費用上限（USD）<input inputMode="decimal" value={cap} onChange={(e) => setCap(e.target.value)} placeholder="例: 1" style={{ width: 120 }} /></label>
+            <button className="primary" onClick={start} disabled={d.problems.length > 0}>検証を開始</button>
+          </div>
+        </>
+      )}
+      {msg && <Msg kind={msg.kind}>{msg.text}</Msg>}
+      {r && (
+        <div className="evidence">
+          <p><strong>直近の検証</strong>: ジョブ {r.job.status === "SUCCEEDED" ? "完了" : r.job.status === "FAILED" ? "失敗" : r.job.status === "RUNNING" ? "実行中" : r.job.status}・教材 {r.unit_status ?? "未作成"}{r.last_completed_step ? `（完了した工程: ${r.last_completed_step}）` : ""}</p>
+          {r.unit_status_reason && <p className="note">理由: {r.unit_status_reason.slice(0, 300)}</p>}
+          {r.stop_detail && r.job.status !== "SUCCEEDED" && <p className="note">停止理由: {r.stop_detail.slice(0, 300)}</p>}
+          <p>費用: 確定 ${r.cost.settled_usd.toFixed(4)}・確定できない分 ${r.cost.unknown_usd.toFixed(4)}・予約中 ${r.cost.reserved_usd.toFixed(4)}（{r.cost.requests} リクエスト） <small>単価の出典 {r.price_checked_at}</small></p>
+          {r.audio_check && <p>音声確認（{r.audio_check.method === "audio_auto_checked" ? "独立した音声認識" : r.audio_check.method}）: {r.audio_check.result === "pass" ? "合格" : "不合格"}・{r.audio_check.clips?.length ?? 0} クリップ{r.audio_check.mismatches?.length ? `・不一致 ${r.audio_check.mismatches.length}` : ""}</p>}
+          {r.open_in_app && <a className="btn primary" href={r.open_in_app}>アプリで再生して解く</a>}
+        </div>
+      )}
+    </section>
   );
 }

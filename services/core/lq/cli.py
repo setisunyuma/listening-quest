@@ -354,6 +354,74 @@ def generate(mode: str, part: str, skill: str = "explicit_detail", band: int = 3
                 _send_or_queue(d, realm)
 
 
+@app.command("verify-live")
+def verify_live(
+    cost_cap_usd: float = typer.Option(
+        ..., help="hard cap for the whole verification (content + review + speech + ASR + retries), in USD"
+    ),
+    mode: str = "common_test",
+    part: str = typer.Option(
+        "3", help="a short format; default: Common Test part 3 (short two-person dialogue, one question)"
+    ),
+    skill: str = "numbers_negation",
+    max_minutes: int = typer.Option(25, help="give up waiting after this many minutes"),
+    dry_run: bool = typer.Option(False, help="show what would happen and the estimate; call no API"),
+    rehearsal: bool = typer.Option(
+        False, help="run the same flow with the free demo providers (tone audio, no API, no cost)"
+    ),
+) -> None:
+    """Real-API check of exactly ONE unit in the live area: write -> blind review -> real speech -> independent
+    speech recognition -> READY. Only this one job may spend money, up to --cost-cap-usd; paid generation stays
+    off for everything else (registered examples and auto-replenish are not processed)."""
+    import time
+    from datetime import UTC, datetime
+
+    from lq.jobs import worker as w
+    from lq.services import verification as V
+
+    if rehearsal:
+        from lq.generator import factory
+        from lq.generator.demo import DemoASR, DemoContent, DemoReview, DemoTTS
+
+        factory.set_provider_override(
+            "demo", factory.Providers(DemoContent(), DemoReview(), DemoTTS(), DemoASR(), paid=False)
+        )
+        typer.echo("REHEARSAL: demo data area, free demo providers, tone audio (音声動作確認用), no API calls, no cost")
+    realm = "demo" if rehearsal else "live"
+    spec = _specs(mode, part, skill, 3, 1, "", "practice", "demo-generated" if rehearsal else "generated")[0]
+    with session_scope() as db:
+        problems = V.preflight(db, realm, cost_cap_usd, rehearsal=rehearsal)
+        if problems or dry_run:
+            _echo({"would_run": spec, "cost_cap_usd": cost_cap_usd, "problems": problems, "dry_run": dry_run})
+            raise typer.Exit(1 if problems else 0)
+        jid = V.start(db, realm, cost_cap_usd, spec, actor="cli")
+    typer.echo(f"verification job {jid} queued (cap {cost_cap_usd} USD); running it here...")
+    deadline = time.time() + max_minutes * 60
+    try:
+        while time.time() < deadline:
+            out = w.run_one("verify-live", job_id=jid)
+            with session_scope() as db:
+                job = db.get(m.GenerationJob, jid)
+                status, run_after, reason = job.status, job.run_after, job.blocked_reason
+            typer.echo(f"  -> {out or 'not claimable'}: job {status}{' (' + reason + ')' if reason else ''}")
+            if status in ("SUCCEEDED", "FAILED", "BLOCKED"):
+                break
+            if status == "RETRY_WAIT":
+                time.sleep(max(1.0, min(120.0, (run_after - datetime.now(UTC)).total_seconds())))
+            elif out is None:
+                time.sleep(2)
+    finally:
+        with session_scope() as db:  # nothing may keep spending after this command ends
+            V.finish(db, realm, jid, actor="cli")
+            report = V.report(db, jid)
+    path = get_settings().work_dir / "verify" / f"report-{datetime.now(UTC):%Y%m%dT%H%M%SZ}.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(report, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+    _echo(report)
+    typer.echo(f"report saved to {path}")
+    raise typer.Exit(0 if report["unit_status"] == "READY" else 1)
+
+
 @app.command()
 def review(unit: str, realm: str = "live") -> None:
     """Run the blind review (and whatever follows) for a unit that is waiting."""
@@ -601,6 +669,61 @@ def outbox_flush() -> None:
             fail += 1
     typer.echo(f"sent {ok}, still waiting {fail}")
     raise typer.Exit(1 if fail else 0)
+
+
+@app.command()
+def serve(
+    role: str = typer.Option(None, help="api | worker | all (default: LQ_ROLE, else api)"),
+    migrate_first: bool = typer.Option(True, help="apply migrations before starting"),
+) -> None:
+    """Container entry point. `all` runs the API and the worker side by side in one container (for hosting
+    platforms where every service costs extra); if either stops, the container stops so the platform restarts it."""
+    import signal
+    import subprocess
+    import time
+
+    s = get_settings()
+    role = role or s.role
+    if role not in ("api", "worker", "all"):
+        raise typer.BadParameter("role must be api, worker or all")
+    if migrate_first and role in ("api", "all"):
+        migrate()
+    api_cmd = [
+        sys.executable,
+        "-m",
+        "uvicorn",
+        "lq.api.app:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        str(s.port),
+        "--proxy-headers",
+        "--forwarded-allow-ips",
+        "*",
+    ]
+    worker_cmd = [sys.executable, "-m", "lq.cli", "worker"]
+    if role == "api":
+        os.execvp(api_cmd[0], api_cmd)
+    if role == "worker":
+        os.execvp(worker_cmd[0], worker_cmd)
+    procs = [subprocess.Popen(api_cmd), subprocess.Popen(worker_cmd)]
+
+    def stop(*_):
+        for p in procs:
+            if p.poll() is None:
+                p.terminate()
+
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+    while all(p.poll() is None for p in procs):
+        time.sleep(1)
+    stop()
+    for p in procs:
+        try:
+            p.wait(timeout=20)
+        except subprocess.TimeoutExpired:
+            p.kill()
+    raise typer.Exit(1)
 
 
 @app.command()

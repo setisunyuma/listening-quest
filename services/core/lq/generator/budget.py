@@ -23,6 +23,9 @@ DEFAULT_SYSTEM = {
     "max_concurrent_jobs": 1,
     "auto_replenish": False,
     "replenish_modes": [],  # empty = the learner's active mode only
+    # one-off live verification: exactly this job may spend up to cap_usd even while paid_enabled is off
+    "verification": None,  # {"job_id": str, "cap_usd": float, "started_at": iso}
+    "last_verification_job_id": None,
 }
 
 
@@ -105,6 +108,21 @@ class BudgetMeter:
         table = price_table()
         with session_factory()() as s:
             cfg = get_system(s, self.realm, lock=True)  # serialises concurrent reservations per realm
+            ver = cfg.get("verification") or {}
+            if self.job_id and ver.get("job_id") == self.job_id:
+                # verification run: one cap for everything this job does (content, review, speech, ASR, retries)
+                rows = s.execute(select(m.CostEntry).where(m.CostEntry.job_id == self.job_id)).scalars().all()
+                job_used = sum(_counted(e) for e in rows)
+                if job_used + estimated_usd > float(ver["cap_usd"]) + 1e-9:
+                    raise BudgetBlocked(
+                        "verification_cap",
+                        f"verification cap {ver['cap_usd']} USD would be exceeded (used {job_used:.4f}, need {estimated_usd:.4f})",
+                    )
+                e = m.CostEntry(realm=self.realm, job_id=self.job_id, step=step, provider=provider, model=model, state="reserved", budget_day=datetime.now(UTC).date(),
+                                estimated_usd=float(estimated_usd), price_source=table["source"], price_checked_at=table["checked_at"])  # fmt: skip
+                s.add(e)
+                s.commit()
+                return e.id
             if not cfg["paid_enabled"]:
                 raise BudgetBlocked("paid_disabled", "paid generation is turned off in settings")
             day = datetime.now(UTC).date()

@@ -2092,6 +2092,54 @@
     "title": "SettingsPatch",
     "type": "object"
    },
+   "SetupIn": {
+    "properties": {
+     "code": {
+      "maxLength": 200,
+      "minLength": 1,
+      "title": "Code",
+      "type": "string"
+     },
+     "password": {
+      "maxLength": 256,
+      "minLength": 10,
+      "title": "Password",
+      "type": "string"
+     },
+     "username": {
+      "maxLength": 64,
+      "minLength": 3,
+      "pattern": "^[A-Za-z0-9_.\\-]+$",
+      "title": "Username",
+      "type": "string"
+     }
+    },
+    "required": [
+     "code",
+     "username",
+     "password"
+    ],
+    "title": "SetupIn",
+    "type": "object"
+   },
+   "SetupStatusOut": {
+    "properties": {
+     "available": {
+      "title": "Available",
+      "type": "boolean"
+     },
+     "reason": {
+      "title": "Reason",
+      "type": "string"
+     }
+    },
+    "required": [
+     "available",
+     "reason"
+    ],
+    "title": "SetupStatusOut",
+    "type": "object"
+   },
    "SubmitIn": {
     "properties": {
      "answers": {
@@ -2315,6 +2363,21 @@
      "type"
     ],
     "title": "ValidationError",
+    "type": "object"
+   },
+   "VerifyLiveIn": {
+    "properties": {
+     "cap_usd": {
+      "exclusiveMinimum": 0.0,
+      "maximum": 20.0,
+      "title": "Cap Usd",
+      "type": "number"
+     }
+    },
+    "required": [
+     "cap_usd"
+    ],
+    "title": "VerifyLiveIn",
     "type": "object"
    }
   }
@@ -3099,6 +3162,111 @@
      }
     },
     "summary": "Admin Invalidate"
+   }
+  },
+  "/api/admin/verify-live": {
+   "get": {
+    "operationId": "admin_verify_status_api_admin_verify_live_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Verify Status Api Admin Verify Live Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Verify Status"
+   },
+   "post": {
+    "description": "Start the one-unit real-API check. Only this job may spend, up to cap_usd; the worker runs it and the\nallowance is withdrawn as soon as it ends.",
+    "operationId": "admin_verify_start_api_admin_verify_live_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/VerifyLiveIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Verify Start Api Admin Verify Live Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Verify Start"
    }
   },
   "/api/assessments": {
@@ -4066,6 +4234,61 @@
      }
     },
     "summary": "Me"
+   }
+  },
+  "/api/auth/setup": {
+   "get": {
+    "operationId": "setup_status_api_auth_setup_get",
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/SetupStatusOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     }
+    },
+    "summary": "Setup Status"
+   },
+   "post": {
+    "description": "Create the single owner account from the browser, once. Requires LQ_SETUP_CODE (chosen by the owner in\nthe hosting dashboard). Wrong codes count as failed logins, so guessing is rate-limited.",
+    "operationId": "setup_owner_api_auth_setup_post",
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/SetupIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/MeOut"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Setup Owner"
    }
   },
   "/api/export": {

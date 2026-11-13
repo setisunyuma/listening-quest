@@ -45,6 +45,7 @@ services:
   api:
     build: { context: .., dockerfile: infra/docker/core.Dockerfile }
     environment: *core-env
+    command: ["lq", "serve", "--role", "api", "--no-migrate-first"]  # the migrate service ran already
     volumes: [appdata:/data]
     depends_on: { migrate: { condition: service_completed_successfully } }
     healthcheck: { test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"], interval: 5s, retries: 20 }

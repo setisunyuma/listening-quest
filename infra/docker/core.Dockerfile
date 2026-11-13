@@ -13,4 +13,6 @@ ENV PATH="/app/services/core/.venv/bin:$PATH" LQ_FIXTURES_DIR=/app/fixtures
 RUN useradd --system --uid 10001 lq && mkdir -p /data && chown lq /data
 USER lq
 EXPOSE 8000
-CMD ["uvicorn", "lq.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips", "*"]
+# LQ_ROLE=api (default) | worker | all  (all = API + worker in one container, for hosting platforms)
+# LQ_PORT (or the platform's PORT) sets the API port; migrations run before the API starts.
+CMD ["sh", "-c", "exec lq serve --role ${LQ_ROLE:-api}"]

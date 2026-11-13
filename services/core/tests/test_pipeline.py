@@ -719,3 +719,55 @@ def test_a_worker_that_lost_its_lease_stops_writing(db, user):
     assert queue.renew(lease) is False and lease.lost.is_set()
     with pytest.raises(queue.StaleLease):
         lease.guard(db)
+
+
+# ---- live verification: one capped job, nothing else spends
+
+
+def test_verify_live_runs_only_its_own_job_under_the_cap(db, live_user, monkeypatch):
+    from typer.testing import CliRunner
+
+    from lq import cli
+    from lq.config import get_settings
+    from lq.services.seed import seed_fixtures
+
+    monkeypatch.setattr(get_settings(), "openai_api_key", "sk-test")
+    monkeypatch.setattr(get_settings(), "work_dir", get_settings().work_dir / "t")
+    seed_fixtures(db, "live")  # registered examples must NOT be processed by the verification
+    db.commit()
+    fake = paid_set(0.01)
+    r = CliRunner().invoke(cli.app, ["verify-live", "--cost-cap-usd", "1"])
+    assert r.exit_code == 0, r.output
+    jobs = db.execute(select(m.GenerationJob)).scalars().all()
+    ver = [j for j in jobs if j.params.get("verification")]
+    assert len(ver) == 1 and ver[0].status == "SUCCEEDED"
+    assert {j.status for j in jobs if j is not ver[0]} == {"QUEUED"}  # examples untouched
+    assert {e.job_id for e in db.execute(select(m.CostEntry)).scalars()} == {ver[0].id}  # only this job spent
+    assert {"content", "review", "tts", "asr"} <= set(fake.calls)
+    assert (
+        budget.get_system(db, "live")["verification"] is None and budget.get_system(db, "live")["paid_enabled"] is False
+    )
+    report = json.loads(r.output[r.output.index("{") : r.output.rindex("}") + 1])
+    assert report["unit_status"] == "READY" and report["cost"]["settled_usd"] > 0 and report["open_in_app"]
+
+
+def test_verify_live_stops_at_the_cap_and_refuses_without_key(db, live_user, monkeypatch):
+    from typer.testing import CliRunner
+
+    from lq import cli
+    from lq.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "work_dir", get_settings().work_dir / "t2")
+    r = CliRunner().invoke(cli.app, ["verify-live", "--cost-cap-usd", "1"])
+    assert r.exit_code == 1 and "OPENAI_API_KEY is not set" in r.output
+    assert db.execute(select(func.count()).select_from(m.GenerationJob)).scalar_one() == 0
+    monkeypatch.setattr(get_settings(), "openai_api_key", "sk-test")
+    fake = paid_set(0.10)
+    r = CliRunner().invoke(cli.app, ["verify-live", "--cost-cap-usd", "0.25"])
+    assert r.exit_code == 1
+    job = db.execute(select(m.GenerationJob)).scalar_one()
+    assert len(fake.calls) == 2 and budget.job_cost(db, job.id)["settled_usd"] == pytest.approx(
+        0.20
+    )  # third request never started
+    assert "verification_cap" in (job.stop_detail or "") or job.blocked_reason == "verification_cap"
+    assert budget.get_system(db, "live")["verification"] is None

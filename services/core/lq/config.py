@@ -24,7 +24,7 @@ def env_file_path() -> Path | None:
     return Path(raw).expanduser() if raw else REPO_ROOT / ".env"
 
 
-SECRET_FIELDS = ("openai_api_key", "s3_secret_key", "import_token", "database_url")
+SECRET_FIELDS = ("openai_api_key", "s3_secret_key", "import_token", "database_url", "setup_code")
 
 
 class Settings(BaseSettings):
@@ -54,6 +54,12 @@ class Settings(BaseSettings):
     login_window_minutes: int = 15
     public_origin: str | None = None  # e.g. https://lq.example.com ; enables Origin check when set
     import_token: str | None = None  # bearer token for CLI -> import API
+    # one-time owner setup from the browser (phone): the owner picks this phrase in the hosting dashboard,
+    # then opens /setup. Ignored as soon as a live account exists. 12+ characters.
+    setup_code: str | None = None
+    # process role inside the core image: api | worker | all (api + worker in one container, for PaaS)
+    role: str = "api"
+    port: int = 8000
 
     # generator CLI -> server connection (optional). When set, `lq generate` auto-registers.
     server_url: str | None = None
@@ -82,10 +88,27 @@ class Settings(BaseSettings):
     replenish_interval_sec: int = 300
 
 
+def _platform_defaults(s: Settings) -> Settings:
+    """Values hosting platforms provide under their own names (used only when ours are not set):
+    DATABASE_URL (postgres://... -> postgresql+psycopg://...) and RAILWAY_PUBLIC_DOMAIN / PUBLIC_ORIGIN."""
+    updates: dict = {}
+    if not os.environ.get("LQ_DATABASE_URL") and os.environ.get("DATABASE_URL"):
+        url = os.environ["DATABASE_URL"]
+        for prefix in ("postgres://", "postgresql://"):
+            if url.startswith(prefix):
+                url = "postgresql+psycopg://" + url[len(prefix) :]
+        updates["database_url"] = url
+    if not s.public_origin:
+        domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN") or os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+        if domain:
+            updates["public_origin"] = f"https://{domain}"
+    return s.model_copy(update=updates) if updates else s
+
+
 @lru_cache
 def get_settings() -> Settings:
     path = env_file_path()
-    return Settings(_env_file=path if path is not None and path.is_file() else None)
+    return _platform_defaults(Settings(_env_file=path if path is not None and path.is_file() else None))
 
 
 def describe_settings() -> dict:

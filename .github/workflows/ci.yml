@@ -95,6 +95,15 @@ jobs:
       - if: always()
         run: docker compose -f infra/compose.yaml down -v
 
+  image:
+    # The all-in-one image (root Dockerfile) as a hosting platform runs it: one container + PostgreSQL + volume.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with: { persist-credentials: false }
+      - run: scripts/image-smoke.sh
+
   infra:
     # Caddyfile validated by the pinned Caddy itself (with and without ACME_EMAIL); production compose
     # file must render with the required variables and refuse to render without them.

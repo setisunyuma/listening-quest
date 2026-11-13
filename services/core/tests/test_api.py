@@ -575,3 +575,73 @@ def test_openapi_contract_is_current():
         "API changed: run `make contracts` to regenerate the contract and the TypeScript types"
     )
     pytest.importorskip("jsonschema")
+
+
+# ---- one-time owner setup from the browser
+
+
+def test_owner_setup_needs_the_code_and_works_once(db, monkeypatch):
+    from lq.config import get_settings
+
+    c = TestClient(app)
+    assert c.get("/api/auth/setup").json() == {"available": False, "reason": "setup_code_not_configured"}
+    assert (
+        c.post(
+            "/api/auth/setup", json={"code": "x" * 12, "username": "owner", "password": "owner-password-123"}
+        ).status_code
+        == 404
+    )
+    monkeypatch.setattr(get_settings(), "setup_code", "short")
+    assert c.get("/api/auth/setup").json()["available"] is False  # too short to be accepted
+    monkeypatch.setattr(get_settings(), "setup_code", "correct-horse-battery")
+    assert c.get("/api/auth/setup").json() == {"available": True, "reason": "ready"}
+    codes = [
+        c.post(
+            "/api/auth/setup", json={"code": "wrong-guess-0000", "username": "owner", "password": "owner-password-123"}
+        ).status_code
+        for _ in range(6)
+    ]
+    assert codes[:5] == [403] * 5 and codes[5] == 429  # guessing is rate limited
+    db.execute(m.LoginAttempt.__table__.delete())
+    db.commit()
+    r = c.post(
+        "/api/auth/setup", json={"code": "correct-horse-battery", "username": "owner", "password": "owner-password-123"}
+    )
+    assert r.status_code == 200 and r.json()["realm"] == "live" and "httponly" in r.headers["set-cookie"].lower()
+    c.headers["X-CSRF-Token"] = r.json()["csrf_token"]
+    assert c.get("/api/home").status_code == 200  # logged in
+    again = TestClient(app).post(
+        "/api/auth/setup",
+        json={"code": "correct-horse-battery", "username": "second", "password": "second-password-123"},
+    )
+    assert again.status_code == 409 and db.execute(select(func.count()).select_from(m.User)).scalar_one() == 1
+    assert TestClient(app).get("/api/auth/setup").json()["reason"] == "account_exists"
+
+
+def test_admin_live_verification_endpoint(db, live_user, monkeypatch):
+    from test_pipeline import paid_set
+
+    from lq.config import get_settings
+
+    c = login("owner", "owner-password-123")
+    st = c.get("/api/admin/verify-live").json()
+    assert st["running"] is False and any("OPENAI_API_KEY" in p for p in st["problems"])
+    assert c.post("/api/admin/verify-live", json={"cap_usd": 1}).status_code == 422  # no key: refused, nothing queued
+    monkeypatch.setattr(get_settings(), "openai_api_key", "sk-test")
+    assert c.post("/api/admin/verify-live", json={"cap_usd": 50}).status_code == 422  # cap out of range
+    fake = paid_set(0.01)
+    jid = c.post("/api/admin/verify-live", json={"cap_usd": 1}).json()["job_id"]
+    assert c.get("/api/admin/verify-live").json()["running"] is True
+    assert c.post("/api/admin/verify-live", json={"cap_usd": 1}).status_code == 422  # one at a time
+    assert worker.drain("w") == ["succeeded"]
+    st = c.get("/api/admin/verify-live").json()
+    assert st["running"] is False and st["report"]["job_id"] == jid and st["report"]["unit_status"] == "READY"
+    assert st["report"]["cost"]["settled_usd"] > 0 and fake.calls
+    assert budget_off(db)
+
+
+def budget_off(db) -> bool:
+    from lq.generator import budget
+
+    cfg = budget.get_system(db, "live")
+    return cfg["paid_enabled"] is False and cfg["verification"] is None
