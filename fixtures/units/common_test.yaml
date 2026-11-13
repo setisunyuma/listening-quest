@@ -1,0 +1,499 @@
+# 共通テスト形式のオリジナル例題（公式問題の転載ではありません）。簡略記法は lq/services/seed.py が展開します。
+- id: ct-1a-library-book
+  mode: common_test
+  part: 1A
+  title: 短文理解 A-1
+  topic: campus
+  band: 2
+  family: ct-1a-intended-action
+  speakers: {M: male}
+  script:
+    - - "M: I meant to return the book yesterday, but the library was closed, so I'm on my way there now."
+  questions:
+    - prompt: Which is closest to the meaning of what the speaker says?
+      skill: explicit_detail
+      choices:
+        - The speaker returned the book yesterday.
+        - The speaker is going to return the book now.
+        - The speaker has decided to keep the book.
+        - The library is closed today.
+      answer: 2
+      evidence: [1]
+      answer_en: The speaker is going to return the book now.
+      ja: 昨日は図書館が閉まっていて返せず、「今向かっている」と言っています。
+      wrong:
+        - 昨日は返すつもりだったが、返せていません。
+        - 返さないと決めたとは言っていません。
+        - 閉まっていたのは昨日で、今日のことではありません。
+      hint: "I meant to ...（〜するつもりだった）の後の but に注目しましょう。"
+
+- id: ct-1b-cat-table
+  mode: common_test
+  part: 1B
+  title: 場面と絵の対応 B-1
+  topic: home
+  band: 2
+  family: ct-1b-position-negation
+  speakers: {W: female}
+  figures:
+    - id: f1
+      kind: scene_set
+      title: Pictures
+      columns: [Picture, Scene]
+      rows:
+        - [Picture 1, A cat sleeping on a sofa]
+        - [Picture 2, A cat sleeping under a table next to a window]
+        - [Picture 3, A cat sitting on a table next to a window]
+        - [Picture 4, A cat sleeping under a table next to a door]
+  script:
+    - - "W: The cat isn't on the sofa anymore. It's sleeping under the table next to the window."
+  radio_desc: "There are four pictures. Picture 1: a cat sleeping on a sofa. Picture 2: a cat sleeping under a table next to a window. Picture 3: a cat sitting on a table next to a window. Picture 4: a cat sleeping under a table next to a door."
+  questions:
+    - prompt: Which picture matches what you hear?
+      skill: numbers_negation
+      figures: [f1]
+      choices: [Picture 1, Picture 2, Picture 3, Picture 4]
+      answer: 2
+      evidence: [1, "f1:r2"]
+      answer_en: Picture 2, a cat sleeping under a table next to a window.
+      ja: 「もうソファの上にはいない」「窓のそばのテーブルの下で寝ている」に合うのは2です。
+      wrong:
+        - isn't on the sofa と否定されています。
+        - テーブルの「上」ではなく「下」で、座っているのではなく寝ています。
+        - テーブルがあるのはドアではなく窓のそばです。
+
+- id: ct-2-train-time
+  mode: common_test
+  part: "2"
+  title: 短い対話と問い 2-1
+  topic: travel
+  band: 2
+  family: ct-2-schedule-change
+  speakers: {M: male, W: female}
+  script:
+    - - "M: Shall we take the 9:15 train?"
+      - "W: That one doesn't stop at Midori Station. The 9:30 does."
+      - "M: Then we'll have to wait for that one."
+  questions:
+    - prompt: Which train will they take?
+      skill: numbers_negation
+      choices: [The 9:00 train, The 9:15 train, The 9:30 train, The 9:45 train]
+      answer: 3
+      evidence: [2, 3]
+      answer_en: They will take the 9:30 train.
+      ja: 9時15分発は緑駅に止まらず、止まる9時30分発を待つことにしています。
+      wrong:
+        - 9時発は会話に出てきません。
+        - 9時15分発は目的の駅に止まらないので乗りません。
+        - 9時45分発は会話に出てきません。
+
+- id: ct-3-study-group
+  mode: common_test
+  part: "3"
+  title: 短い対話 3-1
+  topic: school
+  band: 3
+  family: ct-3-reschedule
+  speakers: {W: female, M: male}
+  script:
+    - - "W: Are you coming to the study group on Friday?"
+      - "M: I'd like to, but my shift at the bakery got moved to Friday evening."
+      - "W: We could meet on Saturday morning instead."
+      - "M: That works. I'm free until noon."
+  questions:
+    - prompt: What will the man probably do?
+      skill: inference
+      choices:
+        - Work at the bakery on Saturday morning.
+        - Join the study group on Saturday morning.
+        - Skip his shift on Friday evening.
+        - Study alone on Friday evening.
+      answer: 2
+      evidence: [3, 4]
+      answer_en: He will probably join the study group on Saturday morning.
+      ja: 土曜の午前に変更する提案に「それなら大丈夫、正午まで空いている」と答えています。
+      wrong:
+        - パン屋のシフトは金曜の夕方で、土曜の午前ではありません。
+        - シフトを休むとは言っていません。
+        - 金曜の夕方は仕事で、一人で勉強するとは言っていません。
+
+- id: ct-3-study-group-b
+  mode: common_test
+  part: "3"
+  title: 短い対話 3-1（別設問）
+  topic: school
+  band: 2
+  family: ct-3-reschedule
+  variant_of: ct-3-study-group
+  speakers: {W: female, M: male}
+  script:
+    - - "W: Are you coming to the study group on Friday?"
+      - "M: I'd like to, but my shift at the bakery got moved to Friday evening."
+      - "W: We could meet on Saturday morning instead."
+      - "M: That works. I'm free until noon."
+  questions:
+    - prompt: Why can't the man come on Friday?
+      skill: explicit_detail
+      choices:
+        - He has to work at the bakery.
+        - He has another study group.
+        - He will be away until noon.
+        - He does not like studying in a group.
+      answer: 1
+      evidence: [2]
+      answer_en: He has to work at the bakery on Friday evening.
+      ja: パン屋のシフトが金曜の夕方に変更になったと言っています。
+      wrong:
+        - 別の勉強会の話は出てきません。
+        - 「正午まで」は土曜に空いている時間です。
+        - 参加したい（I'd like to）と言っています。
+
+- id: ct-4a-order-saturday
+  mode: common_test
+  part: 4A_order
+  title: 出来事の順序 4A-1
+  topic: daily-life
+  band: 3
+  family: ct-4a-order-errands
+  speakers: {W: female}
+  script:
+    - - "W: Last Saturday was busy. Right after breakfast, I went to the post office to send a package."
+      - "W: I had planned to go straight to the gym, but I remembered my library books were due, so I returned them first."
+      - "W: After working out at the gym, I was so hungry that I stopped at a noodle shop before going home."
+  common_choices: [She worked out at the gym., She returned her library books., She ate at a noodle shop., She sent a package.]
+  questions:
+    - prompt: "Which event happened first?"
+      skill: discourse_structure
+      answer: 4
+      evidence: [1]
+      answer_en: "First she sent a package."
+      ja: "朝食の直後に郵便局で荷物を送っています。"
+      wrong:
+        - "ジムは図書館の後です。"
+        - "図書館は郵便局の後です。"
+        - "食事は最後です。"
+    - prompt: "Which event happened second?"
+      skill: discourse_structure
+      answer: 2
+      evidence: [2]
+      answer_en: "Second she returned her library books."
+      ja: "ジムへ直行する予定を変えて、先に本を返しています。"
+      wrong:
+        - "ジムは本を返した後です。"
+        - "食事は最後です。"
+        - "荷物を送ったのは最初です。"
+    - prompt: "Which event happened third?"
+      skill: discourse_structure
+      answer: 1
+      evidence: [2, 3]
+      answer_en: "Third she worked out at the gym."
+      ja: "本を返した後にジムで運動しています。"
+      wrong:
+        - "本の返却は2番目です。"
+        - "食事はジムの後です。"
+        - "荷物を送ったのは最初です。"
+    - prompt: "Which event happened fourth?"
+      skill: discourse_structure
+      answer: 3
+      evidence: [3]
+      answer_en: "Fourth she ate at a noodle shop."
+      ja: "ジムの後、帰宅前に麺の店に寄っています。"
+      wrong:
+        - "ジムは3番目です。"
+        - "本の返却は2番目です。"
+        - "荷物を送ったのは最初です。"
+
+- id: ct-4a-match-gifts
+  mode: common_test
+  part: 4A_match
+  title: 条件の対応づけ 4A-2
+  topic: school-event
+  band: 3
+  family: ct-4a-match-rules
+  speakers: {M: male}
+  script:
+    - - "M: Here is how to hand out the welcome gifts. First-year students get a notebook."
+      - "M: Second-year students get a notebook too, unless they have joined a sports club, in which case give them a towel."
+      - "M: Third-year students all receive a pen, and any teacher who visits gets a bookmark."
+  common_choices: [A bookmark, A notebook, A pen, A towel, A badge, A sticker]
+  questions:
+    - prompt: "What does Aya, a first-year student in the tennis club, receive?"
+      skill: condition_matching
+      answer: 2
+      evidence: [1]
+      answer_en: "Aya receives a notebook."
+      ja: "1年生は部活に関係なくノートです。"
+      wrong:
+        - "しおりは先生用です。"
+        - "ペンは3年生用です。"
+        - "タオルは運動部の2年生だけです。"
+        - "バッジは説明に出てきません。"
+        - "シールは説明に出てきません。"
+    - prompt: "What does Ben, a second-year student in the soccer club, receive?"
+      skill: condition_matching
+      answer: 4
+      evidence: [2]
+      answer_en: "Ben receives a towel."
+      ja: "運動部に入っている2年生はタオルです。"
+      wrong:
+        - "しおりは先生用です。"
+        - "ノートは運動部でない2年生です。"
+        - "ペンは3年生用です。"
+        - "バッジは説明に出てきません。"
+        - "シールは説明に出てきません。"
+    - prompt: "What does Chika, a second-year student in the art club, receive?"
+      skill: condition_matching
+      answer: 2
+      evidence: [2]
+      answer_en: "Chika receives a notebook."
+      ja: "運動部でない2年生はノートです。"
+      wrong:
+        - "しおりは先生用です。"
+        - "ペンは3年生用です。"
+        - "タオルは運動部の2年生だけです。"
+        - "バッジは説明に出てきません。"
+        - "シールは説明に出てきません。"
+    - prompt: "What does Dai, a third-year student in the swimming club, receive?"
+      skill: condition_matching
+      answer: 3
+      evidence: [3]
+      answer_en: "Dai receives a pen."
+      ja: "3年生は全員ペンです。運動部の例外は2年生だけです。"
+      wrong:
+        - "しおりは先生用です。"
+        - "ノートは1・2年生用です。"
+        - "タオルの例外は2年生だけです。"
+        - "バッジは説明に出てきません。"
+        - "シールは説明に出てきません。"
+
+- id: ct-4b-volunteer
+  mode: common_test
+  part: 4B
+  title: 条件に合う選択 4B-1
+  topic: volunteering
+  band: 3
+  family: ct-4b-three-conditions
+  speakers: {A: male, B: female, C: female, D: male}
+  figures:
+    - id: f1
+      kind: table
+      title: Your conditions
+      columns: [Condition, Detail]
+      rows:
+        - [A, Activities are on weekends only]
+        - [B, There is no fee]
+        - [C, English is used]
+  radio_desc: "You are choosing a volunteer program. It must meet three conditions: activities are on weekends only, there is no fee, and English is used."
+  script:
+    - - "A: The River Clean-up meets every Saturday morning. There's no fee, and gloves are provided. Most volunteers are local residents, so everything is done in Japanese."
+      - "B: Our Museum Guide program needs people on Sundays. You'll explain exhibits to overseas visitors in English. We ask for a 500-yen fee for the uniform."
+      - "C: Join Story Time at the international library on Saturdays or Sundays. You read picture books to children in English, and it's completely free."
+      - "D: The Food Bank needs helpers on Wednesday evenings. It's free to join, and we work with many English-speaking volunteers."
+  questions:
+    - prompt: Which program meets all of your conditions?
+      skill: condition_matching
+      figures: [f1]
+      choices: [River Clean-up, Museum Guide, Story Time, Food Bank]
+      answer: 3
+      evidence: [3, "f1:r1", "f1:r2", "f1:r3"]
+      answer_en: Story Time meets all three conditions.
+      ja: 週末のみ・無料・英語使用の3条件をすべて満たすのは Story Time だけです。
+      wrong:
+        - 週末で無料ですが、使うのは日本語です。
+        - 週末で英語ですが、500円の費用がかかります。
+        - 無料で英語も使いますが、活動は水曜の夕方です。
+
+- id: ct-5-naps-lecture
+  mode: common_test
+  part: "5"
+  title: 講義と資料の統合 5-1
+  topic: health-science
+  band: 3
+  family: ct-5-naps
+  speakers: {P: male, K: male, M: female}
+  radio: false
+  radio_reason: ワークシートと図表を見ながら解く形式のため、ラジオには別の教材を使います。
+  figures:
+    - id: f1
+      kind: worksheet
+      title: Worksheet
+      columns: [Topic, Notes]
+      rows:
+        - [The study, "Nap length: [ 1 ] minutes"]
+        - [Naps over 40 minutes, "cause: [ 2 ]  →  result: [ 3 ]"]
+        - [Naps after 4 p.m., "cause: [ 4 ]  →  result: [ 5 ]"]
+    - id: f2
+      kind: table
+      title: "Survey: when students at our school nap"
+      columns: [Time of nap, Share of students who nap]
+      rows:
+        - [Right after lunch (12-2 p.m.), 18%]
+        - [Mid-afternoon (2-4 p.m.), 27%]
+        - [After 4 p.m., 55%]
+  script:
+    - - "P: Today I'd like to talk about how short naps affect learning."
+      - "P: In one study, students memorized a list of words in the morning. One group then took a twenty-minute nap after lunch, while the other group stayed awake."
+      - "P: When tested in the evening, the nap group remembered about thirty percent more words."
+      - "P: However, longer is not always better. Naps of more than forty minutes often lead to deep sleep, and people who wake from deep sleep feel slow and tired for a while."
+      - "P: Timing matters too. A nap taken after four p.m. tends to delay bedtime, which reduces night-time sleep."
+      - "P: So the general advice is simple: keep naps short, and take them early in the afternoon."
+    - - "K: I usually nap for an hour after club practice, around six. Maybe that's why I can't fall asleep until one a.m."
+      - "M: I tried a fifteen-minute nap right after lunch last week, and my afternoon classes felt much easier."
+    - - "K: Look at this survey of our school. More than half of the students who nap do it after four."
+      - "M: Then according to the lecture, most of them are probably napping at the wrong time."
+  questions:
+    - prompt: "Choose the best option for [ 1 ] on the worksheet."
+      skill: numbers_negation
+      segments: [1]
+      figures: [f1]
+      choices: ["10", "20", "30", "40"]
+      answer: 2
+      evidence: [2]
+      answer_en: The nap in the study was twenty minutes long.
+      ja: 実験では昼食後に20分の昼寝をしています。30は成績の伸び（約30%）、40は長すぎる昼寝の目安です。
+      wrong: [10分という数字は出てきません。, 30は思い出せた単語が約30%多いという数字です。, 40分は「長すぎる昼寝」の基準です。]
+    - prompt: "Choose the best option for [ 2 ]."
+      skill: explicit_detail
+      segments: [1]
+      figures: [f1]
+      choices: [deep sleep, light sleep, a later bedtime, better memory]
+      answer: 1
+      evidence: [4]
+      answer_en: Long naps often lead to deep sleep.
+      ja: 40分を超える昼寝は深い眠りにつながると述べています。
+      wrong: [浅い眠りとは言っていません。, 就寝が遅れるのは午後4時以降の昼寝の話です。, 記憶の向上は短い昼寝の効果です。]
+    - prompt: "Choose the best option for [ 3 ]."
+      skill: explicit_detail
+      segments: [1]
+      figures: [f1]
+      choices: [feeling slow after waking, remembering more words, sleeping earlier at night, skipping lunch]
+      answer: 1
+      evidence: [4]
+      answer_en: People feel slow and tired after waking from deep sleep.
+      ja: 深い眠りから起きるとしばらく頭が働かず疲れを感じると述べています。
+      wrong: [単語を多く覚えていたのは20分の昼寝の結果です。, 早く寝られるとは言っていません。, 昼食を抜く話は出てきません。]
+    - prompt: "Choose the best option for [ 4 ]."
+      skill: explicit_detail
+      segments: [1]
+      figures: [f1]
+      choices: [a later bedtime, deep sleep, more energy, a shorter nap]
+      answer: 1
+      evidence: [5]
+      answer_en: A late nap tends to delay bedtime.
+      ja: 午後4時以降の昼寝は就寝時刻を遅らせると述べています。
+      wrong: [深い眠りは40分を超える昼寝の話です。, 元気が出るとは言っていません。, 昼寝が短くなるとは言っていません。]
+    - prompt: "Choose the best option for [ 5 ]."
+      skill: explicit_detail
+      segments: [1]
+      figures: [f1]
+      choices: [less sleep at night, better test scores, longer naps, more dreams]
+      answer: 1
+      evidence: [5]
+      answer_en: A delayed bedtime reduces night-time sleep.
+      ja: 就寝が遅れる結果、夜の睡眠が減ると述べています。
+      wrong: [成績が上がるとは言っていません。, 昼寝が長くなるとは言っていません。, 夢の話は出てきません。]
+    - prompt: Which statement best matches the lecture?
+      skill: main_idea
+      segments: [1]
+      choices:
+        - Any nap improves memory regardless of its length.
+        - Short naps taken early in the afternoon can support learning.
+        - Students should replace night-time sleep with naps.
+        - Naps are harmful for most students.
+      answer: 2
+      evidence: [6]
+      answer_en: Short naps taken early in the afternoon can support learning.
+      ja: 「昼寝は短く、午後の早い時間に」という結論に合います。
+      wrong: [長い昼寝には欠点があると述べています。, 夜の睡眠の代わりにするとは言っていません。, 短い昼寝の効果を紹介しています。]
+    - prompt: "Which statement is supported by the lecture, the students' comments, and the survey?"
+      skill: integration
+      segments: [1, 2, 3]
+      figures: [f2]
+      choices:
+        - Most students who nap at this school do so at a time the lecture warns against.
+        - Mai's nap was too long according to the lecture.
+        - Ken's habit matches the lecture's advice.
+        - The survey shows that napping right after lunch is the most common.
+      answer: 1
+      evidence: [5, 9, "f2:r3"]
+      answer_en: Most students who nap at this school do so after 4 p.m., a time the lecture warns against.
+      ja: 調査では昼寝をする生徒の55%が午後4時以降で、講義はその時間帯の昼寝は夜の睡眠を減らすと注意しています。
+      wrong: [Maiの昼寝は15分で、短い昼寝に当たります。, Kenは午後6時頃に1時間寝ており、助言と逆です。, 昼食直後は18%で最も少ない時間帯です。]
+
+- id: ct-6a-tablets
+  mode: common_test
+  part: 6A
+  title: 二人の対話 6A-1
+  topic: education
+  band: 3
+  family: ct-6a-tablets-vs-paper
+  speakers: {Taro: male, Lisa: female}
+  script:
+    - - "Taro: I think our school should let us use tablets instead of paper textbooks. My bag weighs a ton."
+      - "Lisa: I get that, but I remember things better when I write notes by hand on paper."
+      - "Taro: You can write on a tablet with a pen, though. And we'd always have the latest edition."
+      - "Lisa: True, but screens tire my eyes, and there's the cost. Not every family can buy one."
+      - "Taro: The school could lend them out, like the library does with books."
+      - "Lisa: If they did that, I'd be less against it. I still want paper for exams, though."
+  questions:
+    - prompt: What is Taro's main point?
+      skill: main_idea
+      choices:
+        - Tablets would be lighter to carry and more up to date than paper textbooks.
+        - Students should stop taking notes in class.
+        - Paper textbooks cost families too much money.
+        - Exams should be taken on tablets.
+      answer: 1
+      evidence: [1, 3]
+      answer_en: Tablets would be lighter and always up to date.
+      ja: かばんが重いこと、常に最新版が使えることを理由にタブレットを勧めています。
+      wrong: [ノートを取るのをやめるとは言っていません。, 費用を心配しているのはLisaです。, 試験の方法についてTaroは述べていません。]
+    - prompt: What is Lisa's view at the end of the conversation?
+      skill: speaker_attitude
+      choices:
+        - She fully supports replacing paper textbooks.
+        - She would be more open to tablets if the school lent them, but still wants paper for exams.
+        - She thinks tablets are better for remembering things.
+        - She believes every family can afford a tablet.
+      answer: 2
+      evidence: [6]
+      answer_en: She would be less against tablets if the school lent them, but wants paper for exams.
+      ja: 貸し出しがあれば反対は弱まるが、試験は紙がよいと述べています。
+      wrong: [全面的に賛成してはいません。, 紙に手で書く方が覚えやすいと言っています。, 買えない家庭もあると言っています。]
+
+- id: ct-6b-car-free-sunday
+  mode: common_test
+  part: 6B
+  title: 三人の会話 6B-1
+  topic: community
+  band: 3
+  family: ct-6b-car-free-street
+  speakers: {Emma: female, Jun: male, Sara: female}
+  script:
+    - - "Emma: Our town is thinking of closing the main street to cars on Sundays. I love the idea; it would be safer for kids."
+      - "Jun: As a shop owner's son, I'm worried. Customers who drive may just go to the mall instead."
+      - "Sara: In the town where my cousin lives, sales actually went up after they did this, because more people walked around."
+      - "Jun: Maybe, but that town has a big parking lot nearby. We don't."
+      - "Emma: Then we should ask for parking near the station first."
+      - "Sara: I agree with Emma. Without that, Jun's concern is fair."
+  questions:
+    - prompt: Who is worried that the plan could hurt local shops?
+      skill: explicit_detail
+      choices: [Emma, Jun, Sara, All three speakers]
+      answer: 2
+      evidence: [2]
+      answer_en: Jun is worried about local shops.
+      ja: 店主の息子であるJunが、車の客がモールへ流れると心配しています。
+      wrong: [Emmaは子どもの安全のために賛成しています。, Saraは売上が伸びた例を紹介しています。, 心配を述べているのはJunだけです。]
+    - prompt: What do Emma and Sara agree on at the end?
+      skill: integration
+      choices:
+        - The plan should be cancelled.
+        - Parking should be arranged before the street is closed to cars.
+        - Shops should move to the mall.
+        - Cars should be banned every day of the week.
+      answer: 2
+      evidence: [5, 6]
+      answer_en: Parking near the station should be arranged first.
+      ja: Emmaが駅近くの駐車場を先に求めようと言い、Saraがそれに同意しています。
+      wrong: [中止すべきだとは言っていません。, 店の移転は話題になっていません。, 対象は日曜日だけです。]

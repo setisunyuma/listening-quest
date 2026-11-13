@@ -1,0 +1,41 @@
+# secrets / local config
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# runtime data: DB, generated audio, caches, outbox, personal history exports
+var/
+backups/
+*.sqlite
+*.dump
+listening-quest-export-*.json
+*.mp3
+*.wav
+*.m4a
+!fixtures/import_sample/**/*.wav
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+.next/
+out/
+apps/web/test-results/
+apps/web/playwright-report/
+*.tsbuildinfo
+npm-debug.log*
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/

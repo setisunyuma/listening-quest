@@ -1,0 +1,203 @@
+{
+ "schema_version": 2,
+ "source": "sample-import",
+ "units": [
+  {
+   "schema_version": 2,
+   "source": "sample-import",
+   "content_id": "sample-eiken-p1-part1",
+   "revision": 1,
+   "mode": "eiken_pre1",
+   "profile_version": "eiken_pre1/2026_2",
+   "part": "part1",
+   "template_type": "dialogue",
+   "title": "会話 準1-1",
+   "topic": "office",
+   "skill_tags": [
+    "explicit_detail"
+   ],
+   "primary_skill": "explicit_detail",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "p1-part1-next-action",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "w",
+     "role": "speaker",
+     "label": "W",
+     "voice_hint": "female"
+    },
+    {
+     "id": "m",
+     "role": "speaker",
+     "label": "M",
+     "voice_hint": "male"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "w",
+       "lang": "en",
+       "text": "Hi, Mark. Did you finish the sales report for tomorrow's meeting?"
+      },
+      {
+       "id": "u2",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "Almost. I'm still waiting for the figures from the Osaka office."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "w",
+       "lang": "en",
+       "text": "They said they'd send them by noon. It's already three."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "I know. I'll call them right now instead of sending another e-mail."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "What will the man do next?",
+     "prompt_medium": "audio",
+     "prompt_timing": "after",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Send another e-mail to Osaka."
+      },
+      {
+       "id": "c2",
+       "text": "Phone the Osaka office."
+      },
+      {
+       "id": "c3",
+       "text": "Ask the woman to finish the report."
+      },
+      {
+       "id": "c4",
+       "text": "Postpone tomorrow's meeting."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "explicit_detail"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u4",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "He will phone the Osaka office.",
+      "explanation_ja": "「もう一度メールを送る代わりに、今すぐ電話する」と言っています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "メールではなく電話にすると言っています。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "女性に報告書を頼んではいません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "会議の延期は話題になっていません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null,
+   "audio": {
+    "utt:u1": "utt_u1.wav",
+    "utt:u2": "utt_u2.wav",
+    "utt:u3": "utt_u3.wav",
+    "utt:u4": "utt_u4.wav",
+    "prompt:q1": "prompt_q1.wav",
+    "choices:q1": "choices_q1.wav",
+    "answer:q1": "answer_q1.wav",
+    "explain:q1": "explain_q1.wav"
+   }
+  }
+ ],
+ "files": {
+  "utt_u1.wav": {
+   "sha256": "f705ff66896322ec7d2506cda18e330f3eb56cd9af35a27813d40e258e5c200c",
+   "bytes": 16844
+  },
+  "utt_u2.wav": {
+   "sha256": "afa5a80ebfcb547ca0cc1a7c8332300bb9675ad557ca7314989dd9da751833ef",
+   "bytes": 16844
+  },
+  "utt_u3.wav": {
+   "sha256": "4cab6531d7436438e4b0ae5c14f8c7b3df7aafc96b33c33847454e6e9310d6bf",
+   "bytes": 16844
+  },
+  "utt_u4.wav": {
+   "sha256": "6bdd64502503ad3378d8a9932bfd8960b0d001248f65e7341560f7f140149e41",
+   "bytes": 16844
+  },
+  "prompt_q1.wav": {
+   "sha256": "898cede35f137ed0ac3ced689262cd5c19c144a16069add5d63c84eb4121c359",
+   "bytes": 16844
+  },
+  "choices_q1.wav": {
+   "sha256": "fa56039505f9f5fc2a98de2de8872c39ced823150d27447b45b3c2c937e78823",
+   "bytes": 16844
+  },
+  "answer_q1.wav": {
+   "sha256": "d4db5423903567ff79e0f8f6270a3218738defe0a6ce42dd226e52ce7cf8828b",
+   "bytes": 16844
+  },
+  "explain_q1.wav": {
+   "sha256": "7d68d13f03c2f6bd76d24024fda9774eabf7561214dd53aa46e591ee8f307694",
+   "bytes": 16844
+  }
+ }
+}

@@ -1,0 +1,26 @@
+# One HTTPS origin: pages from Next.js, /api/* straight to FastAPI (cookies, CSRF and audio Range work
+# because the browser sees a single origin). Certificates are obtained automatically for LQ_DOMAIN.
+{
+	email {$ACME_EMAIL}
+}
+
+{$LQ_DOMAIN} {
+	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy same-origin
+		X-Frame-Options DENY
+		-Server
+	}
+	@api path /api/*
+	handle @api {
+		request_body {
+			max_size 300MB
+		}
+		reverse_proxy api:8000
+	}
+	handle {
+		reverse_proxy web:3000
+	}
+}

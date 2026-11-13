@@ -1,0 +1,24 @@
+# 単価表。見積もりと usage からの費用確定に使います。価格不明のモデルは 0 円扱いにせず、実行を拒否します。
+source: https://developers.openai.com/api/docs/pricing
+checked_at: "2026-11-12"
+note: Standard tier / short context の値。実請求は OpenAI の請求が正です。
+text:            # USD per 1M tokens
+  gpt-6.1-terra: {input: 1.00, output: 5.00}
+  gpt-6.1-sol:   {input: 2.00, output: 10.00}
+  gpt-6-luna:    {input: 0.10, output: 0.50}
+  gpt-5.4-mini:  {input: 0.75, output: 4.50}
+  gpt-5-mini:    {input: 0.25, output: 2.00}
+realtime:        # USD per 1M tokens
+  gpt-realtime-2.1-mini: {text_input: 0.60, text_output: 2.40, audio_input: 10.00, audio_output: 20.00}
+  gpt-realtime-2.1:      {text_input: 4.00, text_output: 24.00, audio_input: 32.00, audio_output: 64.00}
+speech:          # deprecated endpoint /v1/audio/speech (shutdown 2027-01-06)
+  gpt-4o-mini-tts: {text_input: 0.60, audio_output: 12.00}
+transcription:   # USD per minute
+  gpt-transcribe: 0.0045
+  gpt-4o-mini-transcribe: 0.003
+  gpt-4o-transcribe: 0.006
+# 見積もり専用の仮定（公式値ではありません）。確定額は API が返す usage から計算します。
+assumptions:
+  audio_output_tokens_per_second: 25
+  chars_per_text_token: 4
+  speech_chars_per_second: 14

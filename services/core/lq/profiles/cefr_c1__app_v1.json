@@ -1,0 +1,74 @@
+{
+ "id": "cefr_c1/app_v1",
+ "mode": "cefr_c1",
+ "version": "app_v1",
+ "current": true,
+ "label_ja": "C1 練習（アプリ独自構成）",
+ "kind": "cefr_practice",
+ "sources": [
+  {
+   "url": "https://rm.coe.int/cefr-companion-volume-with-new-descriptors-2020/16809ea0d4",
+   "note": "CEFR Companion Volume の口頭理解の能力記述を参考にしたアプリ独自の練習構成。公式に統一された問題数・試験時間・音声規格はありません。",
+   "checked_at": "2026-11-12",
+   "verified": "能力記述を参考にしたのみ"
+  }
+ ],
+ "exam": {
+  "label_ja": "アプリ内実力チェック",
+  "kind": "app_check",
+  "answer_time_min": null,
+  "venue_note_ja": "アプリ独自の構成です。CEFRの認定や公式試験の結果を示すものではありません。",
+  "score": "count",
+  "total_questions": 7
+ },
+ "timing": {
+  "between_plays_sec": 0,
+  "note": "アプリ独自の初期値"
+ },
+ "parts": [
+  {
+   "part": "lecture",
+   "section": "講義",
+   "label_ja": "講義",
+   "template_type": "lecture",
+   "units": 1,
+   "questions_per_unit": 3,
+   "plays": 1,
+   "question_medium": "screen",
+   "question_timing": "before",
+   "min_speakers": 1,
+   "answer_wait_sec": 15,
+   "pre_read_sec": 15
+  },
+  {
+   "part": "discussion",
+   "section": "議論",
+   "label_ja": "議論",
+   "template_type": "discussion",
+   "units": 1,
+   "questions_per_unit": 2,
+   "plays": 1,
+   "question_medium": "screen",
+   "question_timing": "before",
+   "min_speakers": 2,
+   "answer_wait_sec": 15,
+   "pre_read_sec": 15
+  },
+  {
+   "part": "interview",
+   "section": "インタビュー",
+   "label_ja": "インタビュー",
+   "template_type": "interview",
+   "units": 1,
+   "questions_per_unit": 2,
+   "plays": 1,
+   "question_medium": "screen",
+   "question_timing": "before",
+   "min_speakers": 2,
+   "answer_wait_sec": 15,
+   "pre_read_sec": 15
+  }
+ ],
+ "scoring": [],
+ "section_points": {}
+}

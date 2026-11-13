@@ -1,0 +1,5952 @@
+{
+ "schema_version": 2,
+ "source": "fixture",
+ "units": [
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "c1-lecture-desire-paths",
+   "revision": 1,
+   "mode": "cefr_c1",
+   "profile_version": "cefr_c1/app_v1",
+   "part": "lecture",
+   "template_type": "lecture",
+   "title": "講義 C1-1",
+   "topic": "design",
+   "skill_tags": [
+    "discourse_structure",
+    "main_idea",
+    "speaker_attitude"
+   ],
+   "primary_skill": "discourse_structure",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "c1-lecture-desire-paths",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "l",
+     "role": "speaker",
+     "label": "L",
+     "voice_hint": "female"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "l",
+       "lang": "en",
+       "text": "Let me begin with something you've all seen: those worn tracks across a lawn where people have ignored the paved route."
+      },
+      {
+       "id": "u2",
+       "speaker_id": "l",
+       "lang": "en",
+       "text": "Planners call them desire paths, and for decades they were treated as a nuisance, evidence that the public couldn't follow instructions."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "l",
+       "lang": "en",
+       "text": "I want to suggest the opposite reading: that a desire path is free data about how a space is actually used."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "l",
+       "lang": "en",
+       "text": "Some universities have taken this literally. They leave new lawns unpaved for a year, watch where the tracks appear, and only then lay the pavement."
+      },
+      {
+       "id": "u5",
+       "speaker_id": "l",
+       "lang": "en",
+       "text": "Now, you might object that this simply rewards impatience. But notice what the alternative costs: fences, signs, and a path nobody uses."
+      },
+      {
+       "id": "u6",
+       "speaker_id": "l",
+       "lang": "en",
+       "text": "The broader lesson, and this is where I'll spend the rest of today, is that a design which fights its users' habits will usually lose."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "What is the lecturer's central claim?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Desire paths show that people refuse to follow rules."
+      },
+      {
+       "id": "c2",
+       "text": "Desire paths are useful information about how people really behave."
+      },
+      {
+       "id": "c3",
+       "text": "Lawns should never be paved."
+      },
+      {
+       "id": "c4",
+       "text": "Universities waste money on landscaping."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "main_idea"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u3",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "A desire path is free data about how a space is actually used.",
+      "explanation_ja": "「迷惑」という従来の見方に対し、実際の使われ方を示す無料のデータだと主張しています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "それは講師が退けている従来の見方です。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "舗装そのものを否定してはいません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "大学は肯定的な例として挙げられています。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q2",
+     "slot": 2,
+     "segment_ids": [],
+     "prompt_en": "Why does the lecturer mention universities that delay paving?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "To criticise slow construction work."
+      },
+      {
+       "id": "c2",
+       "text": "To give a concrete example that supports the claim."
+      },
+      {
+       "id": "c3",
+       "text": "To introduce an opposing view."
+      },
+      {
+       "id": "c4",
+       "text": "To move the topic to budgets."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "discourse_structure"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u4",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "It is a concrete example supporting the claim.",
+      "explanation_ja": "主張の直後に、それを文字どおり実践している具体例として挙げています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "批判ではなく肯定的な例です。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "反対意見はその後の you might object で出てきます。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "予算の話へは移っていません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q3",
+     "slot": 3,
+     "segment_ids": [],
+     "prompt_en": "How does the lecturer deal with the objection about rewarding impatience?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "She accepts it completely."
+      },
+      {
+       "id": "c2",
+       "text": "She sets it aside by pointing to the costs of the alternative."
+      },
+      {
+       "id": "c3",
+       "text": "She ignores it."
+      },
+      {
+       "id": "c4",
+       "text": "She says more research is needed."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "speaker_attitude"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u5",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "She counters it by pointing out what the alternative costs.",
+      "explanation_ja": "反論を取り上げたうえで、柵や看板、誰も使わない道という代案のコストを示して退けています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "受け入れてはいません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "自分から取り上げて答えています。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "さらなる研究には触れていません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "c1-discussion-mentoring",
+   "revision": 1,
+   "mode": "cefr_c1",
+   "profile_version": "cefr_c1/app_v1",
+   "part": "discussion",
+   "template_type": "discussion",
+   "title": "議論 C1-1",
+   "topic": "work",
+   "skill_tags": [
+    "inference",
+    "speaker_attitude"
+   ],
+   "primary_skill": "inference",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "c1-discussion-remote-mentoring",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "hale",
+     "role": "speaker",
+     "label": "Hale",
+     "voice_hint": "male"
+    },
+    {
+     "id": "rina",
+     "role": "speaker",
+     "label": "Rina",
+     "voice_hint": "female"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "hale",
+       "lang": "en",
+       "text": "I would contend that remote work has, on balance, eroded the informal mentoring junior staff once received."
+      },
+      {
+       "id": "u2",
+       "speaker_id": "rina",
+       "lang": "en",
+       "text": "Honestly? I think that ship had sailed way before anyone worked from home. Nobody was mentoring me in an open-plan office with headphones on."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "hale",
+       "lang": "en",
+       "text": "That is a fair point, though I suspect proximity at least made such encounters possible."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "rina",
+       "lang": "en",
+       "text": "Possible, sure. But possible doesn't pay the rent. I'd take a scheduled half hour with someone senior over bumping into them at the coffee machine."
+      },
+      {
+       "id": "u5",
+       "speaker_id": "hale",
+       "lang": "en",
+       "text": "Then perhaps our disagreement is narrower than it first appeared: we both want mentoring to be deliberate."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "What does Rina mean by \"that ship had sailed\"?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Informal mentoring had already declined before remote work."
+      },
+      {
+       "id": "c2",
+       "text": "Remote work was introduced too late."
+      },
+      {
+       "id": "c3",
+       "text": "Senior staff had left the company."
+      },
+      {
+       "id": "c4",
+       "text": "She had missed her chance of promotion."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c1"
+     },
+     "skill_tags": [
+      "inference"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u2",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Informal mentoring had already disappeared before remote work began.",
+      "explanation_ja": "在宅勤務より前から、オフィスでも指導は受けられていなかったという意味です。",
+      "distractors": [
+       {
+        "choice_id": "c2",
+        "reason_ja": "導入時期の遅さの話ではありません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "退職の話は出てきません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "昇進の話は出てきません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q2",
+     "slot": 2,
+     "segment_ids": [],
+     "prompt_en": "On what do the two speakers finally agree?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Offices should be reopened."
+      },
+      {
+       "id": "c2",
+       "text": "Mentoring should be planned rather than left to chance."
+      },
+      {
+       "id": "c3",
+       "text": "Remote work harms junior staff."
+      },
+      {
+       "id": "c4",
+       "text": "Chats at the coffee machine are the best mentoring."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "speaker_attitude"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u4",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": "u5",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Mentoring should be deliberate.",
+      "explanation_ja": "Rinaは予定された時間を望み、Haleも「意図的な指導」を両者が望んでいるとまとめています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "出社再開では一致していません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "それはHaleの当初の主張で、Rinaは同意していません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "Rinaは偶然の立ち話より予定された時間を選ぶと言っています。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "c1-interview-boredom",
+   "revision": 1,
+   "mode": "cefr_c1",
+   "profile_version": "cefr_c1/app_v1",
+   "part": "interview",
+   "template_type": "interview",
+   "title": "インタビュー C1-1",
+   "topic": "psychology",
+   "skill_tags": [
+    "inference",
+    "speaker_attitude"
+   ],
+   "primary_skill": "inference",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "c1-interview-boredom",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "i",
+     "role": "speaker",
+     "label": "I",
+     "voice_hint": "female"
+    },
+    {
+     "id": "g",
+     "role": "speaker",
+     "label": "G",
+     "voice_hint": "male"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "i",
+       "lang": "en",
+       "text": "Your new book argues that boredom is underrated. Isn't that a hard sell?"
+      },
+      {
+       "id": "u2",
+       "speaker_id": "g",
+       "lang": "en",
+       "text": "It is, and I rather enjoy that. We've become so good at filling every gap with a screen that we've forgotten what the gap was for."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "i",
+       "lang": "en",
+       "text": "And what was it for?"
+      },
+      {
+       "id": "u4",
+       "speaker_id": "g",
+       "lang": "en",
+       "text": "Well, the research is suggestive rather than conclusive, I should say. But people left with nothing to do tend to start planning, daydreaming, connecting ideas. I don't think it's a coincidence my best chapters began in dentists' waiting rooms."
+      },
+      {
+       "id": "u5",
+       "speaker_id": "i",
+       "lang": "en",
+       "text": "So should we all throw away our phones?"
+      },
+      {
+       "id": "u6",
+       "speaker_id": "g",
+       "lang": "en",
+       "text": "Heavens, no. I'm not a monk. I'd simply like people to notice the reflex, the hand reaching for the pocket, and occasionally not obey it."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "What is the author's attitude toward the research on boredom?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "He regards it as proven."
+      },
+      {
+       "id": "c2",
+       "text": "He presents it cautiously while finding it persuasive."
+      },
+      {
+       "id": "c3",
+       "text": "He thinks it is seriously flawed."
+      },
+      {
+       "id": "c4",
+       "text": "He admits he has not read it."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "speaker_attitude"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u4",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "He is cautious about the evidence but finds it persuasive.",
+      "explanation_ja": "「決定的ではなく示唆的」と断りつつ、自分の経験を添えて支持しています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "決定的ではないと自分で述べています。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "欠陥があるとは言っていません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "読んでいないとは言っていません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q2",
+     "slot": 2,
+     "segment_ids": [],
+     "prompt_en": "What does he recommend?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Giving up smartphones altogether."
+      },
+      {
+       "id": "c2",
+       "text": "Noticing the habit of reaching for the phone and sometimes resisting it."
+      },
+      {
+       "id": "c3",
+       "text": "Spending more time in waiting rooms."
+      },
+      {
+       "id": "c4",
+       "text": "Writing only when bored."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "inference"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u6",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Notice the reflex and occasionally do not obey it.",
+      "explanation_ja": "手がポケットに伸びる反射に気づき、ときどきそれに従わないことを勧めています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "捨てる必要はないとはっきり否定しています。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "待合室は自分の例として挙げただけです。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "退屈な時だけ書くとは言っていません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "c2-implicature-draft",
+   "revision": 1,
+   "mode": "cefr_c2",
+   "profile_version": "cefr_c2/app_v1",
+   "part": "implicature",
+   "template_type": "implicature",
+   "title": "含意 C2-1",
+   "topic": "writing",
+   "skill_tags": [
+    "explicit_detail",
+    "inference"
+   ],
+   "primary_skill": "explicit_detail",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "c2-implicature-faint-praise",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "a",
+     "role": "speaker",
+     "label": "A",
+     "voice_hint": "male"
+    },
+    {
+     "id": "b",
+     "role": "speaker",
+     "label": "B",
+     "voice_hint": "female"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "So you read my draft. Be honest."
+      },
+      {
+       "id": "u2",
+       "speaker_id": "b",
+       "lang": "en",
+       "text": "The font is lovely."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "Ouch. That bad?"
+      },
+      {
+       "id": "u4",
+       "speaker_id": "b",
+       "lang": "en",
+       "text": "No, no. The middle section sings. It's just that it takes you eleven pages to clear your throat before you get there."
+      },
+      {
+       "id": "u5",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "So cut the introduction."
+      },
+      {
+       "id": "u6",
+       "speaker_id": "b",
+       "lang": "en",
+       "text": "I'd say introduce it to a pair of scissors, yes. Keep the bit about your grandfather, though; that's the only part of the opening that earns its place."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "What does B imply by saying \"The font is lovely\"?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "B thinks the layout is the best thing about an excellent draft."
+      },
+      {
+       "id": "c2",
+       "text": "B has reservations about the content itself."
+      },
+      {
+       "id": "c3",
+       "text": "B has not actually read the draft."
+      },
+      {
+       "id": "c4",
+       "text": "B wants A to change the font."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "inference"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u2",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": "u3",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "B is signalling reservations about the content.",
+      "explanation_ja": "内容を尋ねられて書体だけを褒めるのは、内容に不満があることの遠回しな表現で、Aも「そんなにひどい？」と受け取っています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "草稿全体を絶賛してはいません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "中盤や祖父の話に具体的に触れており、読んでいます。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "書体の変更は求めていません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q2",
+     "slot": 2,
+     "segment_ids": [],
+     "prompt_en": "What does B actually recommend?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Rewriting the middle section."
+      },
+      {
+       "id": "c2",
+       "text": "Cutting most of the introduction but keeping the passage about the grandfather."
+      },
+      {
+       "id": "c3",
+       "text": "Deleting the passage about the grandfather."
+      },
+      {
+       "id": "c4",
+       "text": "Adding eleven more pages."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "explicit_detail"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u6",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Cut the introduction but keep the part about the grandfather.",
+      "explanation_ja": "導入は「はさみを入れる」べきだが、祖父の部分だけは残すよう勧めています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "中盤は「歌っている」と高く評価しています。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "祖父の部分は残すべきだと言っています。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "11ページは長すぎる導入の長さです。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "c2-attitude-four-day-week",
+   "revision": 1,
+   "mode": "cefr_c2",
+   "profile_version": "cefr_c2/app_v1",
+   "part": "attitude",
+   "template_type": "attitude",
+   "title": "態度の変化 C2-1",
+   "topic": "work",
+   "skill_tags": [
+    "inference",
+    "speaker_attitude"
+   ],
+   "primary_skill": "inference",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "c2-attitude-four-day-week",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "a",
+     "role": "speaker",
+     "label": "A",
+     "voice_hint": "male"
+    },
+    {
+     "id": "b",
+     "role": "speaker",
+     "label": "B",
+     "voice_hint": "female"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "I'll say it: the four-day week is a gimmick. Companies trial it, get their headline, and quietly go back."
+      },
+      {
+       "id": "u2",
+       "speaker_id": "b",
+       "lang": "en",
+       "text": "Some do. The firm my sister works at has kept it for three years, and their staff turnover halved."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "One firm. And I'd bet they're all doing five days' work in four and calling it wellbeing."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "b",
+       "lang": "en",
+       "text": "She says the opposite. They cut meetings, not corners. The Friday thing only worked because they redesigned the week."
+      },
+      {
+       "id": "u5",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "Hm. So the day off is the result, not the policy."
+      },
+      {
+       "id": "u6",
+       "speaker_id": "b",
+       "lang": "en",
+       "text": "That's how she'd put it."
+      },
+      {
+       "id": "u7",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "Then I'll downgrade gimmick to badly explained. Which, coming from me, is practically an endorsement."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "How does A's position change during the conversation?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "From scepticism to qualified acceptance."
+      },
+      {
+       "id": "c2",
+       "text": "From support to opposition."
+      },
+      {
+       "id": "c3",
+       "text": "It does not change at all."
+      },
+      {
+       "id": "c4",
+       "text": "From indifference to enthusiasm for every company."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c1"
+     },
+     "skill_tags": [
+      "speaker_attitude"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u1",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": "u7",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "A moves from scepticism to qualified acceptance.",
+      "explanation_ja": "最初は「見せかけ」と断じ、最後は「説明が下手なだけ」に格下げし、自分としてはほぼ支持だと述べています。",
+      "distractors": [
+       {
+        "choice_id": "c2",
+        "reason_ja": "最初から支持してはいません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "最後に評価を改めています。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "全面的な熱意までは示していません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q2",
+     "slot": 2,
+     "segment_ids": [],
+     "prompt_en": "What prompts the change?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "National productivity statistics."
+      },
+      {
+       "id": "c2",
+       "text": "Learning that the firm redesigned its work rather than compressing it."
+      },
+      {
+       "id": "c3",
+       "text": "B's criticism of A's own job."
+      },
+      {
+       "id": "c4",
+       "text": "A newspaper headline."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "inference"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u4",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": "u5",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Hearing that the firm cut meetings and redesigned the week.",
+      "explanation_ja": "5日分を4日に詰めたのではなく、会議を減らして週を設計し直したと聞き、「休日は結果だ」と捉え直しています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "全国統計は出てきません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "Aの仕事への批判はありません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "見出しは最初の懐疑の理由として出ただけです。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "c2-integration-leaving-do",
+   "revision": 1,
+   "mode": "cefr_c2",
+   "profile_version": "cefr_c2/app_v1",
+   "part": "discourse_integration",
+   "template_type": "discourse_integration",
+   "title": "談話統合 C2-1",
+   "topic": "office",
+   "skill_tags": [
+    "inference",
+    "integration"
+   ],
+   "primary_skill": "integration",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "c2-integration-leaving-do",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "dev",
+     "role": "speaker",
+     "label": "Dev",
+     "voice_hint": "male"
+    },
+    {
+     "id": "jo",
+     "role": "speaker",
+     "label": "Jo",
+     "voice_hint": "female"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "dev",
+       "lang": "en",
+       "text": "Before I forget, Marta's leaving do is the 14th, not the 12th. The room was double-booked."
+      },
+      {
+       "id": "u2",
+       "speaker_id": "jo",
+       "lang": "en",
+       "text": "Fine by me. Wait, isn't the 14th the day the auditors are in?"
+      },
+      {
+       "id": "u3",
+       "speaker_id": "dev",
+       "lang": "en",
+       "text": "They're in all week, but they've only got the big conference room on the Thursday."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "jo",
+       "lang": "en",
+       "text": "And the 14th is...?"
+      },
+      {
+       "id": "u5",
+       "speaker_id": "dev",
+       "lang": "en",
+       "text": "A Wednesday. So we're clear. Anyway, are you still doing the speech?"
+      },
+      {
+       "id": "u6",
+       "speaker_id": "jo",
+       "lang": "en",
+       "text": "If I must. Though I was told to keep it under five minutes, which rules out most of my material."
+      },
+      {
+       "id": "u7",
+       "speaker_id": "dev",
+       "lang": "en",
+       "text": "Whoever told you that has clearly heard you speak before."
+      },
+      {
+       "id": "u8",
+       "speaker_id": "jo",
+       "lang": "en",
+       "text": "It was Marta."
+      },
+      {
+       "id": "u9",
+       "speaker_id": "dev",
+       "lang": "en",
+       "text": "Then she's earned her send-off. Oh, and it's the small kitchen, not the big room. Bring your own mug."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "Why is there no clash between the party and the auditors?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "The auditors leave before the 14th."
+      },
+      {
+       "id": "c2",
+       "text": "The auditors have the big room only on Thursday, and the party is on Wednesday in the kitchen."
+      },
+      {
+       "id": "c3",
+       "text": "The party has been moved back to the 12th."
+      },
+      {
+       "id": "c4",
+       "text": "The auditors have been invited to the party."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "integration"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u3",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": "u5",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": "u9",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "The auditors use the big room only on Thursday; the party is on Wednesday, in the small kitchen.",
+      "explanation_ja": "監査人が大会議室を使うのは木曜だけで、送別会は水曜、しかも場所は小さいキッチンです。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "監査人は週の間ずっといます。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "12日から14日に変更されています。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "招待の話は出てきません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q2",
+     "slot": 2,
+     "segment_ids": [],
+     "prompt_en": "What does Dev imply about Jo's speeches?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "They are usually too short."
+      },
+      {
+       "id": "c2",
+       "text": "They tend to go on too long."
+      },
+      {
+       "id": "c3",
+       "text": "They are always carefully prepared."
+      },
+      {
+       "id": "c4",
+       "text": "Marta dislikes them."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "inference"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u7",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Jo's speeches tend to run long.",
+      "explanation_ja": "5分以内と言った人は「前にあなたの話を聞いたことがあるに違いない」という皮肉から、話が長いと分かります。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "短すぎるなら時間制限は不要です。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "準備の丁寧さには触れていません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "嫌っているとまでは言えません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q3",
+     "slot": 3,
+     "segment_ids": [],
+     "prompt_en": "What can be concluded about Marta?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "She set the time limit for the speech at her own farewell."
+      },
+      {
+       "id": "c2",
+       "text": "She double-booked the room."
+      },
+      {
+       "id": "c3",
+       "text": "She is one of the auditors."
+      },
+      {
+       "id": "c4",
+       "text": "She will give the speech herself."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c1"
+     },
+     "skill_tags": [
+      "integration"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u6",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": "u8",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Marta herself told Jo to keep the speech under five minutes.",
+      "explanation_ja": "5分以内にと言われた（6番目の発話）相手がMartaだと後で明かされます（8番目の発話）。",
+      "distractors": [
+       {
+        "choice_id": "c2",
+        "reason_ja": "誰が二重予約したかは述べられていません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "監査人だという情報はありません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "スピーチをするのはJoです。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "ct-1a-library-book",
+   "revision": 1,
+   "mode": "common_test",
+   "profile_version": "common_test/2026_main",
+   "part": "1A",
+   "template_type": "short_statement",
+   "title": "短文理解 A-1",
+   "topic": "campus",
+   "skill_tags": [
+    "explicit_detail"
+   ],
+   "primary_skill": "explicit_detail",
+   "provisional_difficulty_band": 2,
+   "calibration_status": "provisional",
+   "family_id": "ct-1a-intended-action",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "m",
+     "role": "speaker",
+     "label": "M",
+     "voice_hint": "male"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 2,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "I meant to return the book yesterday, but the library was closed, so I'm on my way there now."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "Which is closest to the meaning of what the speaker says?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "The speaker returned the book yesterday."
+      },
+      {
+       "id": "c2",
+       "text": "The speaker is going to return the book now."
+      },
+      {
+       "id": "c3",
+       "text": "The speaker has decided to keep the book."
+      },
+      {
+       "id": "c4",
+       "text": "The library is closed today."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "explicit_detail"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u1",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "The speaker is going to return the book now.",
+      "explanation_ja": "昨日は図書館が閉まっていて返せず、「今向かっている」と言っています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "昨日は返すつもりだったが、返せていません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "返さないと決めたとは言っていません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "閉まっていたのは昨日で、今日のことではありません。"
+       }
+      ],
+      "hint_ja": "I meant to ...（〜するつもりだった）の後の but に注目しましょう。"
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [
+    {
+     "id": "g1",
+     "question_ids": [
+      "q1"
+     ],
+     "points": 4.0,
+     "all_or_nothing": false
+    }
+   ],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "ct-1b-cat-table",
+   "revision": 1,
+   "mode": "common_test",
+   "profile_version": "common_test/2026_main",
+   "part": "1B",
+   "template_type": "scene_match",
+   "title": "場面と絵の対応 B-1",
+   "topic": "home",
+   "skill_tags": [
+    "numbers_negation"
+   ],
+   "primary_skill": "numbers_negation",
+   "provisional_difficulty_band": 2,
+   "calibration_status": "provisional",
+   "family_id": "ct-1b-position-negation",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "w",
+     "role": "speaker",
+     "label": "W",
+     "voice_hint": "female"
+    }
+   ],
+   "pre_info": null,
+   "figures": [
+    {
+     "id": "f1",
+     "kind": "scene_set",
+     "title": "Pictures",
+     "columns": [
+      "Picture",
+      "Scene"
+     ],
+     "rows": [
+      {
+       "id": "r1",
+       "cells": [
+        {
+         "id": "r1c1",
+         "text": "Picture 1"
+        },
+        {
+         "id": "r1c2",
+         "text": "A cat sleeping on a sofa"
+        }
+       ]
+      },
+      {
+       "id": "r2",
+       "cells": [
+        {
+         "id": "r2c1",
+         "text": "Picture 2"
+        },
+        {
+         "id": "r2c2",
+         "text": "A cat sleeping under a table next to a window"
+        }
+       ]
+      },
+      {
+       "id": "r3",
+       "cells": [
+        {
+         "id": "r3c1",
+         "text": "Picture 3"
+        },
+        {
+         "id": "r3c2",
+         "text": "A cat sitting on a table next to a window"
+        }
+       ]
+      },
+      {
+       "id": "r4",
+       "cells": [
+        {
+         "id": "r4c1",
+         "text": "Picture 4"
+        },
+        {
+         "id": "r4c2",
+         "text": "A cat sleeping under a table next to a door"
+        }
+       ]
+      }
+     ],
+     "note": ""
+    }
+   ],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 2,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "w",
+       "lang": "en",
+       "text": "The cat isn't on the sofa anymore. It's sleeping under the table next to the window."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "Which picture matches what you hear?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Picture 1"
+      },
+      {
+       "id": "c2",
+       "text": "Picture 2"
+      },
+      {
+       "id": "c3",
+       "text": "Picture 3"
+      },
+      {
+       "id": "c4",
+       "text": "Picture 4"
+      }
+     ],
+     "items": [],
+     "figure_ids": [
+      "f1"
+     ],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "numbers_negation"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u1",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": null,
+       "figure_id": "f1",
+       "element_id": "r2"
+      }
+     ],
+     "feedback": {
+      "answer_en": "Picture 2, a cat sleeping under a table next to a window.",
+      "explanation_ja": "「もうソファの上にはいない」「窓のそばのテーブルの下で寝ている」に合うのは2です。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "isn't on the sofa と否定されています。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "テーブルの「上」ではなく「下」で、座っているのではなく寝ています。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "テーブルがあるのはドアではなく窓のそばです。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [
+    {
+     "id": "g1",
+     "question_ids": [
+      "q1"
+     ],
+     "points": 3.0,
+     "all_or_nothing": false
+    }
+   ],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": "There are four pictures. Picture 1: a cat sleeping on a sofa. Picture 2: a cat sleeping under a table next to a window. Picture 3: a cat sitting on a table next to a window. Picture 4: a cat sleeping under a table next to a door."
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "ct-2-train-time",
+   "revision": 1,
+   "mode": "common_test",
+   "profile_version": "common_test/2026_main",
+   "part": "2",
+   "template_type": "short_dialogue_audio_question",
+   "title": "短い対話と問い 2-1",
+   "topic": "travel",
+   "skill_tags": [
+    "numbers_negation"
+   ],
+   "primary_skill": "numbers_negation",
+   "provisional_difficulty_band": 2,
+   "calibration_status": "provisional",
+   "family_id": "ct-2-schedule-change",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "m",
+     "role": "speaker",
+     "label": "M",
+     "voice_hint": "male"
+    },
+    {
+     "id": "w",
+     "role": "speaker",
+     "label": "W",
+     "voice_hint": "female"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 2,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "Shall we take the 9:15 train?"
+      },
+      {
+       "id": "u2",
+       "speaker_id": "w",
+       "lang": "en",
+       "text": "That one doesn't stop at Midori Station. The 9:30 does."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "Then we'll have to wait for that one."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "Which train will they take?",
+     "prompt_medium": "audio",
+     "prompt_timing": "after",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "The 9:00 train"
+      },
+      {
+       "id": "c2",
+       "text": "The 9:15 train"
+      },
+      {
+       "id": "c3",
+       "text": "The 9:30 train"
+      },
+      {
+       "id": "c4",
+       "text": "The 9:45 train"
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c3"
+     },
+     "skill_tags": [
+      "numbers_negation"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u2",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": "u3",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "They will take the 9:30 train.",
+      "explanation_ja": "9時15分発は緑駅に止まらず、止まる9時30分発を待つことにしています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "9時発は会話に出てきません。"
+       },
+       {
+        "choice_id": "c2",
+        "reason_ja": "9時15分発は目的の駅に止まらないので乗りません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "9時45分発は会話に出てきません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [
+    {
+     "id": "g1",
+     "question_ids": [
+      "q1"
+     ],
+     "points": 4.0,
+     "all_or_nothing": false
+    }
+   ],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "ct-3-study-group",
+   "revision": 1,
+   "mode": "common_test",
+   "profile_version": "common_test/2026_main",
+   "part": "3",
+   "template_type": "short_dialogue",
+   "title": "短い対話 3-1",
+   "topic": "school",
+   "skill_tags": [
+    "inference"
+   ],
+   "primary_skill": "inference",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "ct-3-reschedule",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "w",
+     "role": "speaker",
+     "label": "W",
+     "voice_hint": "female"
+    },
+    {
+     "id": "m",
+     "role": "speaker",
+     "label": "M",
+     "voice_hint": "male"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "w",
+       "lang": "en",
+       "text": "Are you coming to the study group on Friday?"
+      },
+      {
+       "id": "u2",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "I'd like to, but my shift at the bakery got moved to Friday evening."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "w",
+       "lang": "en",
+       "text": "We could meet on Saturday morning instead."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "That works. I'm free until noon."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "What will the man probably do?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Work at the bakery on Saturday morning."
+      },
+      {
+       "id": "c2",
+       "text": "Join the study group on Saturday morning."
+      },
+      {
+       "id": "c3",
+       "text": "Skip his shift on Friday evening."
+      },
+      {
+       "id": "c4",
+       "text": "Study alone on Friday evening."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "inference"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u3",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": "u4",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "He will probably join the study group on Saturday morning.",
+      "explanation_ja": "土曜の午前に変更する提案に「それなら大丈夫、正午まで空いている」と答えています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "パン屋のシフトは金曜の夕方で、土曜の午前ではありません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "シフトを休むとは言っていません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "金曜の夕方は仕事で、一人で勉強するとは言っていません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [
+    {
+     "id": "g1",
+     "question_ids": [
+      "q1"
+     ],
+     "points": 3.0,
+     "all_or_nothing": false
+    }
+   ],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "ct-3-study-group-b",
+   "revision": 1,
+   "mode": "common_test",
+   "profile_version": "common_test/2026_main",
+   "part": "3",
+   "template_type": "short_dialogue",
+   "title": "短い対話 3-1（別設問）",
+   "topic": "school",
+   "skill_tags": [
+    "explicit_detail"
+   ],
+   "primary_skill": "explicit_detail",
+   "provisional_difficulty_band": 2,
+   "calibration_status": "provisional",
+   "family_id": "ct-3-reschedule",
+   "variant_of": "ct-3-study-group",
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "w",
+     "role": "speaker",
+     "label": "W",
+     "voice_hint": "female"
+    },
+    {
+     "id": "m",
+     "role": "speaker",
+     "label": "M",
+     "voice_hint": "male"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "w",
+       "lang": "en",
+       "text": "Are you coming to the study group on Friday?"
+      },
+      {
+       "id": "u2",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "I'd like to, but my shift at the bakery got moved to Friday evening."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "w",
+       "lang": "en",
+       "text": "We could meet on Saturday morning instead."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "That works. I'm free until noon."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "Why can't the man come on Friday?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "He has to work at the bakery."
+      },
+      {
+       "id": "c2",
+       "text": "He has another study group."
+      },
+      {
+       "id": "c3",
+       "text": "He will be away until noon."
+      },
+      {
+       "id": "c4",
+       "text": "He does not like studying in a group."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c1"
+     },
+     "skill_tags": [
+      "explicit_detail"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u2",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "He has to work at the bakery on Friday evening.",
+      "explanation_ja": "パン屋のシフトが金曜の夕方に変更になったと言っています。",
+      "distractors": [
+       {
+        "choice_id": "c2",
+        "reason_ja": "別の勉強会の話は出てきません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "「正午まで」は土曜に空いている時間です。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "参加したい（I'd like to）と言っています。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [
+    {
+     "id": "g1",
+     "question_ids": [
+      "q1"
+     ],
+     "points": 3.0,
+     "all_or_nothing": false
+    }
+   ],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "ct-4a-order-saturday",
+   "revision": 1,
+   "mode": "common_test",
+   "profile_version": "common_test/2026_main",
+   "part": "4A_order",
+   "template_type": "ordering",
+   "title": "出来事の順序 4A-1",
+   "topic": "daily-life",
+   "skill_tags": [
+    "discourse_structure"
+   ],
+   "primary_skill": "discourse_structure",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "ct-4a-order-errands",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "w",
+     "role": "speaker",
+     "label": "W",
+     "voice_hint": "female"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "w",
+       "lang": "en",
+       "text": "Last Saturday was busy. Right after breakfast, I went to the post office to send a package."
+      },
+      {
+       "id": "u2",
+       "speaker_id": "w",
+       "lang": "en",
+       "text": "I had planned to go straight to the gym, but I remembered my library books were due, so I returned them first."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "w",
+       "lang": "en",
+       "text": "After working out at the gym, I was so hungry that I stopped at a noodle shop before going home."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "Which event happened first?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "She worked out at the gym."
+      },
+      {
+       "id": "c2",
+       "text": "She returned her library books."
+      },
+      {
+       "id": "c3",
+       "text": "She ate at a noodle shop."
+      },
+      {
+       "id": "c4",
+       "text": "She sent a package."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c4"
+     },
+     "skill_tags": [
+      "discourse_structure"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u1",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "First she sent a package.",
+      "explanation_ja": "朝食の直後に郵便局で荷物を送っています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "ジムは図書館の後です。"
+       },
+       {
+        "choice_id": "c2",
+        "reason_ja": "図書館は郵便局の後です。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "食事は最後です。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q2",
+     "slot": 2,
+     "segment_ids": [],
+     "prompt_en": "Which event happened second?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "She worked out at the gym."
+      },
+      {
+       "id": "c2",
+       "text": "She returned her library books."
+      },
+      {
+       "id": "c3",
+       "text": "She ate at a noodle shop."
+      },
+      {
+       "id": "c4",
+       "text": "She sent a package."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "discourse_structure"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u2",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Second she returned her library books.",
+      "explanation_ja": "ジムへ直行する予定を変えて、先に本を返しています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "ジムは本を返した後です。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "食事は最後です。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "荷物を送ったのは最初です。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q3",
+     "slot": 3,
+     "segment_ids": [],
+     "prompt_en": "Which event happened third?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "She worked out at the gym."
+      },
+      {
+       "id": "c2",
+       "text": "She returned her library books."
+      },
+      {
+       "id": "c3",
+       "text": "She ate at a noodle shop."
+      },
+      {
+       "id": "c4",
+       "text": "She sent a package."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c1"
+     },
+     "skill_tags": [
+      "discourse_structure"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u2",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": "u3",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Third she worked out at the gym.",
+      "explanation_ja": "本を返した後にジムで運動しています。",
+      "distractors": [
+       {
+        "choice_id": "c2",
+        "reason_ja": "本の返却は2番目です。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "食事はジムの後です。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "荷物を送ったのは最初です。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q4",
+     "slot": 4,
+     "segment_ids": [],
+     "prompt_en": "Which event happened fourth?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "She worked out at the gym."
+      },
+      {
+       "id": "c2",
+       "text": "She returned her library books."
+      },
+      {
+       "id": "c3",
+       "text": "She ate at a noodle shop."
+      },
+      {
+       "id": "c4",
+       "text": "She sent a package."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c3"
+     },
+     "skill_tags": [
+      "discourse_structure"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u3",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Fourth she ate at a noodle shop.",
+      "explanation_ja": "ジムの後、帰宅前に麺の店に寄っています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "ジムは3番目です。"
+       },
+       {
+        "choice_id": "c2",
+        "reason_ja": "本の返却は2番目です。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "荷物を送ったのは最初です。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [
+    {
+     "id": "g1",
+     "question_ids": [
+      "q1",
+      "q2",
+      "q3",
+      "q4"
+     ],
+     "points": 4.0,
+     "all_or_nothing": true
+    }
+   ],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "ct-4a-match-gifts",
+   "revision": 1,
+   "mode": "common_test",
+   "profile_version": "common_test/2026_main",
+   "part": "4A_match",
+   "template_type": "matching",
+   "title": "条件の対応づけ 4A-2",
+   "topic": "school-event",
+   "skill_tags": [
+    "condition_matching"
+   ],
+   "primary_skill": "condition_matching",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "ct-4a-match-rules",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "m",
+     "role": "speaker",
+     "label": "M",
+     "voice_hint": "male"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "Here is how to hand out the welcome gifts. First-year students get a notebook."
+      },
+      {
+       "id": "u2",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "Second-year students get a notebook too, unless they have joined a sports club, in which case give them a towel."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "Third-year students all receive a pen, and any teacher who visits gets a bookmark."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "What does Aya, a first-year student in the tennis club, receive?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "A bookmark"
+      },
+      {
+       "id": "c2",
+       "text": "A notebook"
+      },
+      {
+       "id": "c3",
+       "text": "A pen"
+      },
+      {
+       "id": "c4",
+       "text": "A towel"
+      },
+      {
+       "id": "c5",
+       "text": "A badge"
+      },
+      {
+       "id": "c6",
+       "text": "A sticker"
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "condition_matching"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u1",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Aya receives a notebook.",
+      "explanation_ja": "1年生は部活に関係なくノートです。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "しおりは先生用です。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "ペンは3年生用です。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "タオルは運動部の2年生だけです。"
+       },
+       {
+        "choice_id": "c5",
+        "reason_ja": "バッジは説明に出てきません。"
+       },
+       {
+        "choice_id": "c6",
+        "reason_ja": "シールは説明に出てきません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q2",
+     "slot": 2,
+     "segment_ids": [],
+     "prompt_en": "What does Ben, a second-year student in the soccer club, receive?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "A bookmark"
+      },
+      {
+       "id": "c2",
+       "text": "A notebook"
+      },
+      {
+       "id": "c3",
+       "text": "A pen"
+      },
+      {
+       "id": "c4",
+       "text": "A towel"
+      },
+      {
+       "id": "c5",
+       "text": "A badge"
+      },
+      {
+       "id": "c6",
+       "text": "A sticker"
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c4"
+     },
+     "skill_tags": [
+      "condition_matching"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u2",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Ben receives a towel.",
+      "explanation_ja": "運動部に入っている2年生はタオルです。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "しおりは先生用です。"
+       },
+       {
+        "choice_id": "c2",
+        "reason_ja": "ノートは運動部でない2年生です。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "ペンは3年生用です。"
+       },
+       {
+        "choice_id": "c5",
+        "reason_ja": "バッジは説明に出てきません。"
+       },
+       {
+        "choice_id": "c6",
+        "reason_ja": "シールは説明に出てきません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q3",
+     "slot": 3,
+     "segment_ids": [],
+     "prompt_en": "What does Chika, a second-year student in the art club, receive?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "A bookmark"
+      },
+      {
+       "id": "c2",
+       "text": "A notebook"
+      },
+      {
+       "id": "c3",
+       "text": "A pen"
+      },
+      {
+       "id": "c4",
+       "text": "A towel"
+      },
+      {
+       "id": "c5",
+       "text": "A badge"
+      },
+      {
+       "id": "c6",
+       "text": "A sticker"
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "condition_matching"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u2",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Chika receives a notebook.",
+      "explanation_ja": "運動部でない2年生はノートです。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "しおりは先生用です。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "ペンは3年生用です。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "タオルは運動部の2年生だけです。"
+       },
+       {
+        "choice_id": "c5",
+        "reason_ja": "バッジは説明に出てきません。"
+       },
+       {
+        "choice_id": "c6",
+        "reason_ja": "シールは説明に出てきません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q4",
+     "slot": 4,
+     "segment_ids": [],
+     "prompt_en": "What does Dai, a third-year student in the swimming club, receive?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "A bookmark"
+      },
+      {
+       "id": "c2",
+       "text": "A notebook"
+      },
+      {
+       "id": "c3",
+       "text": "A pen"
+      },
+      {
+       "id": "c4",
+       "text": "A towel"
+      },
+      {
+       "id": "c5",
+       "text": "A badge"
+      },
+      {
+       "id": "c6",
+       "text": "A sticker"
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c3"
+     },
+     "skill_tags": [
+      "condition_matching"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u3",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Dai receives a pen.",
+      "explanation_ja": "3年生は全員ペンです。運動部の例外は2年生だけです。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "しおりは先生用です。"
+       },
+       {
+        "choice_id": "c2",
+        "reason_ja": "ノートは1・2年生用です。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "タオルの例外は2年生だけです。"
+       },
+       {
+        "choice_id": "c5",
+        "reason_ja": "バッジは説明に出てきません。"
+       },
+       {
+        "choice_id": "c6",
+        "reason_ja": "シールは説明に出てきません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [
+    {
+     "id": "g1",
+     "question_ids": [
+      "q1"
+     ],
+     "points": 1.0,
+     "all_or_nothing": false
+    },
+    {
+     "id": "g2",
+     "question_ids": [
+      "q2"
+     ],
+     "points": 1.0,
+     "all_or_nothing": false
+    },
+    {
+     "id": "g3",
+     "question_ids": [
+      "q3"
+     ],
+     "points": 1.0,
+     "all_or_nothing": false
+    },
+    {
+     "id": "g4",
+     "question_ids": [
+      "q4"
+     ],
+     "points": 1.0,
+     "all_or_nothing": false
+    }
+   ],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "ct-4b-volunteer",
+   "revision": 1,
+   "mode": "common_test",
+   "profile_version": "common_test/2026_main",
+   "part": "4B",
+   "template_type": "condition_choice",
+   "title": "条件に合う選択 4B-1",
+   "topic": "volunteering",
+   "skill_tags": [
+    "condition_matching"
+   ],
+   "primary_skill": "condition_matching",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "ct-4b-three-conditions",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "a",
+     "role": "speaker",
+     "label": "A",
+     "voice_hint": "male"
+    },
+    {
+     "id": "b",
+     "role": "speaker",
+     "label": "B",
+     "voice_hint": "female"
+    },
+    {
+     "id": "c",
+     "role": "speaker",
+     "label": "C",
+     "voice_hint": "female"
+    },
+    {
+     "id": "d",
+     "role": "speaker",
+     "label": "D",
+     "voice_hint": "male"
+    }
+   ],
+   "pre_info": null,
+   "figures": [
+    {
+     "id": "f1",
+     "kind": "table",
+     "title": "Your conditions",
+     "columns": [
+      "Condition",
+      "Detail"
+     ],
+     "rows": [
+      {
+       "id": "r1",
+       "cells": [
+        {
+         "id": "r1c1",
+         "text": "A"
+        },
+        {
+         "id": "r1c2",
+         "text": "Activities are on weekends only"
+        }
+       ]
+      },
+      {
+       "id": "r2",
+       "cells": [
+        {
+         "id": "r2c1",
+         "text": "B"
+        },
+        {
+         "id": "r2c2",
+         "text": "There is no fee"
+        }
+       ]
+      },
+      {
+       "id": "r3",
+       "cells": [
+        {
+         "id": "r3c1",
+         "text": "C"
+        },
+        {
+         "id": "r3c2",
+         "text": "English is used"
+        }
+       ]
+      }
+     ],
+     "note": ""
+    }
+   ],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "The River Clean-up meets every Saturday morning. There's no fee, and gloves are provided. Most volunteers are local residents, so everything is done in Japanese."
+      },
+      {
+       "id": "u2",
+       "speaker_id": "b",
+       "lang": "en",
+       "text": "Our Museum Guide program needs people on Sundays. You'll explain exhibits to overseas visitors in English. We ask for a 500-yen fee for the uniform."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "c",
+       "lang": "en",
+       "text": "Join Story Time at the international library on Saturdays or Sundays. You read picture books to children in English, and it's completely free."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "d",
+       "lang": "en",
+       "text": "The Food Bank needs helpers on Wednesday evenings. It's free to join, and we work with many English-speaking volunteers."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "Which program meets all of your conditions?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "River Clean-up"
+      },
+      {
+       "id": "c2",
+       "text": "Museum Guide"
+      },
+      {
+       "id": "c3",
+       "text": "Story Time"
+      },
+      {
+       "id": "c4",
+       "text": "Food Bank"
+      }
+     ],
+     "items": [],
+     "figure_ids": [
+      "f1"
+     ],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c3"
+     },
+     "skill_tags": [
+      "condition_matching"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u3",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": null,
+       "figure_id": "f1",
+       "element_id": "r1"
+      },
+      {
+       "utterance_id": null,
+       "figure_id": "f1",
+       "element_id": "r2"
+      },
+      {
+       "utterance_id": null,
+       "figure_id": "f1",
+       "element_id": "r3"
+      }
+     ],
+     "feedback": {
+      "answer_en": "Story Time meets all three conditions.",
+      "explanation_ja": "週末のみ・無料・英語使用の3条件をすべて満たすのは Story Time だけです。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "週末で無料ですが、使うのは日本語です。"
+       },
+       {
+        "choice_id": "c2",
+        "reason_ja": "週末で英語ですが、500円の費用がかかります。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "無料で英語も使いますが、活動は水曜の夕方です。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [
+    {
+     "id": "g1",
+     "question_ids": [
+      "q1"
+     ],
+     "points": 4.0,
+     "all_or_nothing": false
+    }
+   ],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": "You are choosing a volunteer program. It must meet three conditions: activities are on weekends only, there is no fee, and English is used."
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "ct-5-naps-lecture",
+   "revision": 1,
+   "mode": "common_test",
+   "profile_version": "common_test/2026_main",
+   "part": "5",
+   "template_type": "lecture_integrated",
+   "title": "講義と資料の統合 5-1",
+   "topic": "health-science",
+   "skill_tags": [
+    "explicit_detail",
+    "integration",
+    "main_idea",
+    "numbers_negation"
+   ],
+   "primary_skill": "explicit_detail",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "ct-5-naps",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "p",
+     "role": "speaker",
+     "label": "P",
+     "voice_hint": "male"
+    },
+    {
+     "id": "k",
+     "role": "speaker",
+     "label": "K",
+     "voice_hint": "male"
+    },
+    {
+     "id": "m",
+     "role": "speaker",
+     "label": "M",
+     "voice_hint": "female"
+    }
+   ],
+   "pre_info": null,
+   "figures": [
+    {
+     "id": "f1",
+     "kind": "worksheet",
+     "title": "Worksheet",
+     "columns": [
+      "Topic",
+      "Notes"
+     ],
+     "rows": [
+      {
+       "id": "r1",
+       "cells": [
+        {
+         "id": "r1c1",
+         "text": "The study"
+        },
+        {
+         "id": "r1c2",
+         "text": "Nap length: [ 1 ] minutes"
+        }
+       ]
+      },
+      {
+       "id": "r2",
+       "cells": [
+        {
+         "id": "r2c1",
+         "text": "Naps over 40 minutes"
+        },
+        {
+         "id": "r2c2",
+         "text": "cause: [ 2 ]  →  result: [ 3 ]"
+        }
+       ]
+      },
+      {
+       "id": "r3",
+       "cells": [
+        {
+         "id": "r3c1",
+         "text": "Naps after 4 p.m."
+        },
+        {
+         "id": "r3c2",
+         "text": "cause: [ 4 ]  →  result: [ 5 ]"
+        }
+       ]
+      }
+     ],
+     "note": ""
+    },
+    {
+     "id": "f2",
+     "kind": "table",
+     "title": "Survey: when students at our school nap",
+     "columns": [
+      "Time of nap",
+      "Share of students who nap"
+     ],
+     "rows": [
+      {
+       "id": "r1",
+       "cells": [
+        {
+         "id": "r1c1",
+         "text": "Right after lunch (12-2 p.m.)"
+        },
+        {
+         "id": "r1c2",
+         "text": "18%"
+        }
+       ]
+      },
+      {
+       "id": "r2",
+       "cells": [
+        {
+         "id": "r2c1",
+         "text": "Mid-afternoon (2-4 p.m.)"
+        },
+        {
+         "id": "r2c2",
+         "text": "27%"
+        }
+       ]
+      },
+      {
+       "id": "r3",
+       "cells": [
+        {
+         "id": "r3c1",
+         "text": "After 4 p.m."
+        },
+        {
+         "id": "r3c2",
+         "text": "55%"
+        }
+       ]
+      }
+     ],
+     "note": ""
+    }
+   ],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "p",
+       "lang": "en",
+       "text": "Today I'd like to talk about how short naps affect learning."
+      },
+      {
+       "id": "u2",
+       "speaker_id": "p",
+       "lang": "en",
+       "text": "In one study, students memorized a list of words in the morning. One group then took a twenty-minute nap after lunch, while the other group stayed awake."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "p",
+       "lang": "en",
+       "text": "When tested in the evening, the nap group remembered about thirty percent more words."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "p",
+       "lang": "en",
+       "text": "However, longer is not always better. Naps of more than forty minutes often lead to deep sleep, and people who wake from deep sleep feel slow and tired for a while."
+      },
+      {
+       "id": "u5",
+       "speaker_id": "p",
+       "lang": "en",
+       "text": "Timing matters too. A nap taken after four p.m. tends to delay bedtime, which reduces night-time sleep."
+      },
+      {
+       "id": "u6",
+       "speaker_id": "p",
+       "lang": "en",
+       "text": "So the general advice is simple: keep naps short, and take them early in the afternoon."
+      }
+     ]
+    },
+    {
+     "id": "s2",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u7",
+       "speaker_id": "k",
+       "lang": "en",
+       "text": "I usually nap for an hour after club practice, around six. Maybe that's why I can't fall asleep until one a.m."
+      },
+      {
+       "id": "u8",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "I tried a fifteen-minute nap right after lunch last week, and my afternoon classes felt much easier."
+      }
+     ]
+    },
+    {
+     "id": "s3",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u9",
+       "speaker_id": "k",
+       "lang": "en",
+       "text": "Look at this survey of our school. More than half of the students who nap do it after four."
+      },
+      {
+       "id": "u10",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "Then according to the lecture, most of them are probably napping at the wrong time."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [
+      "s1"
+     ],
+     "prompt_en": "Choose the best option for [ 1 ] on the worksheet.",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "10"
+      },
+      {
+       "id": "c2",
+       "text": "20"
+      },
+      {
+       "id": "c3",
+       "text": "30"
+      },
+      {
+       "id": "c4",
+       "text": "40"
+      }
+     ],
+     "items": [],
+     "figure_ids": [
+      "f1"
+     ],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "numbers_negation"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u2",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "The nap in the study was twenty minutes long.",
+      "explanation_ja": "実験では昼食後に20分の昼寝をしています。30は成績の伸び（約30%）、40は長すぎる昼寝の目安です。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "10分という数字は出てきません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "30は思い出せた単語が約30%多いという数字です。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "40分は「長すぎる昼寝」の基準です。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q2",
+     "slot": 2,
+     "segment_ids": [
+      "s1"
+     ],
+     "prompt_en": "Choose the best option for [ 2 ].",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "deep sleep"
+      },
+      {
+       "id": "c2",
+       "text": "light sleep"
+      },
+      {
+       "id": "c3",
+       "text": "a later bedtime"
+      },
+      {
+       "id": "c4",
+       "text": "better memory"
+      }
+     ],
+     "items": [],
+     "figure_ids": [
+      "f1"
+     ],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c1"
+     },
+     "skill_tags": [
+      "explicit_detail"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u4",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Long naps often lead to deep sleep.",
+      "explanation_ja": "40分を超える昼寝は深い眠りにつながると述べています。",
+      "distractors": [
+       {
+        "choice_id": "c2",
+        "reason_ja": "浅い眠りとは言っていません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "就寝が遅れるのは午後4時以降の昼寝の話です。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "記憶の向上は短い昼寝の効果です。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q3",
+     "slot": 3,
+     "segment_ids": [
+      "s1"
+     ],
+     "prompt_en": "Choose the best option for [ 3 ].",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "feeling slow after waking"
+      },
+      {
+       "id": "c2",
+       "text": "remembering more words"
+      },
+      {
+       "id": "c3",
+       "text": "sleeping earlier at night"
+      },
+      {
+       "id": "c4",
+       "text": "skipping lunch"
+      }
+     ],
+     "items": [],
+     "figure_ids": [
+      "f1"
+     ],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c1"
+     },
+     "skill_tags": [
+      "explicit_detail"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u4",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "People feel slow and tired after waking from deep sleep.",
+      "explanation_ja": "深い眠りから起きるとしばらく頭が働かず疲れを感じると述べています。",
+      "distractors": [
+       {
+        "choice_id": "c2",
+        "reason_ja": "単語を多く覚えていたのは20分の昼寝の結果です。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "早く寝られるとは言っていません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "昼食を抜く話は出てきません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q4",
+     "slot": 4,
+     "segment_ids": [
+      "s1"
+     ],
+     "prompt_en": "Choose the best option for [ 4 ].",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "a later bedtime"
+      },
+      {
+       "id": "c2",
+       "text": "deep sleep"
+      },
+      {
+       "id": "c3",
+       "text": "more energy"
+      },
+      {
+       "id": "c4",
+       "text": "a shorter nap"
+      }
+     ],
+     "items": [],
+     "figure_ids": [
+      "f1"
+     ],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c1"
+     },
+     "skill_tags": [
+      "explicit_detail"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u5",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "A late nap tends to delay bedtime.",
+      "explanation_ja": "午後4時以降の昼寝は就寝時刻を遅らせると述べています。",
+      "distractors": [
+       {
+        "choice_id": "c2",
+        "reason_ja": "深い眠りは40分を超える昼寝の話です。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "元気が出るとは言っていません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "昼寝が短くなるとは言っていません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q5",
+     "slot": 5,
+     "segment_ids": [
+      "s1"
+     ],
+     "prompt_en": "Choose the best option for [ 5 ].",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "less sleep at night"
+      },
+      {
+       "id": "c2",
+       "text": "better test scores"
+      },
+      {
+       "id": "c3",
+       "text": "longer naps"
+      },
+      {
+       "id": "c4",
+       "text": "more dreams"
+      }
+     ],
+     "items": [],
+     "figure_ids": [
+      "f1"
+     ],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c1"
+     },
+     "skill_tags": [
+      "explicit_detail"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u5",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "A delayed bedtime reduces night-time sleep.",
+      "explanation_ja": "就寝が遅れる結果、夜の睡眠が減ると述べています。",
+      "distractors": [
+       {
+        "choice_id": "c2",
+        "reason_ja": "成績が上がるとは言っていません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "昼寝が長くなるとは言っていません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "夢の話は出てきません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q6",
+     "slot": 6,
+     "segment_ids": [
+      "s1"
+     ],
+     "prompt_en": "Which statement best matches the lecture?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Any nap improves memory regardless of its length."
+      },
+      {
+       "id": "c2",
+       "text": "Short naps taken early in the afternoon can support learning."
+      },
+      {
+       "id": "c3",
+       "text": "Students should replace night-time sleep with naps."
+      },
+      {
+       "id": "c4",
+       "text": "Naps are harmful for most students."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "main_idea"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u6",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Short naps taken early in the afternoon can support learning.",
+      "explanation_ja": "「昼寝は短く、午後の早い時間に」という結論に合います。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "長い昼寝には欠点があると述べています。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "夜の睡眠の代わりにするとは言っていません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "短い昼寝の効果を紹介しています。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q7",
+     "slot": 7,
+     "segment_ids": [
+      "s1",
+      "s2",
+      "s3"
+     ],
+     "prompt_en": "Which statement is supported by the lecture, the students' comments, and the survey?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Most students who nap at this school do so at a time the lecture warns against."
+      },
+      {
+       "id": "c2",
+       "text": "Mai's nap was too long according to the lecture."
+      },
+      {
+       "id": "c3",
+       "text": "Ken's habit matches the lecture's advice."
+      },
+      {
+       "id": "c4",
+       "text": "The survey shows that napping right after lunch is the most common."
+      }
+     ],
+     "items": [],
+     "figure_ids": [
+      "f2"
+     ],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c1"
+     },
+     "skill_tags": [
+      "integration"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u5",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": "u9",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": null,
+       "figure_id": "f2",
+       "element_id": "r3"
+      }
+     ],
+     "feedback": {
+      "answer_en": "Most students who nap at this school do so after 4 p.m., a time the lecture warns against.",
+      "explanation_ja": "調査では昼寝をする生徒の55%が午後4時以降で、講義はその時間帯の昼寝は夜の睡眠を減らすと注意しています。",
+      "distractors": [
+       {
+        "choice_id": "c2",
+        "reason_ja": "Maiの昼寝は15分で、短い昼寝に当たります。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "Kenは午後6時頃に1時間寝ており、助言と逆です。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "昼食直後は18%で最も少ない時間帯です。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [
+    {
+     "id": "g1",
+     "question_ids": [
+      "q1"
+     ],
+     "points": 3.0,
+     "all_or_nothing": false
+    },
+    {
+     "id": "g2",
+     "question_ids": [
+      "q2",
+      "q3"
+     ],
+     "points": 2.0,
+     "all_or_nothing": true
+    },
+    {
+     "id": "g3",
+     "question_ids": [
+      "q4",
+      "q5"
+     ],
+     "points": 2.0,
+     "all_or_nothing": true
+    },
+    {
+     "id": "g4",
+     "question_ids": [
+      "q6"
+     ],
+     "points": 4.0,
+     "all_or_nothing": false
+    },
+    {
+     "id": "g5",
+     "question_ids": [
+      "q7"
+     ],
+     "points": 5.0,
+     "all_or_nothing": false
+    }
+   ],
+   "radio": {
+    "supported": false,
+    "reason": "ワークシートと図表を見ながら解く形式のため、ラジオには別の教材を使います。",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "ct-6a-tablets",
+   "revision": 1,
+   "mode": "common_test",
+   "profile_version": "common_test/2026_main",
+   "part": "6A",
+   "template_type": "two_person_dialogue",
+   "title": "二人の対話 6A-1",
+   "topic": "education",
+   "skill_tags": [
+    "main_idea",
+    "speaker_attitude"
+   ],
+   "primary_skill": "main_idea",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "ct-6a-tablets-vs-paper",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "taro",
+     "role": "speaker",
+     "label": "Taro",
+     "voice_hint": "male"
+    },
+    {
+     "id": "lisa",
+     "role": "speaker",
+     "label": "Lisa",
+     "voice_hint": "female"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "taro",
+       "lang": "en",
+       "text": "I think our school should let us use tablets instead of paper textbooks. My bag weighs a ton."
+      },
+      {
+       "id": "u2",
+       "speaker_id": "lisa",
+       "lang": "en",
+       "text": "I get that, but I remember things better when I write notes by hand on paper."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "taro",
+       "lang": "en",
+       "text": "You can write on a tablet with a pen, though. And we'd always have the latest edition."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "lisa",
+       "lang": "en",
+       "text": "True, but screens tire my eyes, and there's the cost. Not every family can buy one."
+      },
+      {
+       "id": "u5",
+       "speaker_id": "taro",
+       "lang": "en",
+       "text": "The school could lend them out, like the library does with books."
+      },
+      {
+       "id": "u6",
+       "speaker_id": "lisa",
+       "lang": "en",
+       "text": "If they did that, I'd be less against it. I still want paper for exams, though."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "What is Taro's main point?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Tablets would be lighter to carry and more up to date than paper textbooks."
+      },
+      {
+       "id": "c2",
+       "text": "Students should stop taking notes in class."
+      },
+      {
+       "id": "c3",
+       "text": "Paper textbooks cost families too much money."
+      },
+      {
+       "id": "c4",
+       "text": "Exams should be taken on tablets."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c1"
+     },
+     "skill_tags": [
+      "main_idea"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u1",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": "u3",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Tablets would be lighter and always up to date.",
+      "explanation_ja": "かばんが重いこと、常に最新版が使えることを理由にタブレットを勧めています。",
+      "distractors": [
+       {
+        "choice_id": "c2",
+        "reason_ja": "ノートを取るのをやめるとは言っていません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "費用を心配しているのはLisaです。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "試験の方法についてTaroは述べていません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q2",
+     "slot": 2,
+     "segment_ids": [],
+     "prompt_en": "What is Lisa's view at the end of the conversation?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "She fully supports replacing paper textbooks."
+      },
+      {
+       "id": "c2",
+       "text": "She would be more open to tablets if the school lent them, but still wants paper for exams."
+      },
+      {
+       "id": "c3",
+       "text": "She thinks tablets are better for remembering things."
+      },
+      {
+       "id": "c4",
+       "text": "She believes every family can afford a tablet."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "speaker_attitude"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u6",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "She would be less against tablets if the school lent them, but wants paper for exams.",
+      "explanation_ja": "貸し出しがあれば反対は弱まるが、試験は紙がよいと述べています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "全面的に賛成してはいません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "紙に手で書く方が覚えやすいと言っています。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "買えない家庭もあると言っています。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [
+    {
+     "id": "g1",
+     "question_ids": [
+      "q1"
+     ],
+     "points": 3.0,
+     "all_or_nothing": false
+    },
+    {
+     "id": "g2",
+     "question_ids": [
+      "q2"
+     ],
+     "points": 3.0,
+     "all_or_nothing": false
+    }
+   ],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "ct-6b-car-free-sunday",
+   "revision": 1,
+   "mode": "common_test",
+   "profile_version": "common_test/2026_main",
+   "part": "6B",
+   "template_type": "multi_person_discussion",
+   "title": "三人の会話 6B-1",
+   "topic": "community",
+   "skill_tags": [
+    "explicit_detail",
+    "integration"
+   ],
+   "primary_skill": "explicit_detail",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "ct-6b-car-free-street",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "emma",
+     "role": "speaker",
+     "label": "Emma",
+     "voice_hint": "female"
+    },
+    {
+     "id": "jun",
+     "role": "speaker",
+     "label": "Jun",
+     "voice_hint": "male"
+    },
+    {
+     "id": "sara",
+     "role": "speaker",
+     "label": "Sara",
+     "voice_hint": "female"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "emma",
+       "lang": "en",
+       "text": "Our town is thinking of closing the main street to cars on Sundays. I love the idea; it would be safer for kids."
+      },
+      {
+       "id": "u2",
+       "speaker_id": "jun",
+       "lang": "en",
+       "text": "As a shop owner's son, I'm worried. Customers who drive may just go to the mall instead."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "sara",
+       "lang": "en",
+       "text": "In the town where my cousin lives, sales actually went up after they did this, because more people walked around."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "jun",
+       "lang": "en",
+       "text": "Maybe, but that town has a big parking lot nearby. We don't."
+      },
+      {
+       "id": "u5",
+       "speaker_id": "emma",
+       "lang": "en",
+       "text": "Then we should ask for parking near the station first."
+      },
+      {
+       "id": "u6",
+       "speaker_id": "sara",
+       "lang": "en",
+       "text": "I agree with Emma. Without that, Jun's concern is fair."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "Who is worried that the plan could hurt local shops?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Emma"
+      },
+      {
+       "id": "c2",
+       "text": "Jun"
+      },
+      {
+       "id": "c3",
+       "text": "Sara"
+      },
+      {
+       "id": "c4",
+       "text": "All three speakers"
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "explicit_detail"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u2",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Jun is worried about local shops.",
+      "explanation_ja": "店主の息子であるJunが、車の客がモールへ流れると心配しています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "Emmaは子どもの安全のために賛成しています。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "Saraは売上が伸びた例を紹介しています。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "心配を述べているのはJunだけです。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q2",
+     "slot": 2,
+     "segment_ids": [],
+     "prompt_en": "What do Emma and Sara agree on at the end?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "The plan should be cancelled."
+      },
+      {
+       "id": "c2",
+       "text": "Parking should be arranged before the street is closed to cars."
+      },
+      {
+       "id": "c3",
+       "text": "Shops should move to the mall."
+      },
+      {
+       "id": "c4",
+       "text": "Cars should be banned every day of the week."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "integration"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u5",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": "u6",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Parking near the station should be arranged first.",
+      "explanation_ja": "Emmaが駅近くの駐車場を先に求めようと言い、Saraがそれに同意しています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "中止すべきだとは言っていません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "店の移転は話題になっていません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "対象は日曜日だけです。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [
+    {
+     "id": "g1",
+     "question_ids": [
+      "q1"
+     ],
+     "points": 4.0,
+     "all_or_nothing": false
+    },
+    {
+     "id": "g2",
+     "question_ids": [
+      "q2"
+     ],
+     "points": 4.0,
+     "all_or_nothing": false
+    }
+   ],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "p1-part1-sales-report",
+   "revision": 1,
+   "mode": "eiken_pre1",
+   "profile_version": "eiken_pre1/2026_2",
+   "part": "part1",
+   "template_type": "dialogue",
+   "title": "会話 準1-1",
+   "topic": "office",
+   "skill_tags": [
+    "explicit_detail"
+   ],
+   "primary_skill": "explicit_detail",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "p1-part1-next-action",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "w",
+     "role": "speaker",
+     "label": "W",
+     "voice_hint": "female"
+    },
+    {
+     "id": "m",
+     "role": "speaker",
+     "label": "M",
+     "voice_hint": "male"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "w",
+       "lang": "en",
+       "text": "Hi, Mark. Did you finish the sales report for tomorrow's meeting?"
+      },
+      {
+       "id": "u2",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "Almost. I'm still waiting for the figures from the Osaka office."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "w",
+       "lang": "en",
+       "text": "They said they'd send them by noon. It's already three."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "I know. I'll call them right now instead of sending another e-mail."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "What will the man do next?",
+     "prompt_medium": "audio",
+     "prompt_timing": "after",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Send another e-mail to Osaka."
+      },
+      {
+       "id": "c2",
+       "text": "Phone the Osaka office."
+      },
+      {
+       "id": "c3",
+       "text": "Ask the woman to finish the report."
+      },
+      {
+       "id": "c4",
+       "text": "Postpone tomorrow's meeting."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "explicit_detail"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u4",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "He will phone the Osaka office.",
+      "explanation_ja": "「もう一度メールを送る代わりに、今すぐ電話する」と言っています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "メールではなく電話にすると言っています。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "女性に報告書を頼んではいません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "会議の延期は話題になっていません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "p1-part2-urban-bees",
+   "revision": 1,
+   "mode": "eiken_pre1",
+   "profile_version": "eiken_pre1/2026_2",
+   "part": "part2",
+   "template_type": "passage",
+   "title": "説明文 準1-1",
+   "topic": "environment",
+   "skill_tags": [
+    "explicit_detail"
+   ],
+   "primary_skill": "explicit_detail",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "p1-part2-urban-beekeeping",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "r",
+     "role": "speaker",
+     "label": "R",
+     "voice_hint": "female"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "r",
+       "lang": "en",
+       "text": "Urban Beekeeping."
+      },
+      {
+       "id": "u2",
+       "speaker_id": "r",
+       "lang": "en",
+       "text": "In recent years, keeping bees on city rooftops has become popular in many countries. Surprisingly, city bees often produce more honey than bees in the countryside."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "r",
+       "lang": "en",
+       "text": "One reason is that parks and gardens offer a wide variety of flowers throughout the year, while large farms usually grow only one crop."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "r",
+       "lang": "en",
+       "text": "However, experts warn that the trend has a downside. When too many hives are placed in one area, honeybees compete with wild insects for food, and some wild species have declined as a result."
+      },
+      {
+       "id": "u5",
+       "speaker_id": "r",
+       "lang": "en",
+       "text": "Some cities now limit the number of hives that can be kept in each district."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "Why do city bees often produce more honey?",
+     "prompt_medium": "audio",
+     "prompt_timing": "after",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "They are a stronger kind of bee."
+      },
+      {
+       "id": "c2",
+       "text": "Cities offer many kinds of flowers all year round."
+      },
+      {
+       "id": "c3",
+       "text": "Farms use fewer chemicals than cities."
+      },
+      {
+       "id": "c4",
+       "text": "Rooftops are warmer than fields."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "explicit_detail"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u3",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Cities offer a wide variety of flowers throughout the year.",
+      "explanation_ja": "公園や庭には一年を通して多様な花があることが理由として挙げられています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "ハチの種類の違いは述べられていません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "農薬の話は出てきません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "気温の話は出てきません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q2",
+     "slot": 2,
+     "segment_ids": [],
+     "prompt_en": "What have some cities done in response to the problem?",
+     "prompt_medium": "audio",
+     "prompt_timing": "after",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "They have banned beekeeping completely."
+      },
+      {
+       "id": "c2",
+       "text": "They have planted more single-crop fields."
+      },
+      {
+       "id": "c3",
+       "text": "They have restricted the number of hives in each district."
+      },
+      {
+       "id": "c4",
+       "text": "They have removed wild insects from parks."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c3"
+     },
+     "skill_tags": [
+      "explicit_detail"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u5",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "They have limited the number of hives in each district.",
+      "explanation_ja": "地区ごとに置ける巣箱の数を制限している都市があると述べています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "全面禁止とは言っていません。"
+       },
+       {
+        "choice_id": "c2",
+        "reason_ja": "単一作物の畑は農村部の特徴として出ただけです。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "野生の昆虫は守る対象です。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "p1-part3-flight-delay",
+   "revision": 1,
+   "mode": "eiken_pre1",
+   "profile_version": "eiken_pre1/2026_2",
+   "part": "part3",
+   "template_type": "real_life",
+   "title": "Real-Life 準1-1",
+   "topic": "travel",
+   "skill_tags": [
+    "condition_matching"
+   ],
+   "primary_skill": "condition_matching",
+   "provisional_difficulty_band": 3,
+   "calibration_status": "provisional",
+   "family_id": "p1-part3-airport-announcement",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "a",
+     "role": "speaker",
+     "label": "A",
+     "voice_hint": "female"
+    }
+   ],
+   "pre_info": {
+    "situation_en": "You are at an airport. Your flight to Vancouver, AC 204, has been delayed. You have a connecting flight to Calgary that leaves Vancouver at 6:10 p.m. You hear the following announcement.",
+    "read_seconds": 10
+   },
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "Attention passengers on Air Coast flight 204 to Vancouver."
+      },
+      {
+       "id": "u2",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "Due to a mechanical check, departure has been moved from 1:30 to 3:45 p.m."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "Passengers ending their journey in Vancouver, please wait near gate 22."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "If you have a connecting flight leaving Vancouver before 7 p.m., please go to the transfer desk next to gate 18, where staff will rebook you."
+      },
+      {
+       "id": "u5",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "Meal vouchers are available at the information counter for all other passengers."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "What should you do?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Wait near gate 22."
+      },
+      {
+       "id": "c2",
+       "text": "Go to the transfer desk next to gate 18."
+      },
+      {
+       "id": "c3",
+       "text": "Get a meal voucher at the information counter."
+      },
+      {
+       "id": "c4",
+       "text": "Board the plane at 1:30 as planned."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "condition_matching"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u4",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Go to the transfer desk next to gate 18.",
+      "explanation_ja": "乗り継ぎ便は午後6時10分発で「午後7時より前」に当たるため、18番ゲート横の乗り継ぎデスクへ行きます。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "22番ゲートで待つのはバンクーバーが最終目的地の人です。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "食事券は「それ以外の乗客」向けです。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "出発は3時45分に変更されています。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "g1-part1-budget-meeting",
+   "revision": 1,
+   "mode": "eiken_1",
+   "profile_version": "eiken_1/2026_2",
+   "part": "part1",
+   "template_type": "dialogue",
+   "title": "会話 1級-1",
+   "topic": "workplace",
+   "skill_tags": [
+    "inference"
+   ],
+   "primary_skill": "inference",
+   "provisional_difficulty_band": 4,
+   "calibration_status": "provisional",
+   "family_id": "g1-part1-cool-reception",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "m",
+     "role": "speaker",
+     "label": "M",
+     "voice_hint": "male"
+    },
+    {
+     "id": "w",
+     "role": "speaker",
+     "label": "W",
+     "voice_hint": "female"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "So, how did the budget meeting go?"
+      },
+      {
+       "id": "u2",
+       "speaker_id": "w",
+       "lang": "en",
+       "text": "Let's just say the director didn't exactly roll out the red carpet for my proposal."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "m",
+       "lang": "en",
+       "text": "That bad? I thought the numbers spoke for themselves."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "w",
+       "lang": "en",
+       "text": "They did, but she wants a pilot in one branch before committing. Honestly, I can live with that."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "What does the woman imply about her proposal?",
+     "prompt_medium": "audio",
+     "prompt_timing": "after",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "It was rejected outright."
+      },
+      {
+       "id": "c2",
+       "text": "It got a cool reception but may go ahead on a trial basis."
+      },
+      {
+       "id": "c3",
+       "text": "It was approved for every branch."
+      },
+      {
+       "id": "c4",
+       "text": "The figures in it turned out to be wrong."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "inference"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u2",
+       "figure_id": null,
+       "element_id": null
+      },
+      {
+       "utterance_id": "u4",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "It got a cool reception but may go ahead as a pilot in one branch.",
+      "explanation_ja": "「歓迎はされなかった」が、1支店での試行を求められており、本人も受け入れています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "却下ではなく、試行を求められています。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "全支店での承認ではありません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "数字は十分説得力があったと認めています。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "g1-part2-rebound-effect",
+   "revision": 1,
+   "mode": "eiken_1",
+   "profile_version": "eiken_1/2026_2",
+   "part": "part2",
+   "template_type": "passage",
+   "title": "説明文 1級-1",
+   "topic": "economics",
+   "skill_tags": [
+    "explicit_detail",
+    "main_idea"
+   ],
+   "primary_skill": "explicit_detail",
+   "provisional_difficulty_band": 4,
+   "calibration_status": "provisional",
+   "family_id": "g1-part2-rebound-effect",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "r",
+     "role": "speaker",
+     "label": "R",
+     "voice_hint": "male"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "r",
+       "lang": "en",
+       "text": "The Rebound Effect."
+      },
+      {
+       "id": "u2",
+       "speaker_id": "r",
+       "lang": "en",
+       "text": "When a technology becomes more efficient, we might expect people to use less energy. Yet economists have long observed the opposite."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "r",
+       "lang": "en",
+       "text": "In the nineteenth century, William Stanley Jevons noted that as steam engines burned coal more efficiently, coal consumption in Britain actually rose, because cheaper power encouraged new uses."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "r",
+       "lang": "en",
+       "text": "Today, the same pattern appears with fuel-efficient cars: drivers who spend less per kilometer often drive more."
+      },
+      {
+       "id": "u5",
+       "speaker_id": "r",
+       "lang": "en",
+       "text": "This does not mean efficiency is pointless."
+      },
+      {
+       "id": "u6",
+       "speaker_id": "r",
+       "lang": "en",
+       "text": "Researchers argue that it must be paired with policies such as carbon pricing, so that savings are not simply spent on more consumption."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "What did Jevons observe about more efficient steam engines?",
+     "prompt_medium": "audio",
+     "prompt_timing": "after",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "They reduced Britain's use of coal."
+      },
+      {
+       "id": "c2",
+       "text": "They were followed by greater overall coal consumption."
+      },
+      {
+       "id": "c3",
+       "text": "They were too costly to become widespread."
+      },
+      {
+       "id": "c4",
+       "text": "They led Britain to replace coal with other fuels."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "explicit_detail"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u3",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Coal consumption actually rose as engines became more efficient.",
+      "explanation_ja": "効率が上がって動力が安くなり、新たな用途が増えた結果、石炭消費は増えたと述べています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "消費は減らず、増えています。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "費用が高すぎたとは言っていません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "他の燃料への転換は述べられていません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q2",
+     "slot": 2,
+     "segment_ids": [],
+     "prompt_en": "What do researchers suggest?",
+     "prompt_medium": "audio",
+     "prompt_timing": "after",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Giving up on improving efficiency."
+      },
+      {
+       "id": "c2",
+       "text": "Combining efficiency with measures such as carbon pricing."
+      },
+      {
+       "id": "c3",
+       "text": "Legally limiting how far people may drive."
+      },
+      {
+       "id": "c4",
+       "text": "Returning to older technologies."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "main_idea"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u6",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Efficiency should be paired with policies such as carbon pricing.",
+      "explanation_ja": "節約分が消費の増加に回らないよう、炭素価格などの政策と組み合わせるべきだと述べています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "効率化が無意味だとは言っていません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "走行距離の法的制限は出てきません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "古い技術へ戻る話は出てきません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "g1-part3-internet-move",
+   "revision": 1,
+   "mode": "eiken_1",
+   "profile_version": "eiken_1/2026_2",
+   "part": "part3",
+   "template_type": "real_life",
+   "title": "Real-Life 1級-1",
+   "topic": "services",
+   "skill_tags": [
+    "condition_matching"
+   ],
+   "primary_skill": "condition_matching",
+   "provisional_difficulty_band": 4,
+   "calibration_status": "provisional",
+   "family_id": "g1-part3-recorded-menu",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "a",
+     "role": "speaker",
+     "label": "A",
+     "voice_hint": "male"
+    }
+   ],
+   "pre_info": {
+    "situation_en": "You are moving to a new apartment on March 28. You want your internet to work on the day you move in, and you cannot go to the new apartment before that day. You call your provider and hear this recorded message.",
+    "read_seconds": 10
+   },
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "Thank you for calling NetLink. To transfer your service to a new address, standard installation requires a technician visit, and the earliest appointments are currently two weeks after your request."
+      },
+      {
+       "id": "u2",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "If you need service on your moving day and can be present at the new address at least three days beforehand, press 1 to book an early visit."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "If you cannot be there in advance, press 2 to have a self-install kit delivered to your current address; you can plug it in yourself the day you move."
+      },
+      {
+       "id": "u4",
+       "speaker_id": "a",
+       "lang": "en",
+       "text": "For billing questions, press 3."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "What should you do?",
+     "prompt_medium": "screen",
+     "prompt_timing": "before",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Press 1 to book an early technician visit."
+      },
+      {
+       "id": "c2",
+       "text": "Press 2 to have a self-install kit delivered."
+      },
+      {
+       "id": "c3",
+       "text": "Press 3 to ask about billing."
+      },
+      {
+       "id": "c4",
+       "text": "Wait for a standard appointment in two weeks."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "condition_matching"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u3",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Press 2 to have a self-install kit delivered.",
+      "explanation_ja": "事前に新居へ行けないため、現住所に届く自己設置キットを選ぶと引っ越し当日から使えます。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "1番は3日前までに新居にいられる人向けです。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "3番は請求に関する問い合わせです。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "標準工事では当日に使える保証がありません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  },
+  {
+   "schema_version": 2,
+   "source": "fixture",
+   "content_id": "g1-part4-book-conservator",
+   "revision": 1,
+   "mode": "eiken_1",
+   "profile_version": "eiken_1/2026_2",
+   "part": "part4",
+   "template_type": "interview",
+   "title": "インタビュー 1級-1",
+   "topic": "culture",
+   "skill_tags": [
+    "explicit_detail",
+    "main_idea"
+   ],
+   "primary_skill": "explicit_detail",
+   "provisional_difficulty_band": 4,
+   "calibration_status": "provisional",
+   "family_id": "g1-part4-conservator",
+   "variant_of": null,
+   "presentation_profile": {
+    "kind": "official",
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "notes": ""
+   },
+   "speakers": [
+    {
+     "id": "narrator",
+     "role": "narrator",
+     "label": "Narrator",
+     "voice_hint": "neutral"
+    },
+    {
+     "id": "i",
+     "role": "speaker",
+     "label": "I",
+     "voice_hint": "male"
+    },
+    {
+     "id": "n",
+     "role": "speaker",
+     "label": "N",
+     "voice_hint": "female"
+    }
+   ],
+   "pre_info": null,
+   "figures": [],
+   "segments": [
+    {
+     "id": "s1",
+     "label": "",
+     "plays": 1,
+     "utterances": [
+      {
+       "id": "u1",
+       "speaker_id": "i",
+       "lang": "en",
+       "text": "Today we're speaking with Naomi Clarke, who restores old books for a national archive. Naomi, what does a typical project involve?"
+      },
+      {
+       "id": "u2",
+       "speaker_id": "n",
+       "lang": "en",
+       "text": "People imagine it's all delicate brushes, but the first week is usually just looking. I document every tear and stain before I touch anything, because whatever I do should be reversible."
+      },
+      {
+       "id": "u3",
+       "speaker_id": "i",
+       "lang": "en",
+       "text": "Reversible? Why is that so important?"
+      },
+      {
+       "id": "u4",
+       "speaker_id": "n",
+       "lang": "en",
+       "text": "Because techniques improve. Glues that were considered ideal fifty years ago are now damaging the very pages they were meant to save. I'd rather a future conservator be able to undo my work than curse it."
+      },
+      {
+       "id": "u5",
+       "speaker_id": "i",
+       "lang": "en",
+       "text": "Has digitization changed your job?"
+      },
+      {
+       "id": "u6",
+       "speaker_id": "n",
+       "lang": "en",
+       "text": "It's changed the pressure, not the purpose. Now that scans exist, people handle the originals less, which helps. But a scan can't tell you how a book was sewn or what the paper feels like. If anything, digital copies have made people more curious about the real object."
+      }
+     ]
+    }
+   ],
+   "questions": [
+    {
+     "id": "q1",
+     "slot": 1,
+     "segment_ids": [],
+     "prompt_en": "Why does Naomi insist that her work be reversible?",
+     "prompt_medium": "audio",
+     "prompt_timing": "after",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "Archives are required by law to allow it."
+      },
+      {
+       "id": "c2",
+       "text": "Better methods may appear and today's materials may prove harmful."
+      },
+      {
+       "id": "c3",
+       "text": "Clients often change their minds about repairs."
+      },
+      {
+       "id": "c4",
+       "text": "Reversible glue is cheaper to buy."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "explicit_detail"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u4",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Techniques improve, and materials once thought ideal can turn out to be damaging.",
+      "explanation_ja": "技術は進歩し、50年前に理想とされた接着剤が今は紙を傷めている、という理由を挙げています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "法律の話は出てきません。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "依頼者の気変わりは理由に挙げていません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "費用の話は出てきません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    },
+    {
+     "id": "q2",
+     "slot": 2,
+     "segment_ids": [],
+     "prompt_en": "What does Naomi say about digitization?",
+     "prompt_medium": "audio",
+     "prompt_timing": "after",
+     "type": "single_choice",
+     "choices": [
+      {
+       "id": "c1",
+       "text": "It has made physical restoration unnecessary."
+      },
+      {
+       "id": "c2",
+       "text": "It reduces handling of originals while increasing interest in them."
+      },
+      {
+       "id": "c3",
+       "text": "It damages fragile pages during scanning."
+      },
+      {
+       "id": "c4",
+       "text": "It has replaced her documentation work."
+      }
+     ],
+     "items": [],
+     "figure_ids": [],
+     "answer": {
+      "type": "single_choice",
+      "choice_id": "c2"
+     },
+     "skill_tags": [
+      "main_idea"
+     ],
+     "evidence": [
+      {
+       "utterance_id": "u6",
+       "figure_id": null,
+       "element_id": null
+      }
+     ],
+     "feedback": {
+      "answer_en": "Originals are handled less, and people have become more curious about the real objects.",
+      "explanation_ja": "原本に触れる機会が減って助かる一方、実物への関心はむしろ高まったと述べています。",
+      "distractors": [
+       {
+        "choice_id": "c1",
+        "reason_ja": "目的は変わっていないと言っています。"
+       },
+       {
+        "choice_id": "c3",
+        "reason_ja": "スキャンで傷むとは言っていません。"
+       },
+       {
+        "choice_id": "c4",
+        "reason_ja": "記録作業がなくなったとは言っていません。"
+       }
+      ],
+      "hint_ja": ""
+     }
+    }
+   ],
+   "legacy_radio_only": false,
+   "scoring_groups": [],
+   "radio": {
+    "supported": true,
+    "reason": "",
+    "figure_description_en": ""
+   },
+   "estimated_duration_sec": null
+  }
+ ],
+ "files": {}
+}
