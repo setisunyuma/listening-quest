@@ -112,8 +112,9 @@ def restore_user(session, user: m.User, body: dict, *, apply_settings: bool = Fa
                 skip += 1
                 continue
             with session.begin_nested():
-                res = session.execute(pg_insert(model).values(**row).on_conflict_do_nothing())
-            if res.rowcount == 1:
+                pk = list(model.__table__.primary_key.columns)[0]
+                inserted = session.execute(pg_insert(model).values(**row).on_conflict_do_nothing().returning(pk)).first() is not None
+            if inserted:
                 ins += 1
             else:
                 skip += 1  # already here (same id or same natural key): the existing row wins

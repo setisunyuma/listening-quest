@@ -157,8 +157,6 @@ def seed_demo(session, *, username: str = "demo", password: str | None = None, w
             _, created = queue.enqueue(session, "demo", "generate", params, dedupe_key=f"demoseed:{mode}:{i}")
             queued += 1 if created else 0
     if with_mock:
-        from lq.services import assessment
-
         has_set = session.execute(select(m.MockSet).where(m.MockSet.realm == "demo", m.MockSet.mode == "common_test")).first()
         if not has_set:
             for mode in ("common_test", "cefr_c1"):
@@ -170,7 +168,6 @@ def seed_demo(session, *, username: str = "demo", password: str | None = None, w
                         _, created = queue.enqueue(session, "demo", "generate", params, dedupe_key=f"demomock:{mode}:{p['part']}:{i}")
                         queued += 1 if created else 0
             out["mock_modes"] = ["common_test", "cefr_c1"]
-            del assessment
     out["jobs_queued"] = queued
     out["username"] = username
     return out
@@ -185,6 +182,6 @@ def assemble_demo_mocks(session) -> list[str]:
             continue
         try:
             made.append(assessment.assemble(session, "demo", mode).id)
-        except (assessment.Shortage, Exception):  # noqa: BLE001 - reported by the caller via inventory
-            continue
+        except assessment.Shortage:
+            continue  # visible in the admin inventory; nothing is assembled short
     return made

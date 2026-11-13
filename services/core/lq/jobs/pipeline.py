@@ -49,10 +49,12 @@ def cached_clip(session, key: str) -> bytes | None:
     st = get_storage()
     if not st.exists(row.storage_key):
         session.delete(row)
+        session.flush()
         return None
     data = st.get(row.storage_key)
     if sha256_hex(data) != row.sha256:
         session.delete(row)
+        session.flush()
         st.delete(row.storage_key)
         return None
     return decode_to_pcm(data)
@@ -146,15 +148,17 @@ def step_review(lease: Lease, prov, meter, unit_id: str) -> None:
         content = C.load_content(unit)
         has_pass = C.passing_review(s, unit, "content") is not None or C.carry_over_review(s, unit) is not None
         s.commit()
-    lint = authoring.lint_unit(content)
+    lint = [] if content.legacy_radio_only else authoring.lint_unit(content, require_distractors=content.source != "legacy-radio")
     if lint:
-        _commit_step(lease, lambda s, job: C.quarantine(s.get(m.Unit, unit_id), "format check failed: " + "; ".join(lint)))
+        _commit_step(lease, lambda s, job: C.quarantine(s, s.get(m.Unit, unit_id), "format check failed: " + "; ".join(lint)))
         return
     if not has_pass:
-        if prov.review is None:
+        if prov.review is None or content.legacy_radio_only:
             raise Blocked("awaiting_content_review", "no reviewer configured; approve the content manually (lq approve) or enable API review")
         payload = reviewer_view(content)  # learner-visible information only
         solved = prov.review.solve(payload, meter)
+        if solved.get("unavailable"):
+            raise Blocked("awaiting_content_review", "the reviewer cannot judge this material; approve the content manually")
         verdict = authoring.compare_review(content, solved)
 
         def record(s, job):
@@ -287,7 +291,7 @@ def step_audio_qa(lease: Lease, prov, meter, unit_id: str) -> None:
         if not chk["ok"]:
             problems.append(f"{role}: {chk['problems']}")
     if problems:
-        _commit_step(lease, lambda s, job: C.quarantine(s.get(m.Unit, unit_id), "audio check failed: " + "; ".join(problems)))
+        _commit_step(lease, lambda s, job: C.quarantine(s, s.get(m.Unit, unit_id), "audio check failed: " + "; ".join(problems)))
         return
 
     state = {"audio_human_listened": "human_listened", "audio_auto_checked": "auto_checked", "audio_demo_mock_checked": "mock_checked"}

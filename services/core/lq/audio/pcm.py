@@ -52,6 +52,15 @@ def decode_to_pcm(data: bytes) -> bytes:
     """Decode any audio container/codec FFmpeg understands to the working PCM format."""
     if not data:
         raise AudioError("empty audio data")
+    if data[:4] == b"RIFF":  # our own working-format WAV: no need to spawn FFmpeg
+        try:
+            with wave.open(io.BytesIO(data), "rb") as w:
+                if (w.getnchannels(), w.getsampwidth(), w.getframerate(), w.getcomptype()) == (1, 2, RATE, "NONE"):
+                    pcm = w.readframes(w.getnframes())
+                    if len(pcm) >= BYTES_PER_MS * 20:
+                        return pcm
+        except (wave.Error, EOFError):
+            pass
     out = _run(["ffmpeg", "-v", "error", "-i", "pipe:0", "-f", "s16le", "-acodec", "pcm_s16le", "-ac", "1", "-ar", str(RATE), "pipe:1"], data)
     if len(out) < BYTES_PER_MS * 20:
         raise AudioError("decoded audio is empty")

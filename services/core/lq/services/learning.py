@@ -156,7 +156,7 @@ def get_mode_state(session, user_id: str, mode: str, lock: bool = False) -> m.Mo
     q = select(m.ModeState).where(m.ModeState.user_id == user_id, m.ModeState.mode == mode)
     st = session.execute(q.with_for_update() if lock else q).scalar_one_or_none()
     if st is None:
-        session.execute(pg_insert(m.ModeState).values(id=sha256_hex(f"{user_id}:{mode}")[:32], user_id=user_id, mode=mode, difficulty_band=rules.load_config().initial_band, band_since=datetime.now(UTC), band_history=[], updated_at=datetime.now(UTC)).on_conflict_do_nothing())
+        session.execute(pg_insert(m.ModeState).values(id=sha256_hex(f"{user_id}:{mode}")[:32], user_id=user_id, mode=mode, difficulty_band=rules.load_config().initial_band, band_since=datetime(2000, 1, 1, tzinfo=UTC), band_history=[], updated_at=datetime.now(UTC)).on_conflict_do_nothing())
         st = session.execute(q.with_for_update() if lock else q).scalar_one()
     return st
 
@@ -524,8 +524,8 @@ def result_dto(session, att: m.Attempt) -> dict:
 
 
 def award_xp(session, user_id: str, kind: str, unit_id: str | None, day: date, amount: int, dedupe_key: str) -> int:
-    res = session.execute(pg_insert(m.XpEvent).values(id=sha256_hex(dedupe_key)[:32], user_id=user_id, kind=kind, unit_id=unit_id, learning_day=day, amount=amount, dedupe_key=dedupe_key, created_at=datetime.now(UTC)).on_conflict_do_nothing())
-    return amount if res.rowcount == 1 else 0
+    res = session.execute(pg_insert(m.XpEvent).values(id=sha256_hex(dedupe_key)[:32], user_id=user_id, kind=kind, unit_id=unit_id, learning_day=day, amount=amount, dedupe_key=dedupe_key, created_at=datetime.now(UTC)).on_conflict_do_nothing().returning(m.XpEvent.id))
+    return amount if res.first() is not None else 0
 
 
 def total_xp(session, user_id: str) -> int:

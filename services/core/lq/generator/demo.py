@@ -195,6 +195,7 @@ class _Builder:
         spec, part = self.spec, self.part
         self.radio_desc = ""
         n = part["questions_per_unit"]
+        self.say("intro", f"{self.name} here with an update for group {self.rng.randint(100, 999)}.")
         self.say("place", f"The {self.event} will be held in the {self.place} this {self.day}.")
         if part["template_type"] == "ordering":
             qs = self.build_ordering()
@@ -229,7 +230,7 @@ class _Builder:
             "title": f"デモ教材 {part['label_ja']} #{tag[:4]}", "topic": self.topic, "skill_tags": skills,
             "primary_skill": spec.primary_skill if spec.primary_skill in skills else skills[0],
             "provisional_difficulty_band": spec.band, "calibration_status": "provisional",
-            "family_id": f"demo:{spec.mode}:{spec.part}:{self.event.replace(' ', '-')}", "variant_of": None,
+            "family_id": f"demo:{spec.mode}:{spec.part}:{self.event.replace(' ', '-')}:{tag[:6]}", "variant_of": None,
             "presentation_profile": {"kind": "official", "choices_read_aloud": False, "figure_verbalized": False, "notes": "demo"},
             "speakers": self.speakers, "pre_info": pre, "figures": self.figures, "segments": segments, "questions": questions,
             "scoring_groups": unit_scoring_groups(self.profile, spec.part, [q["id"] for q in questions]),
@@ -276,7 +277,7 @@ class DemoReview:
         st = get_storage()
         key = oracle_key(payload)
         if not st.exists(key):
-            return {"answers": {}, "ambiguous": [q["id"] for q in payload["questions"]], "notes": "demo mock: no oracle entry for this material"}
+            return {"unavailable": True, "answers": {}, "ambiguous": [], "notes": "demo mock: this material was not produced by the demo generator, so the mock cannot review it"}
         return {"answers": json.loads(st.get(key)), "ambiguous": [], "notes": "demo mock solver (not an independent review)"}
 
 

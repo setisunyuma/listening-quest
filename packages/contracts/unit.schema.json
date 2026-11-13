@@ -1,0 +1,937 @@
+{
+ "$defs": {
+  "BlankAnswer": {
+   "additionalProperties": false,
+   "properties": {
+    "accepted": {
+     "items": {
+      "type": "string"
+     },
+     "minItems": 1,
+     "title": "Accepted",
+     "type": "array"
+    },
+    "type": {
+     "const": "blank",
+     "default": "blank",
+     "title": "Type",
+     "type": "string"
+    }
+   },
+   "required": [
+    "accepted"
+   ],
+   "title": "BlankAnswer",
+   "type": "object"
+  },
+  "Choice": {
+   "additionalProperties": false,
+   "properties": {
+    "id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Id",
+     "type": "string"
+    },
+    "text": {
+     "maxLength": 600,
+     "minLength": 1,
+     "title": "Text",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "text"
+   ],
+   "title": "Choice",
+   "type": "object"
+  },
+  "DistractorReason": {
+   "additionalProperties": false,
+   "properties": {
+    "choice_id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Choice Id",
+     "type": "string"
+    },
+    "reason_ja": {
+     "minLength": 1,
+     "title": "Reason Ja",
+     "type": "string"
+    }
+   },
+   "required": [
+    "choice_id",
+    "reason_ja"
+   ],
+   "title": "DistractorReason",
+   "type": "object"
+  },
+  "EvidenceRef": {
+   "additionalProperties": false,
+   "properties": {
+    "element_id": {
+     "anyOf": [
+      {
+       "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Element Id"
+    },
+    "figure_id": {
+     "anyOf": [
+      {
+       "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Figure Id"
+    },
+    "utterance_id": {
+     "anyOf": [
+      {
+       "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+       "type": "string"
+      },
+      {
+       "type": "null"
+      }
+     ],
+     "default": null,
+     "title": "Utterance Id"
+    }
+   },
+   "title": "EvidenceRef",
+   "type": "object"
+  },
+  "Feedback": {
+   "additionalProperties": false,
+   "properties": {
+    "answer_en": {
+     "minLength": 1,
+     "title": "Answer En",
+     "type": "string"
+    },
+    "distractors": {
+     "default": [],
+     "items": {
+      "$ref": "#/$defs/DistractorReason"
+     },
+     "title": "Distractors",
+     "type": "array"
+    },
+    "explanation_ja": {
+     "maxLength": 600,
+     "minLength": 1,
+     "title": "Explanation Ja",
+     "type": "string"
+    },
+    "hint_ja": {
+     "default": "",
+     "title": "Hint Ja",
+     "type": "string"
+    }
+   },
+   "required": [
+    "answer_en",
+    "explanation_ja"
+   ],
+   "title": "Feedback",
+   "type": "object"
+  },
+  "Figure": {
+   "additionalProperties": false,
+   "description": "Structured figure rendered as safe HTML/SVG by the client. No raw HTML is accepted.",
+   "properties": {
+    "columns": {
+     "default": [],
+     "items": {
+      "type": "string"
+     },
+     "title": "Columns",
+     "type": "array"
+    },
+    "id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Id",
+     "type": "string"
+    },
+    "kind": {
+     "enum": [
+      "table",
+      "list",
+      "worksheet",
+      "scene_set",
+      "chart_bar"
+     ],
+     "title": "Kind",
+     "type": "string"
+    },
+    "note": {
+     "default": "",
+     "title": "Note",
+     "type": "string"
+    },
+    "rows": {
+     "default": [],
+     "items": {
+      "$ref": "#/$defs/FigureRow"
+     },
+     "title": "Rows",
+     "type": "array"
+    },
+    "title": {
+     "default": "",
+     "title": "Title",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "kind"
+   ],
+   "title": "Figure",
+   "type": "object"
+  },
+  "FigureCell": {
+   "additionalProperties": false,
+   "properties": {
+    "id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Id",
+     "type": "string"
+    },
+    "text": {
+     "title": "Text",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "text"
+   ],
+   "title": "FigureCell",
+   "type": "object"
+  },
+  "FigureRow": {
+   "additionalProperties": false,
+   "properties": {
+    "cells": {
+     "items": {
+      "$ref": "#/$defs/FigureCell"
+     },
+     "title": "Cells",
+     "type": "array"
+    },
+    "id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Id",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "cells"
+   ],
+   "title": "FigureRow",
+   "type": "object"
+  },
+  "MatchItem": {
+   "additionalProperties": false,
+   "properties": {
+    "id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Id",
+     "type": "string"
+    },
+    "text": {
+     "title": "Text",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "text"
+   ],
+   "title": "MatchItem",
+   "type": "object"
+  },
+  "MatchingAnswer": {
+   "additionalProperties": false,
+   "properties": {
+    "pairs": {
+     "additionalProperties": {
+      "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+      "type": "string"
+     },
+     "title": "Pairs",
+     "type": "object"
+    },
+    "type": {
+     "const": "matching",
+     "default": "matching",
+     "title": "Type",
+     "type": "string"
+    }
+   },
+   "required": [
+    "pairs"
+   ],
+   "title": "MatchingAnswer",
+   "type": "object"
+  },
+  "MultiSelectAnswer": {
+   "additionalProperties": false,
+   "properties": {
+    "choice_ids": {
+     "items": {
+      "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+      "type": "string"
+     },
+     "minItems": 1,
+     "title": "Choice Ids",
+     "type": "array"
+    },
+    "type": {
+     "const": "multi_select",
+     "default": "multi_select",
+     "title": "Type",
+     "type": "string"
+    }
+   },
+   "required": [
+    "choice_ids"
+   ],
+   "title": "MultiSelectAnswer",
+   "type": "object"
+  },
+  "OrderingAnswer": {
+   "additionalProperties": false,
+   "properties": {
+    "order": {
+     "items": {
+      "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+      "type": "string"
+     },
+     "minItems": 2,
+     "title": "Order",
+     "type": "array"
+    },
+    "type": {
+     "const": "ordering",
+     "default": "ordering",
+     "title": "Type",
+     "type": "string"
+    }
+   },
+   "required": [
+    "order"
+   ],
+   "title": "OrderingAnswer",
+   "type": "object"
+  },
+  "PreInfo": {
+   "additionalProperties": false,
+   "description": "Shown before playback (e.g. Eiken Real-Life situation and question).",
+   "properties": {
+    "read_seconds": {
+     "default": 0,
+     "maximum": 120,
+     "minimum": 0,
+     "title": "Read Seconds",
+     "type": "integer"
+    },
+    "situation_en": {
+     "default": "",
+     "title": "Situation En",
+     "type": "string"
+    }
+   },
+   "title": "PreInfo",
+   "type": "object"
+  },
+  "PresentationProfile": {
+   "additionalProperties": false,
+   "properties": {
+    "choices_read_aloud": {
+     "default": false,
+     "title": "Choices Read Aloud",
+     "type": "boolean"
+    },
+    "figure_verbalized": {
+     "default": false,
+     "title": "Figure Verbalized",
+     "type": "boolean"
+    },
+    "kind": {
+     "default": "official",
+     "enum": [
+      "official",
+      "audio_arranged"
+     ],
+     "title": "Kind",
+     "type": "string"
+    },
+    "notes": {
+     "default": "",
+     "title": "Notes",
+     "type": "string"
+    }
+   },
+   "title": "PresentationProfile",
+   "type": "object"
+  },
+  "Question": {
+   "additionalProperties": false,
+   "properties": {
+    "answer": {
+     "discriminator": {
+      "mapping": {
+       "blank": "#/$defs/BlankAnswer",
+       "matching": "#/$defs/MatchingAnswer",
+       "multi_select": "#/$defs/MultiSelectAnswer",
+       "ordering": "#/$defs/OrderingAnswer",
+       "single_choice": "#/$defs/SingleChoiceAnswer"
+      },
+      "propertyName": "type"
+     },
+     "oneOf": [
+      {
+       "$ref": "#/$defs/SingleChoiceAnswer"
+      },
+      {
+       "$ref": "#/$defs/MultiSelectAnswer"
+      },
+      {
+       "$ref": "#/$defs/OrderingAnswer"
+      },
+      {
+       "$ref": "#/$defs/MatchingAnswer"
+      },
+      {
+       "$ref": "#/$defs/BlankAnswer"
+      }
+     ],
+     "title": "Answer"
+    },
+    "choices": {
+     "default": [],
+     "items": {
+      "$ref": "#/$defs/Choice"
+     },
+     "title": "Choices",
+     "type": "array"
+    },
+    "evidence": {
+     "items": {
+      "$ref": "#/$defs/EvidenceRef"
+     },
+     "minItems": 1,
+     "title": "Evidence",
+     "type": "array"
+    },
+    "feedback": {
+     "$ref": "#/$defs/Feedback"
+    },
+    "figure_ids": {
+     "default": [],
+     "items": {
+      "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+      "type": "string"
+     },
+     "title": "Figure Ids",
+     "type": "array"
+    },
+    "id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Id",
+     "type": "string"
+    },
+    "items": {
+     "default": [],
+     "items": {
+      "$ref": "#/$defs/MatchItem"
+     },
+     "title": "Items",
+     "type": "array"
+    },
+    "prompt_en": {
+     "minLength": 1,
+     "title": "Prompt En",
+     "type": "string"
+    },
+    "prompt_medium": {
+     "default": "screen",
+     "enum": [
+      "screen",
+      "audio",
+      "both"
+     ],
+     "title": "Prompt Medium",
+     "type": "string"
+    },
+    "prompt_timing": {
+     "default": "before",
+     "enum": [
+      "before",
+      "after"
+     ],
+     "title": "Prompt Timing",
+     "type": "string"
+    },
+    "segment_ids": {
+     "default": [],
+     "items": {
+      "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+      "type": "string"
+     },
+     "title": "Segment Ids",
+     "type": "array"
+    },
+    "skill_tags": {
+     "items": {
+      "type": "string"
+     },
+     "minItems": 1,
+     "title": "Skill Tags",
+     "type": "array"
+    },
+    "slot": {
+     "maximum": 99,
+     "minimum": 1,
+     "title": "Slot",
+     "type": "integer"
+    },
+    "type": {
+     "default": "single_choice",
+     "enum": [
+      "single_choice",
+      "multi_select",
+      "ordering",
+      "matching",
+      "blank"
+     ],
+     "title": "Type",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "slot",
+    "prompt_en",
+    "answer",
+    "skill_tags",
+    "evidence",
+    "feedback"
+   ],
+   "title": "Question",
+   "type": "object"
+  },
+  "RadioInfo": {
+   "additionalProperties": false,
+   "properties": {
+    "figure_description_en": {
+     "default": "",
+     "title": "Figure Description En",
+     "type": "string"
+    },
+    "reason": {
+     "default": "",
+     "title": "Reason",
+     "type": "string"
+    },
+    "supported": {
+     "default": true,
+     "title": "Supported",
+     "type": "boolean"
+    }
+   },
+   "title": "RadioInfo",
+   "type": "object"
+  },
+  "ScoringGroup": {
+   "additionalProperties": false,
+   "properties": {
+    "all_or_nothing": {
+     "default": false,
+     "title": "All Or Nothing",
+     "type": "boolean"
+    },
+    "id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Id",
+     "type": "string"
+    },
+    "points": {
+     "minimum": 0,
+     "title": "Points",
+     "type": "number"
+    },
+    "question_ids": {
+     "items": {
+      "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+      "type": "string"
+     },
+     "minItems": 1,
+     "title": "Question Ids",
+     "type": "array"
+    }
+   },
+   "required": [
+    "id",
+    "question_ids",
+    "points"
+   ],
+   "title": "ScoringGroup",
+   "type": "object"
+  },
+  "SingleChoiceAnswer": {
+   "additionalProperties": false,
+   "properties": {
+    "choice_id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Choice Id",
+     "type": "string"
+    },
+    "type": {
+     "const": "single_choice",
+     "default": "single_choice",
+     "title": "Type",
+     "type": "string"
+    }
+   },
+   "required": [
+    "choice_id"
+   ],
+   "title": "SingleChoiceAnswer",
+   "type": "object"
+  },
+  "Speaker": {
+   "additionalProperties": false,
+   "properties": {
+    "id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Id",
+     "type": "string"
+    },
+    "label": {
+     "default": "",
+     "title": "Label",
+     "type": "string"
+    },
+    "role": {
+     "default": "speaker",
+     "enum": [
+      "narrator",
+      "speaker"
+     ],
+     "title": "Role",
+     "type": "string"
+    },
+    "voice_hint": {
+     "default": "neutral",
+     "enum": [
+      "male",
+      "female",
+      "neutral"
+     ],
+     "title": "Voice Hint",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id"
+   ],
+   "title": "Speaker",
+   "type": "object"
+  },
+  "StimulusSegment": {
+   "additionalProperties": false,
+   "properties": {
+    "id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Id",
+     "type": "string"
+    },
+    "label": {
+     "default": "",
+     "title": "Label",
+     "type": "string"
+    },
+    "plays": {
+     "default": 1,
+     "maximum": 3,
+     "minimum": 1,
+     "title": "Plays",
+     "type": "integer"
+    },
+    "utterances": {
+     "items": {
+      "$ref": "#/$defs/Utterance"
+     },
+     "minItems": 1,
+     "title": "Utterances",
+     "type": "array"
+    }
+   },
+   "required": [
+    "id",
+    "utterances"
+   ],
+   "title": "StimulusSegment",
+   "type": "object"
+  },
+  "Utterance": {
+   "additionalProperties": false,
+   "properties": {
+    "id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Id",
+     "type": "string"
+    },
+    "lang": {
+     "default": "en",
+     "enum": [
+      "en",
+      "ja"
+     ],
+     "title": "Lang",
+     "type": "string"
+    },
+    "speaker_id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Speaker Id",
+     "type": "string"
+    },
+    "text": {
+     "maxLength": 4000,
+     "minLength": 1,
+     "title": "Text",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "speaker_id",
+    "text"
+   ],
+   "title": "Utterance",
+   "type": "object"
+  }
+ },
+ "additionalProperties": false,
+ "properties": {
+  "calibration_status": {
+   "default": "provisional",
+   "enum": [
+    "provisional",
+    "calibrated"
+   ],
+   "title": "Calibration Status",
+   "type": "string"
+  },
+  "content_id": {
+   "pattern": "^[A-Za-z0-9_.\\-]{1,128}$",
+   "title": "Content Id",
+   "type": "string"
+  },
+  "estimated_duration_sec": {
+   "anyOf": [
+    {
+     "type": "integer"
+    },
+    {
+     "type": "null"
+    }
+   ],
+   "default": null,
+   "title": "Estimated Duration Sec"
+  },
+  "family_id": {
+   "maxLength": 128,
+   "minLength": 1,
+   "title": "Family Id",
+   "type": "string"
+  },
+  "figures": {
+   "default": [],
+   "items": {
+    "$ref": "#/$defs/Figure"
+   },
+   "title": "Figures",
+   "type": "array"
+  },
+  "legacy_radio_only": {
+   "default": false,
+   "title": "Legacy Radio Only",
+   "type": "boolean"
+  },
+  "mode": {
+   "enum": [
+    "common_test",
+    "eiken_pre1",
+    "eiken_1",
+    "cefr_c1",
+    "cefr_c2"
+   ],
+   "title": "Mode",
+   "type": "string"
+  },
+  "part": {
+   "title": "Part",
+   "type": "string"
+  },
+  "pre_info": {
+   "anyOf": [
+    {
+     "$ref": "#/$defs/PreInfo"
+    },
+    {
+     "type": "null"
+    }
+   ],
+   "default": null
+  },
+  "presentation_profile": {
+   "$ref": "#/$defs/PresentationProfile",
+   "default": {
+    "choices_read_aloud": false,
+    "figure_verbalized": false,
+    "kind": "official",
+    "notes": ""
+   }
+  },
+  "primary_skill": {
+   "title": "Primary Skill",
+   "type": "string"
+  },
+  "profile_version": {
+   "title": "Profile Version",
+   "type": "string"
+  },
+  "provisional_difficulty_band": {
+   "maximum": 5,
+   "minimum": 1,
+   "title": "Provisional Difficulty Band",
+   "type": "integer"
+  },
+  "questions": {
+   "default": [],
+   "items": {
+    "$ref": "#/$defs/Question"
+   },
+   "title": "Questions",
+   "type": "array"
+  },
+  "radio": {
+   "$ref": "#/$defs/RadioInfo",
+   "default": {
+    "figure_description_en": "",
+    "reason": "",
+    "supported": true
+   }
+  },
+  "revision": {
+   "default": 1,
+   "minimum": 1,
+   "title": "Revision",
+   "type": "integer"
+  },
+  "schema_version": {
+   "const": 2,
+   "default": 2,
+   "title": "Schema Version",
+   "type": "integer"
+  },
+  "scoring_groups": {
+   "default": [],
+   "items": {
+    "$ref": "#/$defs/ScoringGroup"
+   },
+   "title": "Scoring Groups",
+   "type": "array"
+  },
+  "segments": {
+   "items": {
+    "$ref": "#/$defs/StimulusSegment"
+   },
+   "minItems": 1,
+   "title": "Segments",
+   "type": "array"
+  },
+  "skill_tags": {
+   "items": {
+    "type": "string"
+   },
+   "minItems": 1,
+   "title": "Skill Tags",
+   "type": "array"
+  },
+  "source": {
+   "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+   "title": "Source",
+   "type": "string"
+  },
+  "speakers": {
+   "items": {
+    "$ref": "#/$defs/Speaker"
+   },
+   "minItems": 1,
+   "title": "Speakers",
+   "type": "array"
+  },
+  "template_type": {
+   "title": "Template Type",
+   "type": "string"
+  },
+  "title": {
+   "maxLength": 120,
+   "minLength": 1,
+   "title": "Title",
+   "type": "string"
+  },
+  "topic": {
+   "title": "Topic",
+   "type": "string"
+  },
+  "variant_of": {
+   "anyOf": [
+    {
+     "type": "string"
+    },
+    {
+     "type": "null"
+    }
+   ],
+   "default": null,
+   "title": "Variant Of"
+  }
+ },
+ "required": [
+  "source",
+  "content_id",
+  "mode",
+  "profile_version",
+  "part",
+  "template_type",
+  "title",
+  "topic",
+  "skill_tags",
+  "primary_skill",
+  "provisional_difficulty_band",
+  "family_id",
+  "speakers",
+  "segments"
+ ],
+ "title": "UnitContent",
+ "type": "object"
+}

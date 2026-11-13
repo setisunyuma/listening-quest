@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 
-from lq.audio.pcm import AudioError, decode_to_pcm, duration_ms, peak_ratio, probe, rms_dbfs
+from lq.audio.pcm import AudioError, decode_to_pcm, duration_ms, peak_ratio, rms_dbfs
 
 _NUM = {
     "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4", "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9",
@@ -81,9 +81,7 @@ def compare_transcript(expected: str, heard: str, *, is_evidence: bool = False, 
 def check_encoded(data: bytes, expected_ms: int, *, expect_sound: bool = True) -> dict:
     """Decode the final file and verify it is real, complete, audible audio."""
     problems: list[str] = []
-    info: dict = {}
     try:
-        info = probe(data)
         pcm = decode_to_pcm(data)
     except AudioError as e:
         return {"ok": False, "problems": [f"decode_failed: {e}"]}
@@ -95,7 +93,7 @@ def check_encoded(data: bytes, expected_ms: int, *, expect_sound: bool = True) -
         problems.append(f"silent_audio: {level:.1f} dBFS")
     if peak_ratio(pcm) >= 0.999 and level > -3:
         problems.append("clipping")
-    return {"ok": not problems, "problems": problems, "duration_ms": got, "rms_dbfs": round(level, 1), "codec": info.get("codec")}
+    return {"ok": not problems, "problems": problems, "duration_ms": got, "rms_dbfs": round(level, 1)}
 
 
 def check_clip(pcm: bytes, text: str) -> list[str]:
