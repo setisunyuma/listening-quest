@@ -7,7 +7,7 @@ import { listPending, syncPending } from "@/lib/offline";
 
 type Ctx = {
   me: Me; mode: string; settings: Json; setMode: (m: string) => Promise<void>; saveSettings: (p: Json) => Promise<void>;
-  pending: number; online: boolean; refreshPending: () => Promise<void>; syncNow: () => Promise<Json[]>; lastSync: Json[];
+  pending: number; pendingKnown: boolean; syncing: boolean; online: boolean; refreshPending: () => Promise<void>; syncNow: () => Promise<Json[]>; lastSync: Json[];
 };
 const AppCtx = createContext<Ctx | null>(null);
 export const useApp = (): Ctx => {
@@ -27,7 +27,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [me, setMe] = useState<Me | null>(null);
   const [checked, setChecked] = useState(false);
-  const [pending, setPending] = useState(0);
+  const [pending, setPending] = useState<number | null>(null); // null = not checked yet: never claim "synced" before knowing
   const [online, setOnline] = useState(true);
   const [lastSync, setLastSync] = useState<Json[]>([]);
   const [update, setUpdate] = useState<ServiceWorker | null>(null);
@@ -49,8 +49,10 @@ export function Shell({ children }: { children: React.ReactNode }) {
   useEffect(() => { load(); }, [load]);
 
   const refreshPending = useCallback(async () => { if (me) setPending((await listPending(me.user_id)).length); }, [me]);
+  const [syncing, setSyncing] = useState(false);
   const syncNow = useCallback(async () => {
     if (!me) return [];
+    setSyncing(true);
     try {
       const r = await syncPending(me.user_id);
       if (r.sent) setLastSync(r.results);
@@ -60,6 +62,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
     } catch (e) {
       if ((e as ApiError).offline) setOnline(false);
       return [];
+    } finally {
+      setSyncing(false);
     }
   }, [me, refreshPending]);
 
@@ -107,7 +111,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     setMe(next);
     localStorage.setItem("lq:me", JSON.stringify(next));
   };
-  const ctx: Ctx = { me, mode: settings.active_mode, settings, setMode: (m) => saveSettings({ active_mode: m }), saveSettings, pending, online, refreshPending, syncNow, lastSync };
+  const ctx: Ctx = { me, mode: settings.active_mode, settings, setMode: (m) => saveSettings({ active_mode: m }), saveSettings, pending: pending ?? 0, pendingKnown: pending !== null, syncing, online, refreshPending, syncNow, lastSync };
   return (
     <AppCtx.Provider value={ctx}>
       <header className="top">
@@ -116,7 +120,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
           <div className="row">
             {me.realm === "demo" && <span className="chip demo" title="デモ用のデータ領域です。音声は動作確認用です。">デモ領域</span>}
             <span className={`badge-sync ${!online ? "off" : pending ? "pending" : ""}`} role="status" aria-live="polite">
-              {!online ? "オフライン" : pending ? `未同期 ${pending}件` : "同期済み"}
+              {!online ? "オフライン" : pending === null ? "同期を確認中" : syncing && pending ? `送信中 ${pending}件` : pending ? `未同期 ${pending}件` : "同期済み"}
             </span>
           </div>
         </div>
@@ -130,8 +134,8 @@ export function Shell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
-        {update && (
-          <div className="msg warn" role="status">新しいバージョンがあります。{pending > 0 && `未同期の回答 ${pending} 件は端末に残ります。`}
+        {update && pending !== null && (
+          <div className="msg warn" role="status">新しいバージョンがあります。{(pending ?? 0) > 0 && `未同期の回答 ${pending} 件は端末に残ります。`}
             <button className="small" onClick={() => { sessionStorage.setItem("lq:sw-reload", "1"); update.postMessage("skipWaiting"); }}>更新する</button></div>
         )}
       </header>

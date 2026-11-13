@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useApp } from "@/components/Shell";
 import { BandChip, DemoChip, Msg, Ring, useData } from "@/components/ui";
@@ -13,6 +14,7 @@ const NOTE: Record<string, string> = {
 
 export default function HomePage() {
   const app = useApp();
+  const router = useRouter();
   const { data, error, reload } = useData<Home>(() => api("/home"), [app.mode], 15000);
   const [msg, setMsg] = useState<{ kind: "ok" | "err" | "warn"; text: string } | null>(null);
   const [busy, setBusy] = useState("");
@@ -26,7 +28,7 @@ export default function HomePage() {
   };
   const start = (kind: "quest" | "radio") => act(kind, async () => {
     const p = await api<Plan>("/plans/today", { body: { kind } });
-    if (kind === "radio" && p.radio_program_id) location.href = `/radio?program=${p.radio_program_id}`;
+    if (kind === "radio" && p.radio_program_id) router.push(`/radio?program=${p.radio_program_id}`);
   });
   const rebuild = (plan: Plan) => act("rebuild", async () => {
     const p = await api<Plan>(`/plans/${plan.id}/rebuild`, { body: { mode: app.mode } });

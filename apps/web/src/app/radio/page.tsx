@@ -71,6 +71,7 @@ function ProgramPlayer({ initial, onClose }: { initial: Json; onClose: () => voi
   const span = useRef<[number, number] | null>(null);   // range actually being played right now
   const queue = useRef<[number, number][]>([]);          // played ranges not yet confirmed by the server
   const lastPos = useRef(0);
+  const [resumeAt, setResumeAt] = useState(0); // render-safe copy of the saved position
   const lastSent = useRef(0);
   const user = app.me.user_id;
 
@@ -101,7 +102,7 @@ function ProgramPlayer({ initial, onClose }: { initial: Json; onClose: () => voi
   useEffect(() => {
     kvSet(user, `program:${prog.id}`, prog).catch(() => {});
     audioState(user, prog.audio.url, prog.audio).then(setDl);
-    kvGet<number>(user, `radio-pos:${prog.id}`).then((p) => { lastPos.current = Math.max(p ?? 0, prog.position_ms ?? 0); });
+    kvGet<number>(user, `radio-pos:${prog.id}`).then((p) => { lastPos.current = Math.max(p ?? 0, prog.position_ms ?? 0); setResumeAt(lastPos.current); });
     const leave = () => { flush(true); };
     const vis = () => { if (document.visibilityState === "hidden") flush(true); };
     window.addEventListener("pagehide", leave); document.addEventListener("visibilitychange", vis); window.addEventListener("online", leave);
@@ -143,7 +144,7 @@ function ProgramPlayer({ initial, onClose }: { initial: Json; onClose: () => voi
   const relisten = async (unitId: string) => {
     try { const r = await api<Json>("/radio/relisten", { body: { unit_id: unitId } }); setMsg({ kind: "ok", text: `再聴の予定を ${r.due_day} に入れました。` }); } catch (e) { setMsg({ kind: "err", text: (e as ApiError).detail }); }
   };
-  const pos = player.pos || lastPos.current;
+  const pos = player.pos || resumeAt;
   const current = prog.units.find((u: Json) => pos >= u.start_ms && pos < u.end_ms);
   return (
     <>
@@ -151,10 +152,10 @@ function ProgramPlayer({ initial, onClose }: { initial: Json; onClose: () => voi
         <h2 id="pp-h">ラジオ再生 <small>{MODE_LABEL[prog.mode]}・{prog.units.length} Unit・{fmtMin(prog.duration_ms / 1000)}</small></h2>
         <div className="row">
           {player.state === "playing" ? <button className="playbtn wide" onClick={player.pause}>❚❚ 一時停止</button>
-            : <button className="playbtn wide primary" onClick={player.state === "paused" ? () => { player.play(); } : start} disabled={player.state === "loading"}>{player.state === "loading" ? "読み込み中…" : lastPos.current > 1000 && player.state !== "ended" ? "▶ 続きから再生" : "▶ 再生"}</button>}
+            : <button className="playbtn wide primary" onClick={player.state === "paused" ? () => { player.play(); } : start} disabled={player.state === "loading"}>{player.state === "loading" ? "読み込み中…" : resumeAt > 1000 && player.state !== "ended" ? "▶ 続きから再生" : "▶ 再生"}</button>}
         </div>
         <label className="sr" htmlFor="seek">再生位置</label>
-        <input id="seek" type="range" min={0} max={prog.duration_ms} value={Math.min(pos, prog.duration_ms)} onChange={(e) => { lastPos.current = Number(e.target.value); player.seek(Number(e.target.value)); }} />
+        <input id="seek" type="range" min={0} max={prog.duration_ms} value={Math.min(pos, prog.duration_ms)} onChange={(e) => { lastPos.current = Number(e.target.value); setResumeAt(lastPos.current); player.seek(Number(e.target.value)); }} />
         <p className="note" aria-live="polite">{fmtClock(pos)} / {fmtClock(prog.duration_ms)}　{player.state === "playing" ? "再生中" : player.state === "paused" ? "一時停止中" : player.state === "ended" ? "再生終了" : player.state === "loading" ? "読み込み中" : "停止中"}{current ? `・${current.title}` : ""}</p>
         {player.state === "error" && <Msg>{player.error} <button className="small" onClick={start}>再試行</button></Msg>}
         {msg && <Msg kind={msg.kind}>{msg.text}</Msg>}
@@ -170,7 +171,7 @@ function ProgramPlayer({ initial, onClose }: { initial: Json; onClose: () => voi
         {prog.units.map((u: Json, i: number) => (
           <div className="qbox" key={u.unit_id}>
             <div className="row"><strong>{i + 1}. {u.title}</strong><DemoChip kind={u.audio_kind} /><span className="chip">{u.complete ? "✓ 聴取完了" : `再生 ${Math.round(u.coverage * 100)}%`}</span>
-              <button className="small ghost" onClick={() => { lastPos.current = u.start_ms; player.seek(u.start_ms); }}>ここから</button></div>
+              <button className="small ghost" onClick={() => { lastPos.current = u.start_ms; setResumeAt(u.start_ms); player.seek(u.start_ms); }}>ここから</button></div>
             <div className="row" role="group" aria-label="自己申告（任意）"><small>自己申告（任意）:</small>
               {[["correct", "自分では正解"], ["incorrect", "不正解"], ["unknown", "不明"]].map(([v, l]) => <button key={v} className="small" aria-pressed={reports[u.unit_id] === v} disabled={!!reports[u.unit_id]} onClick={() => report(u.unit_id, v)}>{reports[u.unit_id] === v ? "✓ " : ""}{l}</button>)}
               <button className="small ghost" onClick={() => relisten(u.unit_id)}>あとで再聴</button></div>

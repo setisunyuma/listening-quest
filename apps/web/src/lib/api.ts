@@ -2,8 +2,7 @@
 // Python side that the web app does not follow fails type checking.
 import type { components } from "./api-types";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type Json = any;
+export type Json = any;  
 // Free-form dictionaries in the contract (`{[key: string]: unknown}`) are treated as loose JSON;
 // every declared field keeps its generated type.
 type Loose<T> = T extends (infer U)[] ? Loose<U>[] : T extends object ? (string extends keyof T ? Json : { [K in keyof T]: Loose<T[K]> }) : T;

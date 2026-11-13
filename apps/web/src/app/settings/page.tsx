@@ -20,7 +20,9 @@ export default function SettingsPage() {
     try { await api("/auth/logout", { body: {} }); } catch {}
     await clearDevice(app.me.user_id);
     localStorage.removeItem("lq:me");
-    location.href = "/login";
+    // full reload on purpose: drops every in-memory copy of this user's data
+     
+    window.location.replace("/login");
   };
   const restore = async (f: File) => {
     try {

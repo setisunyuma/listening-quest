@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiError, type Json } from "@/lib/api";
 
 /** Fetch with optional polling. Keeps the last good data while offline. */
@@ -7,7 +7,7 @@ export function useData<T = Json>(fn: () => Promise<T>, deps: unknown[], pollMs 
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState("");
   const f = useRef(fn);
-  f.current = fn;
+  useLayoutEffect(() => { f.current = fn; });
   const reload = useCallback(async () => {
     try {
       setData(await f.current());

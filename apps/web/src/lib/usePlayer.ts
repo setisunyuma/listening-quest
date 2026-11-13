@@ -2,14 +2,14 @@
 // One HTMLAudioElement wrapper. The UI state follows what the element actually does: "playing" is only
 // reported after the browser fired `playing`; a rejected play() (autoplay policy, bad file, offline)
 // becomes an error state with a message - never a silent "playing".
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 export type PlayerState = "idle" | "loading" | "playing" | "paused" | "ended" | "error";
 
 export function usePlayer(opts: { onEnded?: () => void; onStarted?: () => void; onTime?: (ms: number, playing: boolean) => void } = {}) {
   const ref = useRef<HTMLAudioElement | null>(null);
   const cb = useRef(opts);
-  cb.current = opts;
+  useLayoutEffect(() => { cb.current = opts; });
   const [state, setState] = useState<PlayerState>("idle");
   const [error, setError] = useState("");
   const [pos, setPos] = useState(0);
@@ -33,9 +33,10 @@ export function usePlayer(opts: { onEnded?: () => void; onStarted?: () => void; 
   const play = useCallback(async (src?: string, rate = 1, from?: number) => {
     const a = ref.current;
     if (!a) return false;
-    if (src && a.getAttribute("data-src") !== src) {
-      a.src = src;
+    if (src && (a.getAttribute("data-src") !== src || a.error)) {
+      a.src = src; // also after a failed load: retry fetches the file again
       a.setAttribute("data-src", src);
+      a.load();
     }
     if (from !== undefined) { try { a.currentTime = from / 1000; } catch {} }
     a.playbackRate = rate;
