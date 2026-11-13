@@ -58,7 +58,22 @@
 ### 実行できていないもの
 
 - **OpenAI 実 API**（内容生成・検品・Realtime 音声・音声認識）: API キーと予算の指示がないため未実行。アダプターは公式ドキュメント（2026-11-12 確認）に基づいて実装し、テストでは通信を遮断して予算の予約までを確認。実音声の品質・Realtime の実際のイベント形式・usage 形式は未検証。
-- **Docker Compose / Caddy**: このコンテナでは Docker デーモンが使えないため未起動（設定ファイルのみ）。ローカルの PostgreSQL + ファイルストレージで同じコードを検証。MinIO（S3）経路は未実行。
+- **Docker Compose / Caddy**: 第2段階で CI に追加し、Compose の実起動と S3 経路（SeaweedFS）、Caddy の設定検証を確認済み。この作業環境には Docker デーモンがないため、手元では未実行。
 - **iPhone 実機**: 未実施（README の確認項目）。Playwright の結果は Chromium のスマホ幅エミュレーションであり、ロック画面・Bluetooth・通話割り込みの確認ではない。
 - **公式資料との逐語照合**: 共通テスト 2026・英検 2026 年度第 2 回の冊子・原稿との照合は未実施（形式・配点は仕様書の値）。
 - **外部公開**: 未実施（docs/DEPLOYMENT.md）。
+
+
+## 第2段階（2026-11-13）: iPhone で本物の音声を使うための仕上げ
+
+| # | 作業 | 状態 | 検証 |
+|---|------|------|------|
+| 1 | リポジトリ直下の `.env` を API・worker・CLI がどこから起動しても読む。`lq config` で秘密値を伏せて確認 | [x] | `tests/test_config.py`（別ディレクトリから CLI を起動して読み込みと秘匿を確認） |
+| 2 | Caddy: `ACME_EMAIL` が空欄でも起動できる | [x] | 空欄では引数不足の構文エラーになることを Caddy 2.10.2 で再現し、修正後は `scripts/caddy-validate.sh` が空欄・設定ありの両方で通過（手元と CI） |
+| 3 | 音声検品: 数詞の表記差（100、3.5、2026、9:30、21st、50%、$12 など）を同一視。数値の違い・脱落と否定語の脱落は不合格 | [x] | `tests/test_textnorm.py`（同一扱い 23 件・不合格 15 件・その他） |
+| 4 | 音声認識の結果をクリップ単位で即時保存し、再開時は再課金しない | [x] | `test_recognition_results_are_saved_per_clip_*` |
+| 5 | 長い API 呼び出しの間も実行権を延長。実行権を失った worker は書き込めない | [x] | `test_lease_is_kept_alive_*`（実行権 2 秒・処理 5 秒で横取りされない）、`test_a_worker_that_lost_its_lease_stops_writing` |
+| 6 | CI: E2E、Compose の実起動と基本動作、1 コンテナのイメージ、Caddy・Compose の検証 | [x] | GitHub Actions の e2e / compose / image / infra ジョブ |
+| 7 | MinIO の配布終了への対応: 開発用 Compose は SeaweedFS、本番はボリューム保存 | [x] | compose ジョブで S3 経路（74 オブジェクト保存・Range 206）を確認 |
+| 8 | 1 教材だけの実 API 検証（費用上限つき、他のジョブは課金不可）: `lq verify-live` / `scripts/live-verify.sh` / 教材管理のボタン | [x] 実装 / [ ] 実 API 実行 | 偽の有料プロバイダーで分離と上限を検証。無料の予行（`--rehearsal`）で、生成→READY→スマホ幅ブラウザーでの再生・解答・解説・履歴保存まで通過 |
+| 9 | スマホだけで公開できる構成: 1 コンテナのイメージ（ルート Dockerfile）、`/setup` での初回アカウント作成、PaaS の `DATABASE_URL`・公開ドメインの自動読み込み | [x] 実装 / [ ] 公開 | image ジョブ、`test_owner_setup_*` |
