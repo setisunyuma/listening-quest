@@ -4,6 +4,7 @@ from pathlib import Path
 
 _TMP = tempfile.mkdtemp(prefix="lq-test-")
 os.environ["LQ_ENV"] = "test"
+os.environ["LQ_ENV_FILE"] = "none"  # never read a developer's .env (real API keys) in tests
 os.environ["LQ_DATABASE_URL"] = os.environ.get(
     "LQ_TEST_DATABASE_URL", "postgresql+psycopg://lq:lq@127.0.0.1:55432/lq_test"
 )
@@ -54,7 +55,18 @@ def _clean(monkeypatch):
     import httpx
     import websockets.sync.client as wsc
 
-    monkeypatch.setattr(httpx, "post", _blocked)
+    for name in ("post", "get", "request", "stream"):
+        monkeypatch.setattr(httpx, name, _blocked)
+    real_send = httpx.Client.send
+
+    def _send(self, request, *a, **k):
+        # FastAPI's TestClient is an httpx.Client talking to the in-process app ("testserver"): allowed.
+        # Any other destination is the outside world and is refused.
+        if request.url.host != "testserver":
+            raise AssertionError(f"network call attempted in tests: {request.url}")
+        return real_send(self, request, *a, **k)
+
+    monkeypatch.setattr(httpx.Client, "send", _send)
     monkeypatch.setattr(wsc, "connect", _blocked)
     yield
 

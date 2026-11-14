@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from lq.audio import qa
 from lq.audio.pcm import AudioError, wav_bytes
 from lq.db import models as m
+from lq.db.base import session_factory
 from lq.domain.content import HASHED_FIELDS, content_hash, learner_view, reviewer_view, sha256_hex
 from lq.generator import budget, factory
 from lq.generator.budget import BudgetBlocked, BudgetMeter
@@ -622,3 +623,283 @@ def test_cli_generate_sends_to_server_and_keeps_failures_in_outbox(db, user, mon
     db.commit()
     live = db.execute(select(m.Unit).where(m.Unit.realm == "live")).scalar_one()
     assert live.status == "CONTENT_REVIEW"  # received with all audio, but the live area wants its own content review
+
+
+# ---- stability: saved recognition results and lease keep-alive
+
+
+class CountingASR(DemoASR):
+    def __init__(self, fail_on=None):
+        self.calls, self.fail_on = 0, fail_on
+
+    def transcribe(self, pcm, lang, meter, expected_hint=""):
+        self.calls += 1
+        if self.fail_on is not None and self.calls == self.fail_on:
+            raise ProviderError("recogniser timed out")
+        return expected_hint
+
+
+def test_recognition_results_are_saved_per_clip_and_not_paid_again_on_resume(db, user):
+    first = CountingASR(fail_on=3)
+    factory.set_provider_override("demo", demo_providers(asr=first))
+    jid = enqueue(db)
+    assert worker.drain("w1") == ["retry"]
+    assert (
+        first.calls == 3 and db.execute(select(func.count()).select_from(m.AsrCheck)).scalar_one() == 2
+    )  # two finished checks kept
+    second = CountingASR()
+    factory.set_provider_override("demo", demo_providers(asr=second))
+    job = db.get(m.GenerationJob, jid)
+    job.run_after = datetime.now(UTC)
+    db.commit()
+    assert worker.drain("w2") == ["succeeded"]
+    total = db.execute(select(func.count()).select_from(m.AsrCheck)).scalar_one()
+    assert second.calls == total - 2  # the two saved results were reused, not requested again
+    _, unit = unit_of(db, jid)
+    assert unit.status == "READY"
+    rec = db.execute(select(m.ReviewRecord).where(m.ReviewRecord.target == "audio")).scalar_one()
+    assert len(rec.details["clips"]) == total
+
+
+class SlowTTS(DemoTTS):
+    """Simulates a long external call (seconds instead of minutes)."""
+
+    def __init__(self, delay):
+        self.delay, self.calls = delay, 0
+
+    def synthesize(self, *a, **k):
+        import time
+
+        self.calls += 1
+        if self.calls == 1:
+            time.sleep(self.delay)
+        return super().synthesize(*a, **k)
+
+
+def test_lease_is_kept_alive_during_a_long_call_so_a_second_worker_cannot_take_the_job(db, user, monkeypatch):
+    import threading
+    import time
+
+    from lq.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "job_lease_sec", 2)
+    budget.set_system(db, "demo", {"max_concurrent_jobs": 4})
+    factory.set_provider_override("demo", demo_providers(tts=SlowTTS(delay=5)))
+    jid = enqueue(db)
+    outcome = {}
+    t = threading.Thread(target=lambda: outcome.setdefault("w1", worker.run_one("w1")))
+    t.start()
+    for _ in range(100):  # wait until w1 holds the job, then let w2 try to take it
+        with session_factory()() as s:
+            if s.get(m.GenerationJob, jid).lease_owner == "w1":
+                break
+        time.sleep(0.05)
+    stolen = []
+    deadline = time.time() + 4.5
+    while time.time() < deadline:  # a second worker keeps trying while the first one is inside the slow call
+        with session_factory()() as s:
+            lease = queue.claim(s, "w2")
+            s.commit()
+        if lease is not None:
+            stolen.append(lease)
+        time.sleep(0.3)
+    t.join(timeout=120)
+    assert stolen == [] and outcome["w1"] == "succeeded"
+    job, unit = unit_of(db, jid)
+    assert job.attempts == 0 and job.lease_generation == 1 and unit.status == "READY"
+
+
+def test_a_worker_that_lost_its_lease_stops_writing(db, user):
+    enqueue(db)
+    lease = queue.claim(db, "w1")
+    db.commit()
+    job = db.get(m.GenerationJob, lease.job_id)
+    job.lease_owner = "someone-else"  # another worker took over after an expiry
+    db.commit()
+    assert queue.renew(lease) is False and lease.lost.is_set()
+    with pytest.raises(queue.StaleLease):
+        lease.guard(db)
+
+
+# ---- live verification: one capped job, nothing else spends
+
+
+def test_verify_live_runs_only_its_own_job_under_the_cap(db, live_user, monkeypatch):
+    from typer.testing import CliRunner
+
+    from lq import cli
+    from lq.config import get_settings
+    from lq.services.seed import seed_fixtures
+
+    monkeypatch.setattr(get_settings(), "openai_api_key", "sk-test")
+    monkeypatch.setattr(
+        "lq.generator.openai_provider.probe_auth", lambda *a, **k: []
+    )  # the free auth probe would go online
+    monkeypatch.setattr(get_settings(), "work_dir", get_settings().work_dir / "t")
+    seed_fixtures(db, "live")  # registered examples must NOT be processed by the verification
+    db.commit()
+    fake = paid_set(0.01)
+    r = CliRunner().invoke(cli.app, ["verify-live", "--cost-cap-usd", "1"])
+    assert r.exit_code == 0, r.output
+    jobs = db.execute(select(m.GenerationJob)).scalars().all()
+    ver = [j for j in jobs if j.params.get("verification")]
+    assert len(ver) == 1 and ver[0].status == "SUCCEEDED"
+    assert {j.status for j in jobs if j is not ver[0]} == {"QUEUED"}  # examples untouched
+    assert {e.job_id for e in db.execute(select(m.CostEntry)).scalars()} == {ver[0].id}  # only this job spent
+    assert {"content", "review", "tts", "asr"} <= set(fake.calls)
+    assert (
+        budget.get_system(db, "live")["verification"] is None and budget.get_system(db, "live")["paid_enabled"] is False
+    )
+    report = json.loads(r.output[r.output.index("{") : r.output.rindex("}") + 1])
+    assert report["unit_status"] == "READY" and report["cost"]["settled_usd"] > 0 and report["open_in_app"]
+
+
+def test_verify_live_stops_at_the_cap_and_refuses_without_key(db, live_user, monkeypatch):
+    from typer.testing import CliRunner
+
+    from lq import cli
+    from lq.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "work_dir", get_settings().work_dir / "t2")
+    r = CliRunner().invoke(cli.app, ["verify-live", "--cost-cap-usd", "1"])
+    assert r.exit_code == 1 and "OPENAI_API_KEY is not set" in r.output
+    assert db.execute(select(func.count()).select_from(m.GenerationJob)).scalar_one() == 0
+    monkeypatch.setattr(get_settings(), "openai_api_key", "sk-test")
+    monkeypatch.setattr(
+        "lq.generator.openai_provider.probe_auth", lambda *a, **k: []
+    )  # the free auth probe would go online
+    fake = paid_set(0.10)
+    r = CliRunner().invoke(cli.app, ["verify-live", "--cost-cap-usd", "0.25"])
+    assert r.exit_code == 1
+    job = db.execute(select(m.GenerationJob)).scalar_one()
+    assert len(fake.calls) == 2 and budget.job_cost(db, job.id)["settled_usd"] == pytest.approx(
+        0.20
+    )  # third request never started
+    assert "verification_cap" in (job.stop_detail or "") or job.blocked_reason == "verification_cap"
+    assert budget.get_system(db, "live")["verification"] is None
+
+
+def test_verify_live_refuses_before_spending_when_the_key_is_rejected(db, live_user, monkeypatch):
+    from typer.testing import CliRunner
+
+    from lq import cli
+    from lq.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "openai_api_key", "sk-wrong")
+    monkeypatch.setattr(
+        "lq.generator.openai_provider.probe_auth", lambda *a, **k: ["Realtime API refused the session: invalid_api_key"]
+    )
+    fake = paid_set(0.01)
+    r = CliRunner().invoke(cli.app, ["verify-live", "--cost-cap-usd", "1"])
+    assert r.exit_code == 1 and "invalid_api_key" in r.output
+    assert fake.calls == [] and db.execute(select(func.count()).select_from(m.GenerationJob)).scalar_one() == 0
+
+
+def test_probe_skips_realtime_when_the_speech_endpoint_is_used(monkeypatch):
+    import httpx
+
+    from lq.generator import openai_provider
+
+    class Ok:
+        status_code = 200
+
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: Ok())
+    assert openai_provider.probe_auth("k", "https://api.openai.com/v1", None, "gpt-4o-mini-tts") == []
+
+
+# ---- shared verification budget across environments
+
+
+def test_verification_budget_carries_over_and_refuses_when_one_unit_cannot_finish(db, live_user, monkeypatch):
+    from typer.testing import CliRunner
+
+    from lq import cli
+    from lq.config import get_settings
+    from lq.services import verification as V
+
+    s = get_settings()
+    monkeypatch.setattr(s, "openai_api_key", "sk-test")
+    monkeypatch.setattr("lq.generator.openai_provider.probe_auth", lambda *a, **k: [])
+    monkeypatch.setattr(s, "verify_budget_total_usd", 1.0)
+    monkeypatch.setattr(s, "verify_budget_prior_usd", 0.95)  # spent in another environment: does not reset here
+    st = V.budget_status(db, "live")
+    assert st["remaining_usd"] == pytest.approx(0.05)
+    fake = paid_set(0.01)
+    r = CliRunner().invoke(cli.app, ["verify-live"])
+    assert r.exit_code == 1 and "not enough verification budget left" in r.output
+    assert fake.calls == [] and db.execute(select(func.count()).select_from(m.GenerationJob)).scalar_one() == 0
+
+    monkeypatch.setattr(s, "verify_budget_prior_usd", 0.30)
+    r = CliRunner().invoke(cli.app, ["verify-live"])
+    assert r.exit_code == 0, r.output
+    st = V.budget_status(db, "live")
+    spent = st["this_environment"]["counted_usd"]
+    assert spent > 0 and st["remaining_usd"] == pytest.approx(0.70 - spent)
+    monkeypatch.setattr(s, "verify_budget_prior_usd", 0.95)  # the run here still counts after "moving"
+    assert V.budget_status(db, "live")["remaining_usd"] == pytest.approx(max(0.0, 0.05 - spent))
+
+
+def test_cost_states_are_reported_separately(db, live_user):
+    from lq.generator.budget import BudgetMeter, cost_summary
+
+    budget.set_system(db, "live", {"paid_enabled": True, "daily_budget_usd": 5, "per_job_cap_usd": 5})
+    db.commit()
+    meter = BudgetMeter("live", None)
+    a, b, c, d = (meter.reserve("tts", "x", "m", 0.1) for _ in range(4))
+    meter.settle(a, 0.05, {"input_tokens": 1})
+    meter.computed(b, 0.07, {"basis": "measured audio"})
+    meter.mark_unknown(c, "timeout")
+    out = cost_summary(db.execute(select(m.CostEntry)).scalars().all())
+    assert (out["settled_usd"], out["computed_usd"], out["unknown_usd"], out["reserved_usd"]) == (0.05, 0.07, 0.1, 0.1)
+    assert out["counted_usd"] == pytest.approx(0.32)
+    del d
+
+
+class FirstTryDropsTail(DemoASR):
+    """The first recognition of the answer clip 'hears' a dropped ending; a re-synthesised clip is fine."""
+
+    def __init__(self):
+        self.answer_calls = 0
+
+    def transcribe(self, pcm, lang, meter, expected_hint=""):
+        if expected_hint.startswith("Question 1. The answer is number"):
+            self.answer_calls += 1
+            if self.answer_calls == 1:
+                return expected_hint.split(":")[0] + "."
+        return expected_hint
+
+
+def test_mismatched_clip_is_resynthesised_once_without_paying_again_for_the_rest(db, user):
+    tts, asr = FlakyTTS(fail_after=10_000), FirstTryDropsTail()
+    factory.set_provider_override("demo", demo_providers(tts=tts, asr=asr))
+    jid = enqueue(db)
+    assert worker.drain("w") == ["succeeded"]
+    job, unit = unit_of(db, jid)
+    clips = db.execute(select(func.count()).select_from(m.AudioCache)).scalar_one()
+    assert unit.status == "READY" and job.state["resynth"] == {"answer:q1": 1}
+    assert tts.calls == clips + 1  # exactly one extra speech request: the failed clip
+    assert asr.answer_calls == 2  # only the new answer clip was recognised again
+
+
+def test_a_clip_that_fails_twice_quarantines_the_unit(db, user):
+    class AlwaysDrops(DemoASR):
+        def transcribe(self, pcm, lang, meter, expected_hint=""):
+            return (
+                expected_hint.split(":")[0] + "."
+                if expected_hint.startswith("Question 1. The answer is number")
+                else expected_hint
+            )
+
+    factory.set_provider_override("demo", demo_providers(asr=AlwaysDrops()))
+    jid = enqueue(db)
+    assert worker.drain("w") == ["failed"]
+    job, unit = unit_of(db, jid)
+    assert unit.status == "QUARANTINED" and job.state["resynth"] == {"answer:q1": 1}
+
+
+def test_generation_prompt_requires_audible_speaker_identity():
+    from lq.generator.authoring import build_generation_prompt
+    from lq.generator.providers import GenSpec
+
+    system, _ = build_generation_prompt(GenSpec(**{k: v for k, v in SPEC.items()}))
+    assert "speaker labels are never shown" in system and '"the man"' in system

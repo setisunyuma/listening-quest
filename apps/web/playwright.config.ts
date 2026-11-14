@@ -8,6 +8,7 @@ const env = {
   LQ_STORAGE_BACKEND: "local",
   LQ_STORAGE_LOCAL_DIR: `${__dirname}/../../var/e2e-storage`,
   LQ_ENV: "test",
+  LQ_ENV_FILE: "none",
   LQ_WORKER_POLL_SEC: "0.5",
   LQ_LOGIN_MAX_FAILURES: "50",
   OPENAI_API_KEY: "",

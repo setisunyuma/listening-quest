@@ -15,6 +15,17 @@ class LoginIn(BaseModel):
     password: str = Field(min_length=1, max_length=256)
 
 
+class SetupIn(BaseModel):
+    code: str = Field(min_length=1, max_length=200)
+    username: str = Field(min_length=3, max_length=64, pattern=r"^[A-Za-z0-9_.\-]+$")
+    password: str = Field(min_length=10, max_length=256)
+
+
+class SetupStatusOut(BaseModel):
+    available: bool
+    reason: str
+
+
 class MeOut(BaseModel):
     username: str
     realm: Literal["live", "demo"]
@@ -346,6 +357,10 @@ class SystemPatch(BaseModel):
     max_concurrent_jobs: int | None = None
     auto_replenish: bool | None = None
     replenish_modes: list[str] | None = None
+
+
+class VerifyLiveIn(BaseModel):
+    cap_usd: float | None = Field(default=None, gt=0, le=20)  # default: what is left of the shared budget
 
 
 class GenerateIn(BaseModel):

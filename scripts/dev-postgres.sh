@@ -19,11 +19,11 @@ case "${1:-start}" in
     fi
     psql -h 127.0.0.1 -p "$PORT" -U postgres -tc "SELECT 1 FROM pg_roles WHERE rolname='lq'" | grep -q 1 || \
       psql -h 127.0.0.1 -p "$PORT" -U postgres -c "CREATE ROLE lq LOGIN PASSWORD 'lq' CREATEDB" >/dev/null
-    for db in lq lq_test lq_e2e; do
+    for db in lq lq_test lq_e2e lq_verify; do
       psql -h 127.0.0.1 -p "$PORT" -U postgres -tc "SELECT 1 FROM pg_database WHERE datname='$db'" | grep -q 1 || \
         psql -h 127.0.0.1 -p "$PORT" -U postgres -c "CREATE DATABASE $db OWNER lq" >/dev/null
     done
-    echo "postgres ready on 127.0.0.1:$PORT (db: lq, lq_test, lq_e2e)"
+    echo "postgres ready on 127.0.0.1:$PORT (db: lq, lq_test, lq_e2e, lq_verify)"
     ;;
   stop) run "$PGBIN/pg_ctl" -D "$DATA" -m fast stop ;;
   *) echo "usage: $0 start|stop"; exit 2 ;;

@@ -1,67 +1,97 @@
-# 公開と運用（iPhone から使う）
+# 公開と運用（iPhone から毎日使う）
 
-開発 PC の `http://localhost:3000` は、その PC からしか開けません。iPhone で使うには、**iPhone から届く HTTPS の URL** が必要です
-（Service Worker・オフライン・Secure Cookie は HTTPS が前提）。この作業は外部公開を伴うため、実施は利用者の判断で行ってください。
+開発 PC の `http://localhost:3000` には、その PC からしかアクセスできません。iPhone で毎日使うには、
+**iPhone から届く HTTPS の URL** が必要です（Service Worker、オフライン、Secure Cookie はいずれも HTTPS が前提）。
 
-## 標準構成: 小さなサーバー 1 台 + Docker Compose + Caddy
+## 提案: Railway（PaaS）で 1 コンテナ + PostgreSQL ― スマホだけで完結
 
-必要なもの: Docker が動く Linux サーバー（メモリ 2GB 程度〜）、ドメイン名（例 `lq.example.com`）とその A/AAAA レコード、80/443 番ポートの開放。
-
-```bash
-git clone <this repo> && cd listening-quest
-cp .env.example .env
-#  必須: POSTGRES_PASSWORD, MINIO_ROOT_USER, MINIO_ROOT_PASSWORD（長いランダム文字列）
-#        LQ_DOMAIN=lq.example.com
-#        LQ_PUBLIC_ORIGIN=https://lq.example.com
-#        LQ_COOKIE_SECURE=true
-#  任意: ACME_EMAIL, OPENAI_API_KEY, LQ_IMPORT_TOKEN（CLI から送る場合）
-docker compose -f infra/compose.yaml -f infra/compose.prod.yaml --env-file .env up -d --build
-docker compose -f infra/compose.yaml --env-file .env run --rm api lq create-user owner   # パスワードはその場で入力
-docker compose -f infra/compose.yaml --env-file .env run --rm api lq seed
-```
-
-Caddy が証明書を自動取得し、`https://lq.example.com` の 1 オリジンで `/api/*` を FastAPI、それ以外を Next.js に振り分けます。
-MinIO と PostgreSQL は外部に公開しません。音声はログイン済みの API 経由（Range 対応）でのみ配信します。
-
-iPhone: Safari で `https://lq.example.com` → ログイン → 共有 →「ホーム画面に追加」。README の実機確認項目を順に確認します。
-
-### 未設定のまま残っているもの（利用者が決める・入力する）
+リポジトリ直下の `Dockerfile` から、Web・API・worker をまとめた**1つのコンテナ**を作ります。
+Railway は GitHub 連携でこの Dockerfile を自動で検出して起動し、HTTPS の URL も自動で付けます。
+サーバーの OS 管理、SSH、証明書の設定、ドメインの購入はいずれも要りません。
 
 | 項目 | 内容 |
 |---|---|
-| 公開先 | サーバー、ドメイン、DNS。**まだ用意・デプロイしていません** |
-| `POSTGRES_PASSWORD` / `MINIO_ROOT_*` | ランダムな値を生成して `.env` に |
-| 初期アカウント | `lq create-user` で作成（固定パスワードは同梱していません） |
-| `OPENAI_API_KEY` | 実 API で生成する場合のみ。サーバーの `.env` にだけ置く |
-| 予算 | 教材管理で 1 日の予算・1 ジョブ上限を確認してから「有料生成を有効にする」 |
-| `LQ_IMPORT_TOKEN` / `LQ_SERVER_URL` | 別 PC の生成器 CLI から送る場合のみ |
+| 構成 | アプリ 1 サービス（ルート Dockerfile）+ Railway PostgreSQL + ボリューム（`/data`、音声の保存先） |
+| URL | `https://<名前>.up.railway.app`（自動発行）。独自ドメインは任意 |
+| 月額の目安 | **5〜10 USD 程度**（Hobby プラン 5 USD に 5 USD 分の利用枠を含む。利用量に応じて加算） |
+| 内訳の見積もり | メモリ 0.5〜0.6 GB 常駐（アプリ約 0.4 GB + DB 約 0.15 GB）、CPU はほぼ待機、ボリューム 1 GB 未満、通信は音声で月 1 GB 前後 |
+| OpenAI の費用 | 上記とは別。1 教材あたりの見積もりの上限は、短い形式で約 0.10 USD、長い講義形式で約 0.28 USD。実測値は実 API 検証の結果で確定。日次の予算上限（初期 1 USD/日）を超えて使われることはない |
+| あなたの操作 | 登録・支払い設定（本人確認を含む）、GitHub 連携の許可、変数 3 つの入力、ボリュームとドメインの追加、`/setup` でアカウント作成 |
+| 長所 | スマホのブラウザーだけで設定できる。main に push すると自動で再デプロイ。OS の保守は不要 |
+| 短所 | 料金が利用量で変動する（上限は設定可能）。リージョンは国外（シンガポールを推奨） |
 
-### 代替: 自宅 PC で動かしてトンネルで公開
+**注意（未確認の点）**: この作業環境からは railway.com とその API に接続できない設定のため、Railway の現在の画面構成と単価を公式ページで直接確認できていません。
+上の金額は第三者のまとめ（Hobby 5 USD に 5 USD 分の利用枠を含む）と一般的な単価からの見積もりです。申し込み画面の表示を正としてください。
 
-Cloudflare Tunnel / Tailscale Funnel などで `http://localhost:3000` を HTTPS 公開することもできます。
-その場合も `LQ_PUBLIC_ORIGIN`（公開 URL）と `LQ_COOKIE_SECURE=true` を設定し、PC が起動している間だけ使えます。
+### 代替案: 国内 VPS（2GB）+ `infra/compose.prod.yaml`（Caddy で自動 HTTPS）
+
+月額は 1,259〜1,980 円程度（2026年11月時点の各社 1 か月契約の 2GB プランの例）です。
+ただし、OS の更新とセキュリティ対応を自分で行う必要があります。また、非公開リポジトリの取得には GitHub トークンかデプロイ鍵が要り、初期設定に SSH が必要です。
+**スマホだけで完結させる**という条件では Railway の方が手順が少ないため、第一候補にしていません。
+手順は末尾の「VPS で運用する場合」にあります。
+
+## Railway での公開手順（スマホ）
+
+1. Safari で `https://railway.com` → **Login** → **GitHub** でサインイン。
+2. 支払い設定で **Hobby** プランに登録（カード登録。表示に従い本人確認）。**費用: 月額 5 USD〜**
+3. **Usage**（利用量）の画面で **上限（hard limit）** を設定する（例: 15 USD）。上限に達するとサービスが止まり、それ以上は請求されない設定。
+4. **New Project** → **Deploy from GitHub repo** → GitHub の画面で Railway アプリに `listening-quest` へのアクセスを許可 → リポジトリを選ぶ。
+   ビルドが始まる（ルートの Dockerfile が使われる）。最初のビルドは数分かかり、DB 未接続のため一度失敗しても問題ない。
+5. プロジェクト画面の **+ New**（または **Create**）→ **Database** → **PostgreSQL** を追加。
+6. アプリのサービス → **Variables** に次の 4 つを追加:
+   - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}`（入力欄の候補から PostgreSQL の変数を選ぶ）
+   - `LQ_SETUP_CODE` = 自分で決めた 12 文字以上の合言葉（初回のアカウント作成にだけ使う）
+   - `OPENAI_API_KEY` = OpenAI の API キー（実 API を使うときだけ。値は画面上で伏せ字になる）
+   - `LQ_VERIFY_BUDGET_PRIOR_USD` = `0.07`（開発環境での実 API 検証の使用済み額。検証予算 1 USD をリセットしないため。docs/VERIFICATION_LOG.md）
+7. アプリのサービス → **Settings**:
+   - **Volumes**（またはサービスのメニューの **Attach Volume**）→ マウント先 `/data`
+   - **Region** → Singapore（日本から近い）
+   - **Networking** → **Generate Domain**。ポートは自動で表示された値のままにする（アプリは Railway が渡す `PORT` で待ち受ける。手入力を求められたら `3000`）
+8. **Deployments** で最新が **Active / Success** になったら、Safari で `https://<発行されたドメイン>/setup` を開き、
+   合言葉・ユーザー名・パスワードを入力して **アカウントを作成**。作成後、`/setup` は使えなくなる。
+9. Safari の共有ボタン →「ホーム画面に追加」。
+
+完了の目安: アプリのサービスが **Active**、`https://<ドメイン>/login` にログイン画面が出て、作成したアカウントでホームの「今日のクエスト」が表示されること。
+
+### 教材を入れる
+
+- 実 API で 1 教材だけ試す: アプリの **教材管理 → 実APIで1教材を検証** に費用上限（例: 1）を入れて **検証を開始**。
+  全体の有料生成は OFF のまま、この 1 件だけが上限の範囲で API を使う。結果画面に費用と **アプリで再生して解く** が出る。
+- 毎日の教材を自動で用意する: **教材管理 → 有料生成と予算** で 1 日の予算を確認し、**有料生成を有効にする** と **在庫の自動補充** をオン。
+
+### 更新・バックアップ
+
+- 更新: main に変更が入ると Railway が自動で再ビルドし、再起動時に DB の migration も実行される。
+- 学習履歴: アプリの **設定 → 学習履歴と設定を書き出す**（JSON。検証付きで復元できる）。
+- DB と音声の丸ごとのバックアップ: Railway の PostgreSQL とボリュームのバックアップ機能を使う（プランにより提供内容が異なる）。
+
+## VPS で運用する場合（代替）
+
+`infra/compose.prod.yaml` は単独で動く本番構成です。Caddy が `LQ_DOMAIN` の証明書を自動で取得し、ポート 80/443 だけを公開します。
+
+```bash
+git clone <this repo> && cd listening-quest
+cp .env.example .env    # LQ_DOMAIN, POSTGRES_PASSWORD を必須で設定（ACME_EMAIL は空欄でも可）
+docker compose -f infra/compose.prod.yaml --env-file .env up -d --build
+```
+
+初回のアカウントは `.env` に `LQ_SETUP_CODE=<合言葉>` を足して `https://<LQ_DOMAIN>/setup` から作れます。
+SSH できる場合は `docker compose -f infra/compose.prod.yaml exec api lq create-user owner` でも作れます。
+ドメインを持っていない場合は、`<IPアドレスのドットをハイフンに>.sslip.io` のようなホスト名でも証明書を取得できます（Let's Encrypt の発行回数の制限を受けます）。
 
 ## セキュリティ
 
-- 1 アカウント運用（live 領域の作成は 1 人まで）。パスワードは argon2。HttpOnly・SameSite=Lax の Cookie セッション、本番は Secure。
-- 状態を変える要求は CSRF トークン（ダブルサブミット）必須、`LQ_PUBLIC_ORIGIN` 設定時は Origin も確認。ログイン失敗は 15 分に 5 回で一時拒否。
-- API キー・ストレージ鍵はサーバー環境変数のみ（`NEXT_PUBLIC_*` に入れない、ログや書き出し JSON に入らない）。
-- Service Worker は `/api/*` を扱わず、個人データを含まないアプリの殻だけをキャッシュ。音声と未同期回答はユーザー別の保存領域に分け、ログアウト時に削除（未同期がある場合は件数と影響を表示してから）。
+- アカウントは 1 つだけ作れます（2 つ目は作れない）。初回アカウントは `/setup` と合言葉で一度だけ作成でき、合言葉の総当たりにはログインと同じ回数制限がかかります。
+- パスワードは argon2 で保存します。Cookie は HttpOnly・SameSite=Lax で、本番は Secure です。状態を変える要求には CSRF トークンが必要で、公開 URL 以外のオリジンからの要求は拒否します。
+- API キーなどの秘密値は、サーバーの環境変数にだけ置きます（`NEXT_PUBLIC_*` に入れず、ログや書き出し JSON にも出さない）。`lq config` も「set」とだけ表示します。
+- 音声は認証済みの API 経由でだけ配信し、ストレージは公開しません。
 
-## バックアップと復旧
-
-- `make backup`（ローカル）/ Compose では次のように:
-  ```bash
-  docker compose -f infra/compose.yaml exec -T db pg_dump -U lq -Fc lq > backups/db-$(date +%F).dump
-  docker run --rm --network listening-quest_default -v $PWD/backups:/b -e MC_HOST_m=http://$MINIO_ROOT_USER:$MINIO_ROOT_PASSWORD@minio:9000 minio/mc mirror m/listening-quest /b/storage
-  ```
-- 復元は空の DB へ（`scripts/restore.sh` は学習データのある DB への上書きを拒否）。学習者個人の履歴は「設定 → 書き出し／復元」でも可能（検証付き・上書きなし・二重登録なし）。
+## 障害時の復旧
 
 | 障害 | 復旧 |
 |---|---|
-| worker が落ちた | 再起動するだけ。実行権の期限切れジョブを回収し、教材の状態から続きを処理。古い worker は結果を確定できない |
-| 生成が失敗・隔離 | 教材管理で理由を確認し「再試行」。内容の問題で隔離されたものは修正版を新しい revision として取り込む |
-| 予算で止まった | 翌日（UTC）に自動で再確認。上限を変えると即再確認 |
-| 音声ファイルの欠損 | READY 前ならジョブが再生成。`lq gc` で参照されないオブジェクトを回収 |
-| 誤った教材を公開した | 教材管理で「無効化」。履歴は残り、成績と推薦から除外して再計算 |
-| DB 破損 | 新しい DB にバックアップを復元し、`lq migrate` |
+| コンテナが落ちた | プラットフォームが自動で再起動します。worker は実行権の期限が切れたジョブを回収して続きから処理し、古い worker は結果を確定できません |
+| 生成が失敗・隔離された | 教材管理で理由を確認して「再試行」。内容の問題で隔離されたものは、修正版を新しい revision として取り込みます |
+| 予算で止まった | 翌日（UTC）に自動で再確認します。上限を変えると、その場で再確認します |
+| 誤った教材を公開した | 教材管理で「無効化」。履歴は残り、成績と推薦からは除外して再計算します |
+| データを戻したい | 学習履歴の JSON を復元します（上書き・二重登録なし）。DB 全体はバックアップから新しい DB に戻します |

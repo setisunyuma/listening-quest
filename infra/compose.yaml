@@ -1,15 +1,18 @@
-# Development stack: web + api + worker + PostgreSQL + MinIO, all wired together.
-#   docker compose -f infra/compose.yaml --env-file .env up --build
+# Development / CI stack: web + api + worker + PostgreSQL + S3-compatible storage (SeaweedFS).
+#   docker compose -f infra/compose.yaml --env-file .env up -d --build
 # The browser uses http://localhost:3000 only (same origin; /api is forwarded to the API).
+# MinIO's community images are no longer published (2025-10) and the project is archived, so the
+# S3 path is exercised with SeaweedFS here. Production (compose.prod.yaml) stores audio on a volume.
 name: listening-quest
 x-core-env: &core-env
   LQ_ENV: ${LQ_ENV:-dev}
+  LQ_ENV_FILE: none
   LQ_DATABASE_URL: postgresql+psycopg://lq:${POSTGRES_PASSWORD:-lq-dev-only}@db:5432/lq
   LQ_STORAGE_BACKEND: s3
-  LQ_S3_ENDPOINT_URL: http://minio:9000
+  LQ_S3_ENDPOINT_URL: http://s3:8333
   LQ_S3_BUCKET: ${LQ_S3_BUCKET:-listening-quest}
-  LQ_S3_ACCESS_KEY: ${MINIO_ROOT_USER:-lq-dev}
-  LQ_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-lq-dev-secret}
+  LQ_S3_ACCESS_KEY: ${S3_ACCESS_KEY:-lq-dev}
+  LQ_S3_SECRET_KEY: ${S3_SECRET_KEY:-lq-dev-secret}
   LQ_COOKIE_SECURE: ${LQ_COOKIE_SECURE:-false}
   LQ_PUBLIC_ORIGIN: ${LQ_PUBLIC_ORIGIN:-}
   LQ_IMPORT_TOKEN: ${LQ_IMPORT_TOKEN:-}
@@ -22,6 +25,12 @@ x-core-env: &core-env
   LQ_TTS_MODEL: ${LQ_TTS_MODEL:-gpt-realtime-2.1-mini}
   LQ_ASR_MODEL: ${LQ_ASR_MODEL:-gpt-transcribe}
 
+configs:
+  s3_identities:
+    content: |
+      {"identities": [{"name": "lq", "credentials": [{"accessKey": "${S3_ACCESS_KEY:-lq-dev}", "secretKey": "${S3_SECRET_KEY:-lq-dev-secret}"}],
+                       "actions": ["Admin", "Read", "Write", "List", "Tagging"]}]}
+
 services:
   db:
     image: postgres:16.10-bookworm
@@ -33,15 +42,13 @@ services:
     healthcheck: { test: ["CMD-SHELL", "pg_isready -U lq"], interval: 3s, retries: 20 }
     restart: unless-stopped
 
-  minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    command: server /data --console-address :9001
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-lq-dev}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-lq-dev-secret}
-    volumes: [miniodata:/data]
+  s3:
+    image: chrislusf/seaweedfs:4.53
+    command: ["server", "-dir=/data", "-s3", "-s3.port=8333", "-s3.config=/etc/seaweedfs/s3.json", "-ip.bind=0.0.0.0"]
+    configs: [{ source: s3_identities, target: /etc/seaweedfs/s3.json }]
+    volumes: [s3data:/data]
     # not published to the host: audio reaches browsers only through the authenticated API
-    healthcheck: { test: ["CMD", "mc", "ready", "local"], interval: 3s, retries: 20 }
+    healthcheck: { test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9333/cluster/status && wget -q -S -O /dev/null http://127.0.0.1:8333/ 2>&1 | grep -q 'HTTP/'"], interval: 3s, retries: 40 }
     restart: unless-stopped
 
   migrate:
@@ -53,7 +60,8 @@ services:
   api:
     build: { context: .., dockerfile: infra/docker/core.Dockerfile }
     environment: *core-env
-    depends_on: { migrate: { condition: service_completed_successfully }, minio: { condition: service_healthy } }
+    command: ["lq", "serve", "--role", "api", "--no-migrate-first"]  # the migrate service ran already
+    depends_on: { migrate: { condition: service_completed_successfully }, s3: { condition: service_healthy } }
     volumes: [coredata:/data]
     healthcheck: { test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"], interval: 5s, retries: 20 }
     restart: unless-stopped
@@ -62,7 +70,7 @@ services:
     build: { context: .., dockerfile: infra/docker/core.Dockerfile }
     environment: *core-env
     command: ["lq", "worker"]
-    depends_on: { migrate: { condition: service_completed_successfully }, minio: { condition: service_healthy } }
+    depends_on: { migrate: { condition: service_completed_successfully }, s3: { condition: service_healthy } }
     volumes: [coredata:/data]
     restart: unless-stopped
 
@@ -74,4 +82,4 @@ services:
     depends_on: { api: { condition: service_healthy } }
     restart: unless-stopped
 
-volumes: { pgdata: {}, miniodata: {}, coredata: {} }
+volumes: { pgdata: {}, s3data: {}, coredata: {} }

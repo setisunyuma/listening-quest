@@ -226,6 +226,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/verify-live": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Verify Status */
+        get: operations["admin_verify_status_api_admin_verify_live_get"];
+        put?: never;
+        /**
+         * Admin Verify Start
+         * @description Start the one-unit real-API check. Only this job may spend, up to cap_usd; the worker runs it and the
+         *     allowance is withdrawn as soon as it ends.
+         */
+        post: operations["admin_verify_start_api_admin_verify_live_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/assessments": {
         parameters: {
             query?: never;
@@ -512,6 +534,28 @@ export interface paths {
         get: operations["me_api_auth_me_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Setup Status */
+        get: operations["setup_status_api_auth_setup_get"];
+        put?: never;
+        /**
+         * Setup Owner
+         * @description Create the single owner account from the browser, once. Requires LQ_SETUP_CODE (chosen by the owner in
+         *     the hosting dashboard). Wrong codes count as failed logins, so guessing is rate-limited.
+         */
+        post: operations["setup_owner_api_auth_setup_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1662,6 +1706,22 @@ export interface components {
             /** Timezone */
             timezone?: string | null;
         };
+        /** SetupIn */
+        SetupIn: {
+            /** Code */
+            code: string;
+            /** Password */
+            password: string;
+            /** Username */
+            username: string;
+        };
+        /** SetupStatusOut */
+        SetupStatusOut: {
+            /** Available */
+            available: boolean;
+            /** Reason */
+            reason: string;
+        };
         /** SubmitIn */
         SubmitIn: {
             /** Answers */
@@ -1729,6 +1789,11 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** VerifyLiveIn */
+        VerifyLiveIn: {
+            /** Cap Usd */
+            cap_usd?: number | null;
         };
     };
     responses: never;
@@ -2212,6 +2277,76 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["InvalidateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_verify_status_api_admin_verify_live_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_verify_start_api_admin_verify_live_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["VerifyLiveIn"];
             };
         };
         responses: {
@@ -2813,6 +2948,59 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    setup_status_api_auth_setup_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupStatusOut"];
+                };
+            };
+        };
+    };
+    setup_owner_api_auth_setup_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetupIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

@@ -69,6 +69,8 @@ export default function AdminPage() {
         </section>
       )}
 
+      {app.me.realm === "live" && <VerifyLive />}
+
       <section className="panel" aria-labelledby="gen-h">
         <h2 id="gen-h">教材を生成 <small>{MODE_LABEL[app.mode]}</small></h2>
         <div className="row" style={{ alignItems: "flex-end" }}>
@@ -155,5 +157,49 @@ export default function AdminPage() {
           ))}</tbody></table></div>
       </section>
     </>
+  );
+}
+
+function VerifyLive() {
+  const st = useData<Json>(() => api("/admin/verify-live"), [], 4000);
+  const [msg, setMsg] = useState<{ kind: "ok" | "err" | "warn"; text: string } | null>(null);
+  const d = st.data;
+  const r = d?.report;
+  const usd = (v: number) => `$${(v ?? 0).toFixed(4)}`;
+  const start = async () => {
+    setMsg(null);
+    if (!window.confirm(`共通テスト第3問の教材を1件だけ、実際のAPIで生成・検品・音声生成・音声確認します。\n上限: 検証予算の残り ${usd(d.budget.remaining_usd)}（すべての工程と再試行を含む）。見積もりの上限は ${usd(d.expected.total_usd)} です。\n開始しますか？`)) return;
+    try { await api("/admin/verify-live", { body: {} }); setMsg({ kind: "ok", text: "開始しました。画面を閉じても処理は続きます。" }); st.reload(); }
+    catch (e) { setMsg({ kind: "err", text: (e as ApiError).detail }); }
+  };
+  if (!d) return null;
+  const b = d.budget;
+  return (
+    <section className="panel accent" aria-labelledby="ver-h">
+      <h2 id="ver-h">実APIで1教材を検証</h2>
+      <p className="note">{d.spec.label_ja}を1件だけ、実際のAPIで「問題作成→検品→音声生成（{d.tts_provider === "openai_speech" ? "HTTP音声" : "Realtime音声"}）→音声認識による確認」まで行います。全体の有料生成はOFFのままで、登録済みの例題や自動補充は処理されません。</p>
+      <dl className="kv">
+        <dt>検証予算</dt><dd>合計 {usd(b.total_usd)}・他の環境で使用済み {usd(b.prior_environments_usd)}・この環境で計上 {usd(b.this_environment.counted_usd)}・<strong>残り {usd(b.remaining_usd)}</strong></dd>
+        <dt>1件の見積もり（上限側）</dt><dd>{usd(d.expected.total_usd)}</dd>
+      </dl>
+      {d.running ? <Msg kind="warn">検証を実行中です（上限 {usd(d.cap_usd)}）。数分かかります。</Msg> : (
+        <>
+          {d.problems.map((p: string) => <Msg key={p} kind="warn">{p === "OPENAI_API_KEY is not set on the server" ? "サーバーにAPIキーが設定されていません。" : p}</Msg>)}
+          <button className="primary" onClick={start} disabled={d.problems.length > 0}>検証を開始（上限 {usd(b.remaining_usd)}）</button>
+          <p className="faint">上限は、このアプリが新しいリクエストを始めないための管理です。応答が途切れたリクエストは見積額で計上し、課金されていないとはみなしません。実際の請求額は OpenAI の請求画面が正です。</p>
+        </>
+      )}
+      {msg && <Msg kind={msg.kind}>{msg.text}</Msg>}
+      {r && (
+        <div className="evidence">
+          <p><strong>直近の検証</strong>: ジョブ {r.job.status === "SUCCEEDED" ? "完了" : r.job.status === "FAILED" ? "失敗" : r.job.status === "RUNNING" ? "実行中" : r.job.status}・教材 {r.unit_status ?? "未作成"}{r.last_completed_step ? `（完了した工程: ${r.last_completed_step}）` : ""}</p>
+          {r.unit_status_reason && <p className="note">理由: {r.unit_status_reason.slice(0, 300)}</p>}
+          {r.stop_detail && r.job.status !== "SUCCEEDED" && <p className="note">停止理由: {r.stop_detail.slice(0, 300)}</p>}
+          <p>費用: 確定（APIの使用量から）{usd(r.cost.settled_usd)}・推計（使用量の返らないAPI）{usd(r.cost.computed_usd)}・不明（応答なし、見積額で計上）{usd(r.cost.unknown_usd)}・予約中 {usd(r.cost.reserved_usd)}（{r.cost.requests} リクエスト） <small>単価の出典 {r.price_checked_at}</small></p>
+          {r.audio_check && <p>音声確認（{r.audio_check.method === "audio_auto_checked" ? "独立した音声認識" : r.audio_check.method}）: {r.audio_check.result === "pass" ? "合格" : "不合格"}・{r.audio_check.clips?.length ?? 0} クリップ{r.audio_check.mismatches?.length ? `・不一致 ${r.audio_check.mismatches.length}` : ""}</p>}
+          {r.open_in_app && <a className="btn primary" href={r.open_in_app}>アプリで再生して解く</a>}
+        </div>
+      )}
+    </section>
   );
 }

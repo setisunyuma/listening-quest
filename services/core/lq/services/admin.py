@@ -13,7 +13,7 @@ from lq.services import plans, stats
 
 BLOCK_LABELS = {
     "paid_disabled": "有料生成がOFFのため待機中", "budget": "日次予算の上限で待機中", "job_cap": "1ジョブ上限で待機中", "price_unknown": "単価不明のため実行不可",
-    "no_provider": "生成プロバイダー未設定", "awaiting_content_review": "内容の手動承認待ち", "awaiting_audio_approval": "音声の手動確認待ち", "missing_audio": "音声が不足（音声合成が未設定）",
+    "no_provider": "生成プロバイダー未設定", "awaiting_content_review": "内容の手動承認待ち", "awaiting_audio_approval": "音声の手動確認待ち", "missing_audio": "音声が不足（音声合成が未設定）", "verification_cap": "検証の費用上限に到達したため停止",
 }  # fmt: skip
 
 

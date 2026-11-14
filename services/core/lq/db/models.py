@@ -171,6 +171,22 @@ class AudioCache(Base):
     created_at: Mapped[datetime] = ts()
 
 
+class AsrCheck(Base):
+    """One independent transcription of one finished clip. Saved as soon as it returns, so a job that fails
+    later (or a worker that restarts) does not pay for the same recognition again. Keyed by everything the
+    transcription depends on: the clip's audio bytes, the recogniser, its model and the language."""
+
+    __tablename__ = "asr_checks"
+    cache_key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    audio_sha256: Mapped[str] = mapped_column(String(64), index=True)
+    provider: Mapped[str] = mapped_column(String(32))
+    model: Mapped[str] = mapped_column(String(64))
+    lang: Mapped[str] = mapped_column(String(8))
+    transcript: Mapped[str] = mapped_column(Text)
+    job_id: Mapped[str | None] = mapped_column(ID, nullable=True)
+    created_at: Mapped[datetime] = ts()
+
+
 class ReviewRecord(Base):
     __tablename__ = "review_records"
     id: Mapped[str] = pk()

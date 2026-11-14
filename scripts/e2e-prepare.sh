@@ -4,7 +4,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export LQ_DATABASE_URL="${LQ_E2E_DATABASE_URL:-postgresql+psycopg://lq:lq@127.0.0.1:55432/lq_e2e}"
-export LQ_STORAGE_BACKEND=local LQ_STORAGE_LOCAL_DIR="$ROOT/var/e2e-storage" LQ_ENV=test
+export LQ_STORAGE_BACKEND=local LQ_STORAGE_LOCAL_DIR="$ROOT/var/e2e-storage" LQ_ENV=test LQ_ENV_FILE=none
 unset OPENAI_API_KEY || true
 rm -rf "$ROOT/var/e2e-storage"
 cd "$ROOT/services/core"

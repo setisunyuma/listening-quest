@@ -5,7 +5,7 @@
 
 - Web: Next.js 16 / React 19 / TypeScript（`apps/web`）。業務ロジックは持たず、API の型は OpenAPI から生成。
 - API・worker・生成器・CLI: Python 3.13 / FastAPI / SQLAlchemy / Alembic（`services/core`、パッケージ名 `lq`）。
-- DB: PostgreSQL 16。ジョブキューも PostgreSQL の表。音声は S3 互換ストレージ（ローカルはファイル、Compose では MinIO）。
+- DB: PostgreSQL 16。ジョブキューも PostgreSQL の表。音声はファイル保存（本番はボリューム）または S3 互換ストレージ（開発用 Compose では SeaweedFS）。
 - 契約: `packages/contracts/openapi.json`・`unit.schema.json`・例題 JSON。
 - 詳細: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) / [docs/LEARNING_SYSTEM.md](docs/LEARNING_SYSTEM.md) / [docs/CONTENT_PIPELINE.md](docs/CONTENT_PIPELINE.md) / [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) / [docs/DECISIONS.md](docs/DECISIONS.md) / [docs/IMPLEMENTATION_PLAN.md](docs/IMPLEMENTATION_PLAN.md)
 
@@ -17,13 +17,17 @@
 必要なもの: Python 3.13 と [uv](https://docs.astral.sh/uv/)、Node.js 22、PostgreSQL 16 のサーバーバイナリ（`initdb`）、FFmpeg。
 
 ```bash
+cp .env.example .env  # 任意。必要な値だけ書く（OPENAI_API_KEY など）
 make bootstrap        # 依存関係のインストール、ローカルDB起動(127.0.0.1:55432)、migration、例題の登録
 make user             # 本番用アカウント作成（パスワードはその場で入力。固定パスワードは同梱しません）
 make dev              # API :8000 + worker + Web :3000 を起動（Ctrl-C で全部止まる）
 ```
 
+`.env` はリポジトリ直下のものを、API・worker・CLI のどれも、どのディレクトリから起動しても読みます。
+実際に読まれた設定は `cd services/core && uv run lq config` で確認できます（秘密値は「set」とだけ表示されます）。
+
 ブラウザーで http://localhost:3000 を開いてログインします。
-本番領域（live）は最初は空です。例題は登録済みですが、**実際の音声が付くまで学習画面には出ません**（下の 4 か 6 を参照）。
+本番領域（live）は最初は空です。例題は登録済みですが、**実際の音声が付くまで学習画面には出ません**（下の 4・6・iPhone で使う を参照）。
 
 ## 2. デモ（有料 API なしで全体を試す）
 
@@ -39,8 +43,8 @@ make demo             # デモ領域を作成: 例題24件 + 手続き生成の�
 ## 3. Docker Compose で起動
 
 ```bash
-cp .env.example .env  # パスワード類を書き換える
-make compose-up       # web / api / worker / PostgreSQL / MinIO
+cp .env.example .env  # POSTGRES_PASSWORD などを書き換える
+make compose-up       # web / api / worker / PostgreSQL / S3互換ストレージ(SeaweedFS)
 docker compose -f infra/compose.yaml --env-file .env run --rm api lq create-user owner
 docker compose -f infra/compose.yaml --env-file .env run --rm api lq seed
 ```
@@ -48,6 +52,24 @@ docker compose -f infra/compose.yaml --env-file .env run --rm api lq seed
 http://localhost:3000 を開きます。停止は `make compose-down`。データは Docker volume に残ります。
 
 ## 4. 実 API の設定（OpenAI）
+
+**まず 1 教材だけ試す（費用上限つき）**: 共通テスト第3問の短い教材を 1 件だけ、実 API で
+作成→ブラインド検品→音声→独立した音声認識による確認→READY まで進め、続けてアプリの画面で再生・解答・保存まで確かめます。
+
+```bash
+OPENAI_API_KEY=... scripts/live-verify.sh 1        # 1 = この検証全体の費用上限（USD、再試行を含む）
+scripts/live-verify.sh 1 --rehearsal                # 同じ流れを無料のデモ用プロバイダーで予行（費用 0）
+```
+
+Claude Code のクラウド環境のように、キーを中継プロキシが差し込む環境では WebSocket（Realtime API）が使えません。
+その場合は `LQ_TTS_PROVIDER=openai_speech OPENAI_API_KEY=proxy-injected scripts/live-verify.sh 1` として、
+HTTP の音声生成（`/v1/audio/speech`、2027-01-06 に終了予定）で検証します。本番の Realtime 音声は、公開後に教材管理のボタンで確認します。
+
+この検証は専用の DB（`lq_verify`）を使い、学習データには触れません。全体の有料生成は OFF のままで、
+登録済み例題や自動補充は処理されません。報告（費用の内訳、クリップごとの音声認識の結果）とスクリーンショットは `var/verify/` に保存されます。
+公開後は、アプリの **教材管理 → 実APIで1教材を検証** から同じことができます。
+
+**日常の利用:**
 
 1. `.env`（または環境変数）に `OPENAI_API_KEY` を設定して API と worker を再起動。キーはサーバー側だけで使い、ブラウザーには渡りません。
 2. `cd services/core && uv run lq doctor` で FFmpeg・DB・ストレージ・モデル名・単価表を確認。
@@ -83,6 +105,11 @@ JSON 内に「検品済み」と書かれていても承認にはなりません
 
 本番領域の例題（`make bootstrap` で登録済み）は、有料生成をオンにすると worker が音声を作って READY にします。
 
+## iPhone で使う（公開）
+
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) にあります。推奨は、ルートの Dockerfile（Web・API・worker が 1 コンテナ）を Railway で動かす構成で、
+スマホのブラウザーだけで公開できます。最初のアカウントは `LQ_SETUP_CODE`（自分で決める合言葉）を設定してから `https://<URL>/setup` で作ります。
+
 ## 7. 日課の使い方
 
 ホーム →「クエストを開始」で今日の計画（推定30分・5モード合計）が固定されます。1枠 = 1 Unit。
@@ -104,11 +131,19 @@ make restore DIR=backups/...  # 空のDBへ復元（既存データのあるDB�
 ## 9. テスト
 
 ```bash
-make test             # ruff・pytest(63件: 受入テスト1〜19を含む)・lint・型検査・契約チェック・build
+make test             # ruff・pytest(114件: 受入テスト1〜19、音声検品の表記差、設定読み込みなどを含む)・lint・型検査・契約チェック・build
 make e2e              # Playwright(14件): 実サーバー + worker + 本番ビルドに対し、スマホ幅とデスクトップで実行
+scripts/caddy-validate.sh <caddy>   # Caddyfile を Caddy 自身で検証（ACME_EMAIL あり／なし）
 ```
 
-テストは有料 API を呼びません（HTTP/WebSocket を遮断し、デモ用プロバイダーを使います）。
+テストは有料 API を呼びません（HTTP/WebSocket を遮断し、デモ用プロバイダーを使います。`.env` も読みません）。
+CI（GitHub Actions）では、上記に加えて次を実行します。
+- **e2e**: Playwright の E2E
+- **compose**: Docker Compose（PostgreSQL・SeaweedFS・API・worker・Web）を実際に起動し、ログイン→生成→S3 からの Range 取得→解答
+- **image**: 1 コンテナのイメージを PostgreSQL とボリュームで起動し、`/setup`→生成→再起動後の保持
+- **infra**: Caddy と Compose 設定の検証
+
+ブラウザーの自動テストは Chromium のスマホ幅エミュレーションであり、iPhone 実機での確認ではありません。
 
 ## 10. iPhone 実機での確認項目（自動テストでは確認していません）
 

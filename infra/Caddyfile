@@ -1,7 +1,10 @@
 # One HTTPS origin: pages from Next.js, /api/* straight to FastAPI (cookies, CSRF and audio Range work
 # because the browser sees a single origin). Certificates are obtained automatically for LQ_DOMAIN.
+# Global options. CADDY_EMAIL_DIRECTIVE is either empty or "email you@example.com"; compose.prod.yaml
+# builds it from the optional ACME_EMAIL, so an empty ACME_EMAIL leaves no dangling "email" keyword.
+# (Caddy substitutes {$VAR} before parsing, so the whole directive can come from one variable.)
 {
-	email {$ACME_EMAIL}
+	{$CADDY_EMAIL_DIRECTIVE}
 }
 
 {$LQ_DOMAIN} {

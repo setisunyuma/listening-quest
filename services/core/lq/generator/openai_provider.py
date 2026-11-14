@@ -187,8 +187,23 @@ class RealtimeTTS:
             else:
                 meter.release(entry)
             raise ProviderError(f"realtime connection problem: {e}") from e
-        meter.settle(entry, budget.cost_realtime(self.model, usage), usage)
         pcm = b"".join(chunks)
+        usd = budget.cost_realtime(self.model, usage)
+        if usd is not None:
+            meter.settle(entry, usd, usage)
+        else:  # no usable usage in response.done: price what we measured instead of guessing nothing
+            measured = budget.cost_tts_measured("realtime", self.model, text, duration_ms(pcm) / 1000)
+            if measured is None:
+                meter.settle(entry, None, usage)
+            else:
+                meter.computed(
+                    entry,
+                    measured,
+                    {
+                        "basis": "no usage in response.done: list price x characters + measured audio",
+                        "returned_usage": usage,
+                    },
+                )
         if duration_ms(pcm) < 100:
             raise ProviderError("realtime returned no audio")
         return pcm
@@ -226,8 +241,22 @@ class SpeechTTS:
                 f"OpenAI HTTP {r.status_code}: {r.text[:300]}",
                 retryable=r.status_code in (408, 429) or r.status_code >= 500,
             )
-        meter.settle(entry, None, {"note": "speech endpoint returns no usage; cost stays at the estimate"})
-        return decode_to_pcm(r.content)
+        pcm = decode_to_pcm(r.content)
+        seconds = duration_ms(pcm) / 1000
+        usd = budget.cost_tts_measured("speech", self.model, text, seconds)
+        if usd is None:
+            meter.settle(entry, None, {"note": "no price entry"})
+        else:
+            meter.computed(
+                entry,
+                usd,
+                {
+                    "basis": "speech endpoint returns no usage: list price x characters sent + measured audio length",
+                    "audio_seconds": round(seconds, 2),
+                    "chars": len(text),
+                },
+            )
+        return pcm
 
 
 class OpenAIASR:
@@ -262,5 +291,49 @@ class OpenAIASR:
                 f"OpenAI HTTP {r.status_code}: {r.text[:300]}",
                 retryable=r.status_code in (408, 429) or r.status_code >= 500,
             )
-        meter.settle(entry, est, {"seconds": seconds, "basis": "per-minute price x measured duration"})
-        return r.json().get("text", "")
+        body = r.json()
+        usage = body.get("usage") or {}
+        per_min = budget.price_table()["transcription"].get(self.model)
+        if usage.get("type") == "duration" and usage.get("seconds") is not None and per_min is not None:
+            meter.settle(entry, float(usage["seconds"]) / 60.0 * per_min, usage)
+        else:
+            meter.computed(
+                entry,
+                est,
+                {
+                    "basis": "per-minute list price x measured audio length",
+                    "audio_seconds": round(seconds, 2),
+                    "returned_usage": usage,
+                },
+            )
+        return body.get("text", "")
+
+
+def probe_auth(
+    api_key: str, base_url: str, realtime_url: str | None, tts_model: str, timeout: float = 20.0
+) -> list[str]:
+    """Free pre-flight: can this key reach the HTTP API and open a Realtime session? Nothing is generated:
+    GET /models is free, and the Realtime check only waits for session.created and closes before any response."""
+    from websockets.sync.client import connect
+
+    problems = []
+    try:
+        r = httpx.get(f"{base_url.rstrip('/')}/models", headers=_headers(api_key), timeout=timeout)
+        if r.status_code != 200:
+            problems.append(f"OpenAI HTTP API rejected the key (HTTP {r.status_code})")
+    except httpx.HTTPError as e:
+        problems.append(f"OpenAI HTTP API not reachable: {e}")
+    if realtime_url is None:  # speech endpoint in use: the HTTP check above covers it
+        return problems
+    try:
+        with connect(
+            f"{realtime_url}?model={tts_model}", additional_headers=_headers(api_key), open_timeout=timeout
+        ) as ws:
+            ev = json.loads(ws.recv(timeout=timeout))
+            if ev.get("type") == "error":
+                problems.append(f"Realtime API refused the session: {(ev.get('error') or {}).get('code')}")
+            elif ev.get("type") != "session.created":
+                problems.append(f"Realtime API answered unexpectedly: {ev.get('type')}")
+    except Exception as e:  # noqa: BLE001 - any failure here means "do not start paid work"
+        problems.append(f"Realtime API not reachable: {type(e).__name__}: {str(e)[:200]}")
+    return problems

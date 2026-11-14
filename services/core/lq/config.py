@@ -1,7 +1,12 @@
-"""Runtime settings. All values come from environment variables (see .env.example)."""
+"""Runtime settings. Values come from environment variables and, for anything not set there, from the
+repository's `.env` (see .env.example). The `.env` location does not depend on the working directory, so the
+API, the worker and the CLI read the same file whether they are started from the repository root,
+`services/core` or anywhere else. `LQ_ENV_FILE=/path/.env` picks another file; `LQ_ENV_FILE=none` disables it
+(the test suite does this so a developer's real key can never reach a test)."""
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
 
@@ -12,8 +17,19 @@ PACKAGE_DIR = Path(__file__).resolve().parent
 REPO_ROOT = PACKAGE_DIR.parents[2]
 
 
+def env_file_path() -> Path | None:
+    raw = os.environ.get("LQ_ENV_FILE", "").strip()
+    if raw.lower() == "none":
+        return None
+    return Path(raw).expanduser() if raw else REPO_ROOT / ".env"
+
+
+SECRET_FIELDS = ("openai_api_key", "s3_secret_key", "import_token", "database_url", "setup_code")
+
+
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_prefix="LQ_", env_file=".env", extra="ignore")
+    # env_file is passed at construction time (see get_settings) so it is resolved per process
+    model_config = SettingsConfigDict(env_prefix="LQ_", extra="ignore", env_file_encoding="utf-8")
 
     env: str = "dev"  # dev | test | prod
     database_url: str = "postgresql+psycopg://lq:lq@127.0.0.1:55432/lq"
@@ -38,6 +54,16 @@ class Settings(BaseSettings):
     login_window_minutes: int = 15
     public_origin: str | None = None  # e.g. https://lq.example.com ; enables Origin check when set
     import_token: str | None = None  # bearer token for CLI -> import API
+    # one-time owner setup from the browser (phone): the owner picks this phrase in the hosting dashboard,
+    # then opens /setup. Ignored as soon as a live account exists. 12+ characters.
+    setup_code: str | None = None
+    # live verification budget, shared across environments: total for all verification runs, and what was
+    # already spent elsewhere (e.g. in a development environment before moving to the server)
+    verify_budget_total_usd: float = 1.0
+    verify_budget_prior_usd: float = 0.0
+    # process role inside the core image: api | worker | all (api + worker in one container, for PaaS)
+    role: str = "api"
+    port: int = 8000
 
     # generator CLI -> server connection (optional). When set, `lq generate` auto-registers.
     server_url: str | None = None
@@ -66,9 +92,49 @@ class Settings(BaseSettings):
     replenish_interval_sec: int = 300
 
 
+def _platform_defaults(s: Settings) -> Settings:
+    """Values hosting platforms provide under their own names (used only when ours are not set):
+    DATABASE_URL (postgres://... -> postgresql+psycopg://...) and RAILWAY_PUBLIC_DOMAIN / PUBLIC_ORIGIN."""
+    updates: dict = {}
+    if not os.environ.get("LQ_DATABASE_URL") and os.environ.get("DATABASE_URL"):
+        url = os.environ["DATABASE_URL"]
+        for prefix in ("postgres://", "postgresql://"):
+            if url.startswith(prefix):
+                url = "postgresql+psycopg://" + url[len(prefix) :]
+        updates["database_url"] = url
+    if not s.public_origin:
+        domain = os.environ.get("RAILWAY_PUBLIC_DOMAIN") or os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+        if domain:
+            updates["public_origin"] = f"https://{domain}"
+    return s.model_copy(update=updates) if updates else s
+
+
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()
+    path = env_file_path()
+    return _platform_defaults(Settings(_env_file=path if path is not None and path.is_file() else None))
+
+
+def describe_settings() -> dict:
+    """Effective settings for display. Secret values are never shown, only whether they are set."""
+    s = get_settings()
+    path = env_file_path()
+    out: dict = {
+        "env_file": str(path) if path else "disabled (LQ_ENV_FILE=none)",
+        "env_file_found": bool(path and path.is_file()),
+    }
+    for name, value in s.model_dump().items():
+        if name in SECRET_FIELDS:
+            if name == "database_url" and value:
+                # show host/db, hide the password
+                from sqlalchemy.engine import make_url
+
+                out[name] = make_url(value).render_as_string(hide_password=True)
+            else:
+                out[name] = "set" if value else "not set"
+        else:
+            out[name] = str(value) if isinstance(value, Path) else value
+    return out
 
 
 def reset_settings_cache() -> None:

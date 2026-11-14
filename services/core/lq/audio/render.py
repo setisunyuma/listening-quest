@@ -82,7 +82,8 @@ def plan_clips(unit: UnitContent) -> dict[str, ClipSpec]:
         if q.type == "single_choice":
             n = choice_number(q, q.answer.choice_id)
             text = next(c.text for c in q.choices if c.id == q.answer.choice_id)
-            ans = f"Question {q.slot}. The answer is number {n}. {text}"
+            # one sentence, choice text inside it: speech models tend to drop a trailing fragment like "$20."
+            ans = f"Question {q.slot}. The answer is number {n}: {text}."
             if radio_ok:
                 listed = " ".join(f"Number {i}. {c.text}." for i, c in enumerate(q.choices, 1))
                 clips[f"choices:{q.id}"] = ClipSpec(f"choices:{q.id}", listed, "en", narr, "narration", ("radio",))
