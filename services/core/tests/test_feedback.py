@@ -157,3 +157,31 @@ def test_exam_dates_are_validated_per_mode(db, user):
     assert r.status_code == 200 and r.json()["exam_dates"] == {"eiken_pre1": "2027-01-25"}
     assert c.patch("/api/settings", json={"exam_dates": {"toeic": "2027-01-01"}}).status_code == 422
     assert c.patch("/api/settings", json={"exam_dates": {"eiken_1": "next week"}}).status_code == 422
+
+
+def test_r03_lost_play_events_arrive_with_the_submission_and_are_not_counted_twice(db, user):
+    """R03: a 0.8x replay whose own request was lost must not let the attempt count as first / unassisted;
+    resending the same events and the same submission changes nothing."""
+    from helpers import answers
+
+    unit = ready_unit(db, seed="r03a")
+    db.commit()
+    seg = C.load_content(unit).segments[0]
+    c = login()
+    att = c.post("/api/attempts", json={"attempt_id": "b" * 32, "unit_id": unit.id}).json()
+    ok = {"event_id": "e" * 32, "segment_id": seg.id, "rate": 1.0}
+    assert c.post(f"/api/attempts/{att['attempt_id']}/plays", json=ok).status_code == 200  # this one got through
+    lost = {"event_id": "f" * 32, "segment_id": seg.id, "rate": 0.8}  # this one never reached the server
+    body = {"answers": answers(unit), "plays": [ok, lost]}
+    r = c.post(f"/api/attempts/{att['attempt_id']}/submit", json=body)
+    assert r.status_code == 200
+    res = r.json()
+    assert res["counted_as_first"] is False and res["assisted"] is True
+    a = db.get(m.Attempt, att["attempt_id"])
+    db.refresh(a)
+    assert a.plays[seg.id] == 2 and a.aids.get("speed") is True  # ok counted once, lost applied once
+    xp_before = db.query(m.XpEvent).filter(m.XpEvent.user_id == user.id).count()
+    again = c.post(f"/api/attempts/{att['attempt_id']}/submit", json=body)  # response was lost; the device resends
+    assert again.status_code == 200 and again.json()["attempt_id"] == att["attempt_id"]
+    db.refresh(a)
+    assert a.plays[seg.id] == 2 and db.query(m.XpEvent).filter(m.XpEvent.user_id == user.id).count() == xp_before

@@ -2080,6 +2080,8 @@ export interface components {
                     [key: string]: unknown;
                 } | null;
             };
+            /** Plays */
+            plays?: components["schemas"]["PlayIn"][];
         };
         /** SyncIn */
         SyncIn: {
