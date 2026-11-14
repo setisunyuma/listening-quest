@@ -50,5 +50,6 @@ docker volume create "$ROVOL" >/dev/null
 docker run -d --name lq-smoke-ro-app --network "$NET" -v "$ROVOL:/data:ro" -e DATABASE_URL=postgres://lq:pw@$DB:5432/lq "$TAG" >/dev/null
 for i in $(seq 1 30); do [ "$(docker inspect -f '{{.State.Running}}' lq-smoke-ro-app)" = false ] && break; sleep 1; done
 [ "$(docker inspect -f '{{.State.Running}}' lq-smoke-ro-app)" = false ] && [ "$(docker inspect -f '{{.State.ExitCode}}' lq-smoke-ro-app)" != 0 ]
-docker logs lq-smoke-ro-app 2>&1 | grep -E "FATAL" | head -2
+ro_logs="$(docker logs lq-smoke-ro-app 2>&1)"
+echo "$ro_logs" | grep "FATAL" || { echo "no clear FATAL message:"; echo "$ro_logs" | tail -5; exit 1; }
 echo "image smoke test passed"

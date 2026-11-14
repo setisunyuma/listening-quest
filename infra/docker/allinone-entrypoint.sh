@@ -6,7 +6,10 @@
 #    If any of them stops, the container stops so the platform restarts it.
 set -e
 if [ "$(id -u)" = "0" ]; then
-  mkdir -p /data/storage /data/work /data/outbox
+  if ! mkdir -p /data/storage /data/work /data/outbox 2>/dev/null; then
+    echo "lq: FATAL: cannot create directories in /data (volume missing, read-only or full). Audio cannot be stored; refusing to start." >&2
+    exit 1
+  fi
   if [ "$(stat -c %u /data/storage)" != "10001" ] || [ "$(stat -c %u /data)" != "10001" ]; then
     echo "lq: giving /data to the app user (volume was owned by $(stat -c %U:%G /data))"
     chown -R 10001:10001 /data || { echo "lq: FATAL: cannot change ownership of /data (read-only or restricted volume)" >&2; exit 1; }
