@@ -15,7 +15,7 @@ from lq.domain.content import HASHED_FIELDS, content_hash, learner_view, reviewe
 from lq.generator import authoring, budget, factory
 from lq.generator.budget import BudgetBlocked, BudgetMeter
 from lq.generator.demo import DemoASR, DemoContent, DemoReview, DemoTTS, _tone
-from lq.generator.providers import ProviderError
+from lq.generator.providers import GenSpec, ProviderError
 from lq.jobs import pipeline, queue, worker
 from lq.services import content as C
 from lq.services import importer
@@ -1008,3 +1008,10 @@ def test_integration_evidence_may_name_audio_and_figure_in_one_entry():
     only_audio = q.model_copy(update={"skill_tags": tags, "evidence": [EvidenceRef(utterance_id=u.id)]})
     c3 = content.model_copy(update={"questions": [only_audio, *content.questions[1:]]})
     assert [e for e in authoring.lint_unit(c3) if "integration item" in e]
+
+
+def test_generation_prompt_asks_to_gloss_unfamiliar_customs():
+    """Owner feedback 2026-11-14: a unit about a library "seed exchange" was hard to follow because the
+    explanation only translated the line. Unfamiliar customs/terms must be glossed in explanation_ja."""
+    system, _ = authoring.build_generation_prompt(GenSpec(**{k: v for k, v in SPEC.items()}))
+    assert "unfamiliar in Japan" in system and "seed exchange" in system
