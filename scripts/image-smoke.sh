@@ -25,7 +25,7 @@ run_app() {
 run_app
 echo "== root-owned volume handed to the app user; app processes do not run as root"
 docker logs "$APP" 2>&1 | grep "giving /data to the app user" >/dev/null
-docker exec "$APP" sh -c 'stat -c %u /data/storage' | grep -qx 10001
+docker exec "$APP" sh -c 'stat -c %u /data/storage' | grep -x 10001 >/dev/null
 docker exec "$APP" sh -c 'for p in /proc/[0-9]*; do u=$(awk "/^Uid:/{print \$2}" $p/status 2>/dev/null); c=$(tr "\0" " " < $p/cmdline 2>/dev/null); case "$c" in *uvicorn*|*server.js*|*"lq.cli worker"*) [ "$u" = 10001 ] || { echo "runs as uid $u: $c"; exit 1; };; esac; done'
 echo "== web page and API through one port"
 curl -fsS http://localhost:3999/setup | grep "Listening Quest" >/dev/null

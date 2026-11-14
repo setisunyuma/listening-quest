@@ -38,10 +38,11 @@ Railway は GitHub 連携でこの Dockerfile を自動で検出して起動し�
 4. **New Project** → **Deploy from GitHub repo** → GitHub の画面で Railway アプリに `listening-quest` へのアクセスを許可 → リポジトリを選ぶ。
    ビルドが始まる（ルートの Dockerfile が使われる）。最初のビルドは数分かかり、DB 未接続のため一度失敗しても問題ない。
 5. プロジェクト画面の **+ New**（または **Create**）→ **Database** → **PostgreSQL** を追加。
-6. アプリのサービス → **Variables** に次の 3 つを追加:
+6. アプリのサービス → **Variables** に次の 4 つを追加:
    - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}`（入力欄の候補から PostgreSQL の変数を選ぶ）
    - `LQ_SETUP_CODE` = 自分で決めた 12 文字以上の合言葉（初回のアカウント作成にだけ使う）
    - `OPENAI_API_KEY` = OpenAI の API キー（実 API を使うときだけ。値は画面上で伏せ字になる）
+   - `LQ_VERIFY_BUDGET_PRIOR_USD` = `0.07`（開発環境での実 API 検証の使用済み額。検証予算 1 USD をリセットしないため。docs/VERIFICATION_LOG.md）
 7. アプリのサービス → **Settings**:
    - **Volumes**（またはサービスのメニューの **Attach Volume**）→ マウント先 `/data`
    - **Region** → Singapore（日本から近い）
