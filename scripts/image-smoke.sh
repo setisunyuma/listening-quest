@@ -39,6 +39,12 @@ docker exec "$APP" lq generate common_test 3 --realm demo --no-send | python3 -c
 before=$(docker exec "$APP" sh -c 'find /data/storage/units -type f | wc -l')
 [ "$before" -gt 0 ] && echo "audio files on the volume: $before"
 docker exec "$APP" lq config | python3 -c 'import sys,json;c=json.load(sys.stdin);assert c["openai_api_key"]=="not set" and c["database_url"].startswith("postgresql+psycopg://lq:***@");print("config ok (secrets hidden)")'
+echo "== a platform stop (SIGTERM) is a clean exit, not a crash"
+docker stop -t 30 "$APP" >/dev/null
+code=$(docker inspect -f '{{.State.ExitCode}}' "$APP")
+[ "$code" = "0" ] || { echo "container exited with $code on SIGTERM (platforms report this as a crash)"; docker logs "$APP" | tail -20; exit 1; }
+docker logs "$APP" 2>&1 | grep "stopped on request" >/dev/null
+echo "SIGTERM -> exit 0"
 echo "== restart keeps the account and the stored audio"
 docker rm -f "$APP" >/dev/null
 run_app
