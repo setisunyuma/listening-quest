@@ -57,19 +57,63 @@ def get_providers(realm: str) -> Providers:
     )
 
 
+_MALE_WORDS = {"man", "male", "boy", "mr", "mr.", "father", "dad", "son", "brother", "husband", "grandfather", "he"}
+_FEMALE_WORDS = {
+    "woman",
+    "female",
+    "girl",
+    "ms",
+    "ms.",
+    "mrs",
+    "mrs.",
+    "miss",
+    "mother",
+    "mom",
+    "daughter",
+    "sister",
+    "wife",
+    "grandmother",
+    "she",
+}
+
+
+def speaker_gender(sp) -> str:
+    """'male' | 'female' | 'neutral'. A gendered label ("Man", "Woman", "Mr. Lee") wins, because the learner
+    reads the label while hearing the voice; otherwise the authored voice_hint decides."""
+    words = {w.strip(".,:;()").lower() for w in str(getattr(sp, "label", "")).split()}
+    if words & _FEMALE_WORDS and not words & _MALE_WORDS:
+        return "female"
+    if words & _MALE_WORDS and not words & _FEMALE_WORDS:
+        return "male"
+    hint = getattr(sp, "voice_hint", "neutral") or "neutral"
+    return hint if hint in ("male", "female") else "neutral"
+
+
+def _pool(csv: str, exclude: set[str]) -> list[str]:
+    return [v.strip() for v in csv.split(",") if v.strip() and v.strip() not in exclude]
+
+
 def assign_voices(unit) -> dict[str, str]:
-    """One fixed voice per speaker_id inside a unit; narrator and the Japanese explainer are distinct."""
+    """One fixed voice per speaker_id inside a unit. A speaker's voice matches its gender (voice_hint, else
+    the label), different speakers never share a voice while the pools last, and the narrator and the
+    Japanese explainer keep their own voices."""
     s = get_settings()
-    pool = [
-        v.strip() for v in s.tts_speaker_voices.split(",") if v.strip() and v.strip() not in (s.tts_narrator_voice,)
-    ]
+    reserved = {s.tts_narrator_voice, s.tts_ja_voice}
+    pools = {
+        "male": _pool(s.tts_male_voices, reserved),
+        "female": _pool(s.tts_female_voices, reserved),
+        "neutral": _pool(s.tts_speaker_voices, reserved),
+    }
+    used: set[str] = set()
     voices = {"explainer_ja": s.tts_ja_voice}
-    i = 0
     for sp in unit.speakers:
         if sp.role == "narrator":
             voices[sp.id] = s.tts_narrator_voice
-        else:
-            voices[sp.id] = pool[i % len(pool)]
-            i += 1
+            continue
+        pool = pools[speaker_gender(sp)] or pools["neutral"]
+        fresh = [v for v in pool if v not in used]
+        voice = fresh[0] if fresh else pool[len(used) % len(pool)]
+        voices[sp.id] = voice
+        used.add(voice)
     voices.setdefault("narrator", s.tts_narrator_voice)
     return voices

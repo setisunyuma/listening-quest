@@ -46,7 +46,9 @@ Railway は GitHub 連携でこの Dockerfile を自動で検出して起動し�
 7. アプリのサービス → **Settings**:
    - **Volumes**（またはサービスのメニューの **Attach Volume**）→ マウント先 `/data`
    - **Region** → Singapore（日本から近い）
-   - **Networking** → **Generate Domain**。ポートは自動で表示された値のままにする（アプリは Railway が渡す `PORT` で待ち受ける。手入力を求められたら `3000`）
+   - **Networking** → **Generate Domain**。転送先のポートは、Deploy Logs の `Network: http://0.0.0.0:<番号>` と同じ番号にする。
+     アプリは Railway が渡す `PORT`（2026-11-14 の実測では `8080`）で待ち受けるため、ドメインが `Port 3000` になっていたら鉛筆アイコンで `8080` に直す
+     （不一致だとデプロイは Active でも全ページが 502「Application failed to respond」になる）
 8. **Deployments** で最新が **Active / Success** になったら、Safari で `https://<発行されたドメイン>/setup` を開き、
    合言葉・ユーザー名・パスワードを入力して **アカウントを作成**。作成後、`/setup` は使えなくなる。
 9. Safari の共有ボタン →「ホーム画面に追加」。
@@ -90,6 +92,7 @@ SSH できる場合は `docker compose -f infra/compose.prod.yaml exec api lq cr
 
 | 障害 | 復旧 |
 |---|---|
+| Active なのに全ページが 502 | ドメインの転送先ポートと、アプリの待ち受けポート（Deploy Logs の `Network: http://0.0.0.0:<番号>`）が違う。Settings → Networking のドメインの鉛筆アイコンで番号を合わせる |
 | コンテナが落ちた | プラットフォームが自動で再起動します。worker は実行権の期限が切れたジョブを回収して続きから処理し、古い worker は結果を確定できません |
 | 生成が失敗・隔離された | 教材管理で理由を確認して「再試行」。内容の問題で隔離されたものは、修正版を新しい revision として取り込みます |
 | 予算で止まった | 翌日（UTC）に自動で再確認します。上限を変えると、その場で再確認します |

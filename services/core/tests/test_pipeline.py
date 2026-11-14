@@ -903,3 +903,47 @@ def test_generation_prompt_requires_audible_speaker_identity():
 
     system, _ = build_generation_prompt(GenSpec(**{k: v for k, v in SPEC.items()}))
     assert "speaker labels are never shown" in system and '"the man"' in system
+
+
+def test_voices_follow_speaker_gender():
+    """Regression (Railway verification 2026-11-14): "Man" was read by a female voice and "Woman" by a male
+    one, because voices were handed out in order of appearance. They must follow the label / voice_hint."""
+    from types import SimpleNamespace as NS
+
+    from lq.generator.factory import assign_voices, speaker_gender
+
+    male = {"ash", "echo", "verse", "ballad"}
+    female = {"coral", "shimmer", "sage"}
+
+    def unit(*speakers):
+        return NS(speakers=[NS(id="narrator", role="narrator", label="Narrator", voice_hint="neutral"), *speakers])
+
+    # the exact failing order: the man speaks first
+    v = assign_voices(
+        unit(
+            NS(id="m", role="speaker", label="Man", voice_hint="male"),
+            NS(id="w", role="speaker", label="Woman", voice_hint="female"),
+        )
+    )
+    assert v["m"] in male and v["w"] in female
+    # woman first, too
+    v = assign_voices(
+        unit(
+            NS(id="w", role="speaker", label="Woman", voice_hint="female"),
+            NS(id="m", role="speaker", label="Man", voice_hint="male"),
+        )
+    )
+    assert v["m"] in male and v["w"] in female
+    # two men get two different male voices; narrator and Japanese explainer keep their own voices
+    v = assign_voices(
+        unit(
+            NS(id="a", role="speaker", label="Mr. Lee", voice_hint="neutral"),
+            NS(id="b", role="speaker", label="Man", voice_hint="male"),
+        )
+    )
+    assert v["a"] in male and v["b"] in male and v["a"] != v["b"]
+    assert v["narrator"] not in (v["a"], v["b"]) and v["explainer_ja"] not in (v["a"], v["b"])
+    # the visible label wins over a contradicting hint; unknown stays neutral
+    assert speaker_gender(NS(label="Woman", voice_hint="male")) == "female"
+    assert speaker_gender(NS(label="Ken", voice_hint="male")) == "male"
+    assert speaker_gender(NS(label="Speaker A", voice_hint="neutral")) == "neutral"

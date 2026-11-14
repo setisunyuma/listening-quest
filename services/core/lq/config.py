@@ -80,7 +80,9 @@ class Settings(BaseSettings):
     asr_model: str = "gpt-transcribe"
     tts_narrator_voice: str = "cedar"
     tts_ja_voice: str = "marin"
-    tts_speaker_voices: str = "alloy,ash,coral,sage,echo,shimmer,verse,ballad"
+    tts_speaker_voices: str = "alloy,ash,coral,sage,echo,shimmer,verse,ballad"  # speakers of unknown gender
+    tts_male_voices: str = "ash,echo,verse,ballad"  # voice_hint=male, or a label such as "Man"
+    tts_female_voices: str = "coral,shimmer,sage"  # voice_hint=female, or a label such as "Woman"
     provider_timeout_sec: float = 120.0
 
     # worker
