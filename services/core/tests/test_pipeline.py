@@ -12,7 +12,7 @@ from lq.audio.pcm import AudioError, wav_bytes
 from lq.db import models as m
 from lq.db.base import session_factory
 from lq.domain.content import HASHED_FIELDS, content_hash, learner_view, reviewer_view, sha256_hex
-from lq.generator import budget, factory
+from lq.generator import authoring, budget, factory
 from lq.generator.budget import BudgetBlocked, BudgetMeter
 from lq.generator.demo import DemoASR, DemoContent, DemoReview, DemoTTS, _tone
 from lq.generator.providers import ProviderError
@@ -947,3 +947,64 @@ def test_voices_follow_speaker_gender():
     assert speaker_gender(NS(label="Woman", voice_hint="male")) == "female"
     assert speaker_gender(NS(label="Ken", voice_hint="male")) == "male"
     assert speaker_gender(NS(label="Speaker A", voice_hint="neutral")) == "neutral"
+
+
+class _LintOnce:
+    """Content provider whose first draft breaks a format rule (duplicate choice text); later drafts are fine."""
+
+    name, model = "demo", "demo"
+
+    def __init__(self, bad_drafts=1):
+        self.inner, self.specs, self.bad = DemoContent(), [], bad_drafts
+
+    def generate(self, spec, meter):
+        self.specs.append(spec)
+        raw = self.inner.generate(spec, meter)
+        if len(self.specs) <= self.bad:
+            q = raw["questions"][0]
+            q["choices"][1]["text"] = q["choices"][0]["text"]
+        return raw
+
+
+def test_a_draft_that_fails_format_checks_is_rewritten_once_with_the_reasons(db, user):
+    """Regression (Railway, 2026-11-14): drafts that failed a format rule were quarantined after paying for them;
+    now the failures are fed back for one rewrite before review and audio are paid for."""
+    prov = _LintOnce(bad_drafts=1)
+    factory.set_provider_override("demo", demo_providers(content=prov))
+    jid = enqueue(db)
+    assert worker.drain("w1") == ["succeeded"]
+    _, unit = unit_of(db, jid)
+    assert unit.status == "READY" and len(prov.specs) == 2
+    notes = prov.specs[1].extra["fix_notes"]
+    assert any("duplicate choice text" in n for n in notes)
+    _, prompt = authoring.build_generation_prompt(prov.specs[1])
+    assert "failed these automatic format checks" in prompt and "duplicate choice text" in prompt
+    assert "fix_notes" not in prov.specs[0].extra  # the first request carries no feedback
+
+
+def test_a_rewrite_that_still_fails_is_quarantined_with_reasons_and_not_retried_again(db, user):
+    prov = _LintOnce(bad_drafts=5)
+    factory.set_provider_override("demo", demo_providers(content=prov))
+    jid = enqueue(db)
+    worker.drain("w1")
+    _, unit = unit_of(db, jid)
+    assert len(prov.specs) == 2  # one rewrite only, no third paid draft
+    assert unit.status == "QUARANTINED" and "duplicate choice text" in (unit.status_reason or "")
+
+
+def test_integration_evidence_may_name_audio_and_figure_in_one_entry():
+    from lq.domain.content import EvidenceRef
+
+    content = make_content(mode="common_test", part="5")
+    assert content.figures, "demo part-5 unit should carry a figure"
+    f = content.figures[0]
+    q = content.questions[0].model_copy(update={"figure_ids": [f.id]})
+    u = content.segments[0].utterances[0]
+    tags = list(dict.fromkeys([*q.skill_tags, "integration"]))
+    both = [EvidenceRef(utterance_id=u.id, figure_id=f.id)]
+    q2 = q.model_copy(update={"skill_tags": tags, "evidence": both})
+    c2 = content.model_copy(update={"questions": [q2, *content.questions[1:]]})
+    assert not [e for e in authoring.lint_unit(c2) if "integration item" in e]
+    only_audio = q.model_copy(update={"skill_tags": tags, "evidence": [EvidenceRef(utterance_id=u.id)]})
+    c3 = content.model_copy(update={"questions": [only_audio, *content.questions[1:]]})
+    assert [e for e in authoring.lint_unit(c3) if "integration item" in e]

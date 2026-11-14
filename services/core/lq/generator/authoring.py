@@ -190,6 +190,12 @@ def build_generation_prompt(spec: GenSpec) -> tuple[str, str]:
         f"Variation seed: {spec.seed}.\n"
         "Use short ids such as s1 (segment), u1 (utterance), q1 (question), c1 (choice), f1 (figure), r1 (row), r1c1 (cell)."
     )
+    fixes = (spec.extra or {}).get("fix_notes")
+    if fixes:
+        user += (
+            "\nA previous draft for this request failed these automatic format checks. Write a new draft that"
+            " passes them:\n- " + "\n- ".join(fixes)
+        )
     return system, user
 
 
@@ -369,7 +375,10 @@ def lint_unit(unit: UnitContent, require_distractors: bool = True) -> list[str]:
             if len(ans_text) > 8 and ans_text in unit.title.lower():
                 errs.append(f"question {q.id}: title reveals the answer")
         if "integration" in q.skill_tags and unit.figures and q.figure_ids:
-            kinds = {("u" if e.utterance_id else "f") for e in q.evidence}
+            # One evidence entry may name both an utterance and a figure element; count each side separately.
+            kinds = {
+                k for e in q.evidence for k in (("u",) if e.utterance_id else ()) + (("f",) if e.figure_id else ())
+            }
             if kinds != {"u", "f"}:
                 errs.append(f"question {q.id}: an integration item must need both the audio and the figure")
     expected_groups = unit_scoring_groups(profile, unit.part, [q.id for q in unit.sorted_questions()])

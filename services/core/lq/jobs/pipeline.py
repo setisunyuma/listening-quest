@@ -5,6 +5,9 @@ unit's stored status and a stale worker cannot write. Objects go to storage befo
 
 from __future__ import annotations
 
+import dataclasses
+import logging
+
 from pydantic import ValidationError
 from sqlalchemy import delete, select
 
@@ -22,6 +25,8 @@ from lq.generator.providers import GenSpec, ProviderError
 from lq.jobs.queue import Lease, StaleLease
 from lq.services import content as C
 from lq.storage import get_storage
+
+log = logging.getLogger("lq.pipeline")
 
 CACHE_IMPL_VERSION = 1
 AUDIO_SETTINGS = {"rate": 24000, "channels": 1, "format": "s16le"}
@@ -142,13 +147,23 @@ def step_content(lease: Lease, prov, meter, realm: str, params: dict) -> str:
     )
     last_err = ""
     content = None
-    for _ in range(3):  # schema violations: bounded retries, each one budgeted
-        raw = prov.content.generate(spec, meter)
+    lint_fixes: list[str] = []
+    for attempt in range(3):  # schema violations / format-check failures: bounded retries, each one budgeted
+        ask = spec if not lint_fixes else dataclasses.replace(spec, extra={**spec.extra, "fix_notes": lint_fixes})
+        raw = prov.content.generate(ask, meter)
         try:
-            content = UnitContent.model_validate(raw)
-            break
+            cand = UnitContent.model_validate(raw)
         except ValidationError as e:
             last_err = str(e)[:800]
+            continue
+        # Format rules need no model, so check them before paying for review and audio. One rewrite with the
+        # failures fed back; if the rewrite still fails, keep it and let step_review quarantine it with reasons.
+        lint = authoring.lint_unit(cand) if cand.source != "legacy-radio" else []
+        content = cand
+        if not lint or lint_fixes or attempt == 2:
+            break
+        lint_fixes = lint[:10]
+        log.info("content draft failed format checks, asking for one rewrite: %s", "; ".join(lint_fixes))
     if content is None:
         raise ProviderError(f"generated content violated the schema 3 times: {last_err}", retryable=False)
 
