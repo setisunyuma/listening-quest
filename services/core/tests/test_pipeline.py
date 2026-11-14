@@ -895,3 +895,11 @@ def test_a_clip_that_fails_twice_quarantines_the_unit(db, user):
     assert worker.drain("w") == ["failed"]
     job, unit = unit_of(db, jid)
     assert unit.status == "QUARANTINED" and job.state["resynth"] == {"answer:q1": 1}
+
+
+def test_generation_prompt_requires_audible_speaker_identity():
+    from lq.generator.authoring import build_generation_prompt
+    from lq.generator.providers import GenSpec
+
+    system, _ = build_generation_prompt(GenSpec(**{k: v for k, v in SPEC.items()}))
+    assert "speaker labels are never shown" in system and '"the man"' in system
