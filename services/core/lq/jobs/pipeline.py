@@ -6,7 +6,7 @@ unit's stored status and a stale worker cannot write. Objects go to storage befo
 from __future__ import annotations
 
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from lq.audio import qa
 from lq.audio import render as R
@@ -451,6 +451,36 @@ def step_audio_qa(lease: Lease, prov, meter, unit_id: str) -> None:
             results.append({"clip": cid, "wer": cmp["wer"], "ok": cmp["ok"]})
             if not cmp["ok"]:
                 bad.append({"clip": cid, "problems": cmp["problems"], "heard": heard[:300]})
+
+        # A synthesised clip that does not match gets ONE fresh synthesis before the unit is quarantined:
+        # speech models are not deterministic. Only that clip is re-made (one more speech request); all other
+        # clips and their recognition results come from the cache, so nothing else is paid again.
+        retry = [b["clip"] for b in bad if clip_keys.get(b["clip"], "").startswith("cache/tts/")]
+        if bad and retry and len(retry) == len(bad):
+
+            def resynth(s, job):
+                st_job = dict(job.state or {})
+                done = dict(st_job.get("resynth") or {})
+                if any(done.get(c, 0) >= 1 for c in retry):
+                    return False
+                for c in retry:
+                    # forget the failed clip and its recognition, so both are really made again
+                    s.execute(
+                        delete(m.AsrCheck).where(m.AsrCheck.audio_sha256 == sha256_hex(get_storage().get(clip_keys[c])))
+                    )
+                    key = clip_keys[c].rsplit("/", 1)[1].removesuffix(".wav")
+                    row = s.get(m.AudioCache, key)
+                    if row is not None:
+                        s.delete(row)
+                    done[c] = done.get(c, 0) + 1
+                st_job["resynth"] = done
+                st_job["resynth_log"] = [*st_job.get("resynth_log", []), {"clips": retry, "mismatches": bad}]
+                job.state = st_job
+                s.get(m.Unit, unit_id).status = "AUDIO_PENDING"
+                return True
+
+            if _commit_step(lease, resynth):
+                return
 
         def record(s, job):
             unit = s.get(m.Unit, unit_id)

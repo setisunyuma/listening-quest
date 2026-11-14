@@ -853,3 +853,45 @@ def test_cost_states_are_reported_separately(db, live_user):
     assert (out["settled_usd"], out["computed_usd"], out["unknown_usd"], out["reserved_usd"]) == (0.05, 0.07, 0.1, 0.1)
     assert out["counted_usd"] == pytest.approx(0.32)
     del d
+
+
+class FirstTryDropsTail(DemoASR):
+    """The first recognition of the answer clip 'hears' a dropped ending; a re-synthesised clip is fine."""
+
+    def __init__(self):
+        self.answer_calls = 0
+
+    def transcribe(self, pcm, lang, meter, expected_hint=""):
+        if expected_hint.startswith("Question 1. The answer is number"):
+            self.answer_calls += 1
+            if self.answer_calls == 1:
+                return expected_hint.split(":")[0] + "."
+        return expected_hint
+
+
+def test_mismatched_clip_is_resynthesised_once_without_paying_again_for_the_rest(db, user):
+    tts, asr = FlakyTTS(fail_after=10_000), FirstTryDropsTail()
+    factory.set_provider_override("demo", demo_providers(tts=tts, asr=asr))
+    jid = enqueue(db)
+    assert worker.drain("w") == ["succeeded"]
+    job, unit = unit_of(db, jid)
+    clips = db.execute(select(func.count()).select_from(m.AudioCache)).scalar_one()
+    assert unit.status == "READY" and job.state["resynth"] == {"answer:q1": 1}
+    assert tts.calls == clips + 1  # exactly one extra speech request: the failed clip
+    assert asr.answer_calls == 2  # only the new answer clip was recognised again
+
+
+def test_a_clip_that_fails_twice_quarantines_the_unit(db, user):
+    class AlwaysDrops(DemoASR):
+        def transcribe(self, pcm, lang, meter, expected_hint=""):
+            return (
+                expected_hint.split(":")[0] + "."
+                if expected_hint.startswith("Question 1. The answer is number")
+                else expected_hint
+            )
+
+    factory.set_provider_override("demo", demo_providers(asr=AlwaysDrops()))
+    jid = enqueue(db)
+    assert worker.drain("w") == ["failed"]
+    job, unit = unit_of(db, jid)
+    assert unit.status == "QUARANTINED" and job.state["resynth"] == {"answer:q1": 1}
