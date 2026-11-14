@@ -184,6 +184,7 @@ class ResultOut(BaseModel):
     slot_id: str | None
     audio_kind: str
     title: str
+    missed: list[str] = []
 
 
 class AckOut(BaseModel):
@@ -376,6 +377,21 @@ class GenerateIn(BaseModel):
 class ApproveIn(BaseModel):
     target: Literal["content", "audio"]
     note: str = Field(default="", max_length=300)
+
+
+class ReportIn(BaseModel):
+    kind: Literal["unclear", "wrong", "audio", "other"]
+    note: str = Field(default="", max_length=1000)
+    attempt_id: str | None = None
+
+
+class ResolveReportIn(BaseModel):
+    action: Literal["dismiss", "withdraw", "restore"]
+
+
+class MissedIn(BaseModel):
+    utterance_id: str = Field(min_length=1, max_length=64)
+    missed: bool
 
 
 class InvalidateIn(BaseModel):

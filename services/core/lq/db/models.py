@@ -510,3 +510,30 @@ class AuditLog(Base):
     target: Mapped[str] = mapped_column(String(128))
     details: Mapped[dict] = mapped_column(JSONB, default=dict)
     created_at: Mapped[datetime] = ts()
+
+
+class UnitReport(Base):
+    """A learner's report about one unit ("unclear", "wrong answer", "audio problem", "other").
+    "wrong" and "audio" withdraw the unit at once (the same as invalidation, reversible by the owner)."""
+
+    __tablename__ = "unit_reports"
+    id: Mapped[str] = pk()
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    unit_id: Mapped[str] = mapped_column(ForeignKey("units.id", ondelete="CASCADE"), index=True)
+    attempt_id: Mapped[str | None] = mapped_column(ID, nullable=True)
+    kind: Mapped[str] = mapped_column(String(16))
+    note: Mapped[str] = mapped_column(Text, default="")
+    status: Mapped[str] = mapped_column(String(16), default="open")  # open | resolved
+    resolution: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created_at: Mapped[datetime] = ts()
+    resolved_at: Mapped[datetime | None] = ts(nullable=True, default=False)
+
+
+class MissedLine(Base):
+    """A line of a unit the learner marked as "could not catch". Cleared when they mark it as caught."""
+
+    __tablename__ = "missed_lines"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    unit_id: Mapped[str] = mapped_column(ForeignKey("units.id", ondelete="CASCADE"), primary_key=True)
+    utterance_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    created_at: Mapped[datetime] = ts()

@@ -22,7 +22,7 @@ from lq.domain.content import MODE_LABELS_JA, MODES, SKILL_LABELS_JA, SKILLS, un
 from lq.domain.profiles import current_profile, load_profiles
 from lq.generator import budget
 from lq.jobs import queue
-from lq.services import admin, assessment, auth, backup, importer, plans, radio, replenish, stats
+from lq.services import admin, assessment, auth, backup, feedback, importer, plans, radio, replenish, stats
 from lq.services import learning as L
 from lq.storage import get_storage
 
@@ -338,7 +338,34 @@ def attempt_submit(
 
 @app.get("/api/attempts/{attempt_id}/result", response_model=S.ResultOut)
 def attempt_result(attempt_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)):
-    return L.result_dto(session, L._open_attempt(session, user, attempt_id, lock=False))
+    out = L.result_dto(session, L._open_attempt(session, user, attempt_id, lock=False))
+    out["missed"] = feedback.missed_ids(session, user, out["unit_id"])
+    return out
+
+
+@app.post("/api/units/{unit_id}/reports")
+def unit_report(
+    unit_id: str, body: S.ReportIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    out = feedback.report(session, user, unit_id, body.kind, body.note, body.attempt_id, now_utc())
+    session.commit()
+    return out
+
+
+@app.post("/api/units/{unit_id}/missed")
+def unit_missed(
+    unit_id: str, body: S.MissedIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    out = feedback.set_missed(session, user, unit_id, body.utterance_id, body.missed)
+    session.commit()
+    return {"missed": out}
+
+
+@app.get("/api/missed")
+def missed_lines(
+    mode: str | None = None, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    return {"lines": feedback.missed_list(session, user, mode)}
 
 
 @app.post("/api/attempts/{attempt_id}/ack", response_model=S.AckOut)
@@ -785,6 +812,29 @@ def admin_approve(
     rec = importer.manual_approve(session, unit, target=body.target, reviewer=user.username, note=body.note)
     session.commit()
     return {"record": {"method": rec.method, "target": rec.target, "content_hash": rec.content_hash[:12]}}
+
+
+@app.get("/api/admin/reports")
+def admin_reports(
+    all: bool = False, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    return {"reports": feedback.list_reports(session, user.realm, include_resolved=all)}
+
+
+@app.post("/api/admin/reports/{report_id}/resolve")
+def admin_resolve_report(
+    report_id: str, body: S.ResolveReportIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    out = feedback.resolve(session, user, report_id, body.action, now_utc())
+    session.commit()
+    return out
+
+
+@app.post("/api/admin/units/{unit_id}/restore")
+def admin_restore(unit_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    out = feedback.restore_unit(session, user, unit_id)
+    session.commit()
+    return out
 
 
 @app.post("/api/admin/units/{unit_id}/invalidate")

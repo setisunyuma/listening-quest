@@ -193,6 +193,39 @@ test("assessment: duration shown before start, no explanations until submitted",
   await setMode(page, "共通テスト");
 });
 
+test("feedback: mark a line as missed, replay it from the list, and report a unit", async ({ page }) => {
+  await login(page);
+  await page.goto("/library");
+  await page.locator('a.card[href^="/play?unit="]').first().click();
+  await expect(page.getByRole("group", { name: /問\d+の選択肢/ }).first()).toBeVisible();
+  await answerAll(page);
+  await page.getByRole("button", { name: "解答する" }).click();
+  await expect(page.getByRole("heading", { name: /結果/ })).toBeVisible();
+  const miss = page.getByRole("button", { name: "聞き取れなかった", exact: true }).first();
+  await miss.click();
+  await expect(page.getByRole("button", { name: "✓ 聞き取れなかった" }).first()).toBeVisible();
+  await checkTouchLayout(page);
+  await page.getByText("この教材を報告する").click();
+  await page.getByRole("group", { name: "報告の種類" }).getByRole("button", { name: "意味・解説が分かりにくい" }).click();
+  await page.getByLabel("メモ（任意）").fill("e2e: 背景が分からない");
+  await page.getByRole("button", { name: "報告を送る" }).click();
+  await expect(page.getByText(/報告しました。教材管理の「報告」に記録されます。/)).toBeVisible();
+
+  await page.goto("/missed");
+  await expect(page.getByRole("heading", { name: /聞き取れなかった文 1 文/ })).toBeVisible();
+  await page.getByRole("button", { name: "英文を表示" }).click();
+  await expect(page.locator(".qbox p.en")).toBeVisible();
+  await checkTouchLayout(page);
+  await page.getByRole("button", { name: "聞き取れた" }).click();
+  await expect(page.getByText("まだありません。")).toBeVisible();
+
+  await page.goto("/admin");
+  await expect(page.getByRole("heading", { name: /報告 1 件/ })).toBeVisible();
+  await expect(page.getByText("e2e: 背景が分からない")).toBeVisible();
+  await page.getByRole("button", { name: "対応済みにする" }).click();
+  await expect(page.getByRole("heading", { name: /報告 1 件/ })).toHaveCount(0);
+});
+
 test("settings: unsent answers are announced before logout clears the device", async ({ page, context }) => {
   await login(page);
   await page.goto("/settings");

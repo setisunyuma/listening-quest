@@ -236,6 +236,17 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
       if (r.replaced) router.push(`/play?unit=${r.unit_id}&slot=${r.slot_id}`); else setMsg("この枠に合う別の教材が今はありません。");
     } catch (e) { setMsg((e as ApiError).detail); }
   };
+  const [missed, setMissed] = useState<Set<string>>(new Set(result.missed ?? []));
+  const toggleMissed = async (uttId: string) => {
+    const on = !missed.has(uttId);
+    const next = new Set(missed); if (on) next.add(uttId); else next.delete(uttId);
+    setMissed(next);
+    try { await api(`/units/${result.unit_id}/missed`, { body: { utterance_id: uttId, missed: on } }); }
+    catch (e) { setMissed(missed); setMsg((e as ApiError).detail); }
+  };
+  const MissBtn = ({ id }: { id: string }) => (
+    <button className="small ghost" aria-pressed={missed.has(id)} onClick={() => toggleMissed(id)}>{missed.has(id) ? "✓ 聞き取れなかった" : "聞き取れなかった"}</button>
+  );
   const setReason = async (qid: string, reason: string | null) => {
     setReasons({ ...reasons, [qid]: reason });
     api(`/attempts/${result.attempt_id}/error-reasons`, { body: { question_id: qid, reason } }).catch(() => {});
@@ -282,7 +293,10 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
               {x.evidence.filter((e) => e.type === "utterance").map((e) => (
                 <div className="evidence" key={e.utterance_id}>
                   <p className="en"><strong>{e.speaker}:</strong> {e.text}</p>
-                  {e.audio_url && <button className="small" onClick={() => playSrc(e.utterance_id, e.audio_url)} aria-label="根拠の音声を再生">{active === e.utterance_id && player.state === "playing" ? "♪ 再生中" : "▶ 根拠の音声"}</button>}
+                  <div className="row">
+                    {e.audio_url && <button className="small" onClick={() => playSrc(e.utterance_id, e.audio_url)} aria-label="根拠の音声を再生">{active === e.utterance_id && player.state === "playing" ? "♪ 再生中" : "▶ 根拠の音声"}</button>}
+                    <MissBtn id={e.utterance_id} />
+                  </div>
                 </div>
               ))}
               <p><strong>要点:</strong> {x.explanation_ja}</p>
@@ -299,7 +313,11 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
           );
         })}
         <details><summary className="btn ghost small">英文全体を見る</summary>
-          <div className="evidence">{result.transcript.map((s: Json) => s.lines.map((l: Json) => <p key={l.utterance_id} className="en"><strong>{l.speaker}:</strong> {l.text}</p>))}</div></details>
+          <div className="evidence">{result.transcript.map((s: Json) => s.lines.map((l: Json) => (
+            <div key={l.utterance_id} className="line"><p className="en"><strong>{l.speaker}:</strong> {l.text}</p><MissBtn id={l.utterance_id} /></div>
+          )))}</div>
+          <p className="faint">「聞き取れなかった」を付けた文は、メニューの「聞き取れなかった文」でまとめて聞き直せます。ラジオでも優先して流れます。</p></details>
+        <ReportBox unitId={result.unit_id} attemptId={result.attempt_id} />
         {msg && <Msg>{msg}</Msg>}
         <div className="sticky-actions">
           {ack ? (
@@ -317,5 +335,33 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
         </div>
       </section>
     </>
+  );
+}
+
+
+const REPORT_KINDS: [string, string][] = [["unclear", "意味・解説が分かりにくい"], ["wrong", "答え・解説がおかしい"], ["audio", "音声がおかしい"], ["other", "その他"]];
+
+function ReportBox({ unitId, attemptId }: { unitId: string; attemptId: string }) {
+  const [kind, setKind] = useState("");
+  const [note, setNote] = useState("");
+  const [done, setDone] = useState("");
+  const [err, setErr] = useState("");
+  const send = async () => {
+    try {
+      const r = await api<Json>(`/units/${unitId}/reports`, { body: { kind, note, attempt_id: attemptId } });
+      setDone(r.withdrawn ? "報告しました。この教材は出題とラジオから外しました（教材管理で元に戻せます）。" : "報告しました。教材管理の「報告」に記録されます。");
+    } catch (e) { setErr((e as ApiError).detail); }
+  };
+  if (done) return <Msg kind="ok">{done}</Msg>;
+  return (
+    <details className="report"><summary className="btn ghost small">この教材を報告する</summary>
+      <div className="row" role="group" aria-label="報告の種類">
+        {REPORT_KINDS.map(([id, label]) => <button key={id} className="small" aria-pressed={kind === id} onClick={() => setKind(kind === id ? "" : id)}>{kind === id ? "✓ " : ""}{label}</button>)}
+      </div>
+      <label className="field">メモ（任意）<textarea value={note} maxLength={1000} rows={2} onChange={(e) => setNote(e.target.value)} placeholder="例: seed exchange が何か分からない" /></label>
+      {(kind === "wrong" || kind === "audio") && <p className="faint">送ると、この教材はすぐに出題とラジオから外れます。</p>}
+      <button className="small primary" disabled={!kind} onClick={send}>報告を送る</button>
+      {err && <Msg>{err}</Msg>}
+    </details>
   );
 }

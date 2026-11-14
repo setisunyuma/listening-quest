@@ -158,6 +158,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Reports */
+        get: operations["admin_reports_api_admin_reports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/reports/{report_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin Resolve Report */
+        post: operations["admin_resolve_report_api_admin_reports__report_id__resolve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/system": {
         parameters: {
             query?: never;
@@ -220,6 +254,23 @@ export interface paths {
         put?: never;
         /** Admin Invalidate */
         post: operations["admin_invalidate_api_admin_units__unit_id__invalidate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/admin/units/{unit_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admin Restore */
+        post: operations["admin_restore_api_admin_units__unit_id__restore_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -684,6 +735,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/missed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Missed Lines */
+        get: operations["missed_lines_api_missed_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plans/today": {
         parameters: {
             query?: never;
@@ -971,6 +1039,40 @@ export interface paths {
         put?: never;
         /** Sync Answers */
         post: operations["sync_answers_api_sync_answers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/units/{unit_id}/missed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unit Missed */
+        post: operations["unit_missed_api_units__unit_id__missed_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/units/{unit_id}/reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unit Report */
+        post: operations["unit_report_api_units__unit_id__reports_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1366,6 +1468,13 @@ export interface components {
             /** Username */
             username: string;
         };
+        /** MissedIn */
+        MissedIn: {
+            /** Missed */
+            missed: boolean;
+            /** Utterance Id */
+            utterance_id: string;
+        };
         /** ModeIn */
         ModeIn: {
             /** Mode */
@@ -1554,6 +1663,29 @@ export interface components {
             /** Mode */
             mode: string;
         };
+        /** ReportIn */
+        ReportIn: {
+            /** Attempt Id */
+            attempt_id?: string | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "unclear" | "wrong" | "audio" | "other";
+            /**
+             * Note
+             * @default
+             */
+            note: string;
+        };
+        /** ResolveReportIn */
+        ResolveReportIn: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "dismiss" | "withdraw" | "restore";
+        };
         /** RestoreIn */
         RestoreIn: {
             /**
@@ -1593,6 +1725,11 @@ export interface components {
             figures: {
                 [key: string]: unknown;
             }[];
+            /**
+             * Missed
+             * @default []
+             */
+            missed: string[];
             /** Not First Reasons */
             not_first_reasons: string[];
             /** Presentation */
@@ -2154,6 +2291,80 @@ export interface operations {
             };
         };
     };
+    admin_reports_api_admin_reports_get: {
+        parameters: {
+            query?: {
+                all?: boolean;
+            };
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_resolve_report_api_admin_reports__report_id__resolve_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ResolveReportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     admin_system_api_admin_system_patch: {
         parameters: {
             query?: never;
@@ -2279,6 +2490,41 @@ export interface operations {
                 "application/json": components["schemas"]["InvalidateIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_restore_api_admin_units__unit_id__restore_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -3246,6 +3492,41 @@ export interface operations {
             };
         };
     };
+    missed_lines_api_missed_get: {
+        parameters: {
+            query?: {
+                mode?: string | null;
+            };
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     plan_start_api_plans_today_post: {
         parameters: {
             query?: never;
@@ -3862,6 +4143,84 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SyncIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unit_missed_api_units__unit_id__missed_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MissedIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unit_report_api_units__unit_id__reports_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReportIn"];
             };
         };
         responses: {

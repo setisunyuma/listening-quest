@@ -69,6 +69,7 @@ export default function AdminPage() {
         </section>
       )}
 
+      <Reports />
       {app.me.realm === "live" && <VerifyLive />}
 
       <section className="panel" aria-labelledby="gen-h">
@@ -200,6 +201,36 @@ function VerifyLive() {
           {r.open_in_app && <a className="btn primary" href={r.open_in_app}>アプリで再生して解く</a>}
         </div>
       )}
+    </section>
+  );
+}
+
+
+function Reports() {
+  const { data, reload } = useData<{ reports: Json[] }>(() => api("/admin/reports"), [], 15000);
+  const [msg, setMsg] = useState("");
+  const act = async (id: string, action: string) => {
+    try { await api(`/admin/reports/${id}/resolve`, { body: { action } }); setMsg({ dismiss: "対応済みにしました。", withdraw: "教材を出題から外しました。", restore: "教材を元に戻しました。" }[action] ?? ""); reload(); }
+    catch (e) { setMsg((e as ApiError).detail); }
+  };
+  if (!data || data.reports.length === 0) return null;
+  return (
+    <section className="panel" aria-labelledby="rep-h">
+      <h2 id="rep-h">報告 <small>{data.reports.length} 件</small></h2>
+      <p className="note">解説画面から送った報告です。「答え・解説がおかしい」「音声がおかしい」は送った時点で出題から外れています。</p>
+      {msg && <Msg kind="ok">{msg}</Msg>}
+      <div className="table-wrap"><table className="list">
+        <thead><tr><th scope="col">教材</th><th scope="col">報告</th><th scope="col"><span className="sr">操作</span></th></tr></thead>
+        <tbody>{data.reports.map((r) => (
+          <tr key={r.id}>
+            <td>{r.title}<br /><small>{MODE_LABEL[r.mode]} {r.part}・{new Date(r.created_at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</small></td>
+            <td><span className="chip">{r.kind_label}</span>{r.unit_withdrawn && <span className="chip demo">出題停止中</span>}{r.note && <><br /><small>{r.note}</small></>}</td>
+            <td><div className="row">
+              {r.unit_withdrawn ? <button className="small" onClick={() => act(r.id, "restore")}>元に戻す</button> : <button className="small danger" onClick={() => act(r.id, "withdraw")}>出題から外す</button>}
+              <button className="small" onClick={() => act(r.id, "dismiss")}>対応済みにする</button>
+            </div></td>
+          </tr>
+        ))}</tbody></table></div>
     </section>
   );
 }

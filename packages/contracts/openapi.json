@@ -1059,6 +1059,26 @@
     "title": "MeOut",
     "type": "object"
    },
+   "MissedIn": {
+    "properties": {
+     "missed": {
+      "title": "Missed",
+      "type": "boolean"
+     },
+     "utterance_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Utterance Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "utterance_id",
+     "missed"
+    ],
+    "title": "MissedIn",
+    "type": "object"
+   },
    "ModeIn": {
     "properties": {
      "mode": {
@@ -1588,6 +1608,60 @@
     "title": "RebuildIn",
     "type": "object"
    },
+   "ReportIn": {
+    "properties": {
+     "attempt_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attempt Id"
+     },
+     "kind": {
+      "enum": [
+       "unclear",
+       "wrong",
+       "audio",
+       "other"
+      ],
+      "title": "Kind",
+      "type": "string"
+     },
+     "note": {
+      "default": "",
+      "maxLength": 1000,
+      "title": "Note",
+      "type": "string"
+     }
+    },
+    "required": [
+     "kind"
+    ],
+    "title": "ReportIn",
+    "type": "object"
+   },
+   "ResolveReportIn": {
+    "properties": {
+     "action": {
+      "enum": [
+       "dismiss",
+       "withdraw",
+       "restore"
+      ],
+      "title": "Action",
+      "type": "string"
+     }
+    },
+    "required": [
+     "action"
+    ],
+    "title": "ResolveReportIn",
+    "type": "object"
+   },
    "RestoreIn": {
     "properties": {
      "apply_settings": {
@@ -1676,6 +1750,14 @@
        "type": "object"
       },
       "title": "Figures",
+      "type": "array"
+     },
+     "missed": {
+      "default": [],
+      "items": {
+       "type": "string"
+      },
+      "title": "Missed",
       "type": "array"
      },
      "not_first_reasons": {
@@ -2928,6 +3010,131 @@
     "summary": "Admin Replenish"
    }
   },
+  "/api/admin/reports": {
+   "get": {
+    "operationId": "admin_reports_api_admin_reports_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "all",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "All",
+       "type": "boolean"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Reports Api Admin Reports Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Reports"
+   }
+  },
+  "/api/admin/reports/{report_id}/resolve": {
+   "post": {
+    "operationId": "admin_resolve_report_api_admin_reports__report_id__resolve_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "report_id",
+      "required": true,
+      "schema": {
+       "title": "Report Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ResolveReportIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Resolve Report Api Admin Reports  Report Id  Resolve Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Resolve Report"
+   }
+  },
   "/api/admin/system": {
    "patch": {
     "operationId": "admin_system_api_admin_system_patch",
@@ -3166,6 +3373,63 @@
      }
     },
     "summary": "Admin Invalidate"
+   }
+  },
+  "/api/admin/units/{unit_id}/restore": {
+   "post": {
+    "operationId": "admin_restore_api_admin_units__unit_id__restore_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "unit_id",
+      "required": true,
+      "schema": {
+       "title": "Unit Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Restore Api Admin Units  Unit Id  Restore Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Restore"
    }
   },
   "/api/admin/verify-live": {
@@ -4658,6 +4922,70 @@
     "summary": "Meta"
    }
   },
+  "/api/missed": {
+   "get": {
+    "operationId": "missed_lines_api_missed_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "mode",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Mode"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Missed Lines Api Missed Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Missed Lines"
+   }
+  },
   "/api/plans/today": {
    "post": {
     "operationId": "plan_start_api_plans_today_post",
@@ -5685,6 +6013,140 @@
      }
     },
     "summary": "Sync Answers"
+   }
+  },
+  "/api/units/{unit_id}/missed": {
+   "post": {
+    "operationId": "unit_missed_api_units__unit_id__missed_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "unit_id",
+      "required": true,
+      "schema": {
+       "title": "Unit Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MissedIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Unit Missed Api Units  Unit Id  Missed Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Unit Missed"
+   }
+  },
+  "/api/units/{unit_id}/reports": {
+   "post": {
+    "operationId": "unit_report_api_units__unit_id__reports_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "unit_id",
+      "required": true,
+      "schema": {
+       "title": "Unit Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReportIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Unit Report Api Units  Unit Id  Reports Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Unit Report"
    }
   }
  }
