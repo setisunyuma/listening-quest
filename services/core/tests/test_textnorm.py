@@ -60,7 +60,8 @@ def test_notation_differences_pass(script, heard):
 def test_meaning_differences_fail(script, heard, kind):
     r = compare_transcript(script, heard)
     assert not r["ok"]
-    assert any(p["type"] == "critical_token_mismatch" for p in r["problems"]), (kind, r)
+    # qa-2 (R02): the key words are compared in position; the problem type was renamed with that change
+    assert any(p["type"] == "key_word_mismatch" for p in r["problems"]), (kind, r)
 
 
 def test_canonical_tokens():

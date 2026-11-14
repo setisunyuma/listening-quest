@@ -143,7 +143,11 @@ def test_dictation_scores_words_after_normalisation_and_only_after_answering(db,
     words = line.text.split()
     partial = " ".join(words[: max(1, len(words) // 2)])
     r = c.post(f"/api/units/{unit.id}/dictation", json={"utterance_id": line.id, "typed": partial}).json()
-    assert 0 < r["score"] < 1 and any(o["op"] == "delete" for o in r["ops"])
+    assert 0 < r["score"] < 1 and any(o["op"] == "del" for o in r["ops"]) and not r["exact"]
+    r = c.post(f"/api/units/{unit.id}/dictation", json={"utterance_id": line.id, "typed": line.text + " not"}).json()
+    assert r["score"] < 1 and any(f["type"] == "key_added" for f in r["critical"])  # R01: an added "not" costs points
+    r = c.post(f"/api/units/{unit.id}/dictation", json={"utterance_id": line.id, "typed": ""}).json()
+    assert r["score"] == 0 and r["empty"] and not r["exact"]
     assert feedback.check_dictation.__doc__  # documented as free (no API)
 
 

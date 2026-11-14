@@ -55,10 +55,11 @@ export default function MissedPage() {
               <button className="small primary" disabled={!typed.trim()} onClick={() => check(l)}>採点</button>
               {grade && (
                 <div className="evidence" aria-live="polite">
-                  <p><strong>{grade.correct_words} / {grade.total_words} 語</strong>（{Math.round(grade.score * 100)}%）</p>
+                  <p><strong>{grade.exact ? "完全一致" : `${Math.round(grade.score * 100)}%`}</strong>（一致 {grade.correct_words} / {grade.total_words} 語・違い {grade.edits} か所）</p>
+                  {grade.critical.length > 0 && <ul>{grade.critical.map((c: Json, i: number) => <li key={i}><strong>{c.reason_ja}</strong>: {c.expected ? <span className="en">正 {c.expected}</span> : null}{c.got ? <span className="en">　入力 {c.got}</span> : null}</li>)}</ul>}
                   <p className="en">{grade.ops.map((o: Json, i: number) => o.op === "equal" ? <span key={i}>{o.expected.join(" ")} </span>
-                    : <span key={i}>{o.expected.length > 0 && <mark title="聞き取れなかった語">{o.expected.join(" ")}</mark>}{o.typed.length > 0 && <del title="入力した語">{o.typed.join(" ")}</del>} </span>)}</p>
-                  <p className="faint">黄色は正しい語（入力にない、または違う語）、取り消し線はあなたの入力です。数字の書き方・大文字小文字・記号は区別しません。</p>
+                    : <span key={i}>{o.expected.length > 0 && <mark title="正しい語">{o.expected.join(" ")}</mark>}{o.typed.length > 0 && <del title="入力した語">{o.typed.join(" ")}</del>} </span>)}</p>
+                  <p className="faint">黄色は正しい語（入力にない・違う語）、取り消し線はあなたの入力です（余分な語も含む）。余分な語も点数から引きます。数字の書き方・大文字小文字・記号・短縮形は区別しません。書き取りの点数は、聞き取りの成績とは別に扱います。</p>
                 </div>
               )}
             </div>
