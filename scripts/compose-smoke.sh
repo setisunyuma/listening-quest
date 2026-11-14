@@ -11,7 +11,7 @@ step() { echo "== $*"; }
 
 step "wait for web and api"
 for i in $(seq 1 90); do curl -fsS "$BASE/api/health" >/dev/null 2>&1 && break; sleep 2; [ "$i" = 90 ] && { "${DC[@]}" ps; "${DC[@]}" logs --tail 80; exit 1; }; done
-curl -fsS "$BASE/login" | grep -q "Listening Quest"
+curl -fsS "$BASE/login" | grep "Listening Quest" >/dev/null
 
 step "create the demo user and seed the example units (CLI inside the api container)"
 "${DC[@]}" exec -T -e SMOKE_PW=smoke-password-123 api lq create-user smoke --realm demo --password-env SMOKE_PW

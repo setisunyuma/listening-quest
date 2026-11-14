@@ -13,9 +13,9 @@ run() {
 }
 cfg_without="$(run "")"
 cfg_with="$(run "owner@example.org")"
-echo "$cfg_without" | grep -q '"lq.example.com"' || { echo "site address missing"; exit 1; }
-echo "$cfg_without" | grep -q '"dial":"api:8000"' || { echo "/api route to api:8000 missing"; exit 1; }
-echo "$cfg_without" | grep -q '"dial":"web:3000"' || { echo "route to web:3000 missing"; exit 1; }
-echo "$cfg_with" | grep -q 'owner@example.org' || { echo "ACME e-mail not applied"; exit 1; }
-if echo "$cfg_without" | grep -q '"email"'; then echo "unexpected email when ACME_EMAIL is empty"; exit 1; fi
+echo "$cfg_without" | grep '"lq.example.com"' || { echo "site address missing"; exit 1; } >/dev/null
+echo "$cfg_without" | grep '"dial":"api:8000"' || { echo "/api route to api:8000 missing"; exit 1; } >/dev/null
+echo "$cfg_without" | grep '"dial":"web:3000"' || { echo "route to web:3000 missing"; exit 1; } >/dev/null
+echo "$cfg_with" | grep 'owner@example.org' || { echo "ACME e-mail not applied"; exit 1; } >/dev/null
+if echo "$cfg_without" | grep '"email"'; then echo "unexpected email when ACME_EMAIL is empty"; exit 1; fi >/dev/null
 echo "Caddyfile OK (with and without ACME_EMAIL)"

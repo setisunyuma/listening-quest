@@ -10,7 +10,9 @@
 # This is not an iPhone test; the iPhone checklist in README stays separate.
 set -euo pipefail
 CAP="${1:?usage: scripts/live-verify.sh <cost-cap-usd> [--rehearsal]   (the cap is limited further by the remaining shared verification budget)}"
-export REHEARSAL="${2:-}"   # --rehearsal: same flow with free demo providers (tone audio), to test the script itself
+export REHEARSAL=""; APP_ONLY=""
+for a in "${@:2}"; do case "$a" in --rehearsal) REHEARSAL=1;; --app-only) APP_ONLY=1;; esac; done
+export REHEARSAL   # --rehearsal: same flow with free demo providers (tone audio), to test the script itself
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 export LQ_DATABASE_URL="${LQ_VERIFY_DATABASE_URL:-postgresql+psycopg://lq:lq@127.0.0.1:55432/lq_verify}"
 export LQ_STORAGE_BACKEND=local LQ_STORAGE_LOCAL_DIR="$ROOT/var/verify-storage" LQ_WORK_DIR="$ROOT/var"
@@ -40,16 +42,22 @@ from lq.services import auth
 realm = "demo" if os.environ.get("REHEARSAL") else "live"
 with session_scope() as s:
     u = s.execute(select(m.User).where(m.User.username == "verifier")).scalar_one_or_none()
+    if u is not None and u.realm != realm:  # leftover from a run in the other data area: keep it, renamed
+        u.username = f"verifier-{u.realm}-{u.id[:6]}"
+        s.flush()
+        u = None
     if u is None:
         auth.create_user(s, "verifier", os.environ["LQ_VERIFY_PASSWORD"], realm=realm)
     else:
         u.password_hash = auth.hash_password(os.environ["LQ_VERIFY_PASSWORD"])
 PY
+if [ -n "$APP_ONLY" ]; then echo "--app-only: no generation, no API cost; checking the latest READY unit in the app"; else
 set +e
 uv run lq verify-live --cost-cap-usd "$CAP" ${REHEARSAL:+--rehearsal} | tee "$ROOT/var/verify/verify-live.log"
 rc=${PIPESTATUS[0]}
 set -e
 [ "$rc" = 0 ] || { echo "generation did not reach READY; see the report above (nothing further was run)"; exit "$rc"; }
+fi
 cd "$ROOT/apps/web"
 [ -d .next ] || npm run build
 [ -n "$REHEARSAL" ] && export LQ_VERIFY_REHEARSAL=1

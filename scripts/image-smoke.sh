@@ -24,16 +24,16 @@ run_app() {
 }
 run_app
 echo "== root-owned volume handed to the app user; app processes do not run as root"
-docker logs "$APP" 2>&1 | grep -q "giving /data to the app user"
+docker logs "$APP" 2>&1 | grep "giving /data to the app user" >/dev/null
 docker exec "$APP" sh -c 'stat -c %u /data/storage' | grep -qx 10001
 docker exec "$APP" sh -c 'for p in /proc/[0-9]*; do u=$(awk "/^Uid:/{print \$2}" $p/status 2>/dev/null); c=$(tr "\0" " " < $p/cmdline 2>/dev/null); case "$c" in *uvicorn*|*server.js*|*"lq.cli worker"*) [ "$u" = 10001 ] || { echo "runs as uid $u: $c"; exit 1; };; esac; done'
 echo "== web page and API through one port"
-curl -fsS http://localhost:3999/setup | grep -q "Listening Quest"
-curl -fsS http://localhost:3999/api/auth/setup | grep -q '"available":true'
+curl -fsS http://localhost:3999/setup | grep "Listening Quest" >/dev/null
+curl -fsS http://localhost:3999/api/auth/setup | grep '"available":true' >/dev/null
 echo "== one-time owner setup from the browser API"
 curl -fsS -c "$JAR" -H 'Content-Type: application/json' -d '{"code":"smoke-setup-code-123","username":"owner","password":"owner-password-123"}' http://localhost:3999/api/auth/setup >/dev/null
 curl -fsS -b "$JAR" http://localhost:3999/api/home | python3 -c 'import sys,json;d=json.load(sys.stdin);assert d["realm"]=="live";print("home ok for", d["username"])'
-curl -fsS http://localhost:3999/api/auth/setup | grep -q '"account_exists"'
+curl -fsS http://localhost:3999/api/auth/setup | grep '"account_exists"' >/dev/null
 echo "== the pipeline stores audio on the /data volume (free demo providers)"
 docker exec "$APP" lq generate common_test 3 --realm demo --no-send | python3 -c 'import sys,json;j=json.load(sys.stdin);assert j[0]["unit_status"]=="READY", j;print("demo unit READY")'
 before=$(docker exec "$APP" sh -c 'find /data/storage/units -type f | wc -l')
