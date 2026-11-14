@@ -59,6 +59,18 @@ export default function GrowthPage() {
           <p className="faint">今日のクエストは、直近に間違えた技能と、平均が低い技能を優先して教材を選びます。</p>
         </section>
       )}
+      {g.repair && g.repair.lines + g.repair.phrases > 0 && (
+        <section className="panel" aria-labelledby="rep-h">
+          <h2 id="rep-h">修復の結果</h2>
+          <dl className="kv">
+            <dt>その場でできた</dt><dd>{g.repair.immediate_ok} / {g.repair.lines} 文</dd>
+            <dt>後日も同じ文でできた（英文なし）</dt><dd>{g.repair.delayed_ok} 文</dd>
+            <dt>別の初見音声で同じ技能ができた</dt><dd>{g.repair.transfer_ok} / {g.repair.transfer_checked} 文</dd>
+            <dt>覚える語句</dt><dd>{g.repair.phrases} 件</dd>
+          </dl>
+          <p className="faint">{g.repair.note}</p>
+        </section>
+      )}
       <section className="panel" aria-labelledby="skill-h">
         <h2 id="skill-h">技能別（初見・直近最大{g.skills[0]?.window}件）</h2>
         <div className="table-wrap"><table className="list">

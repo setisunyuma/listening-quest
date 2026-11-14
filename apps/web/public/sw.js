@@ -5,7 +5,7 @@
    - Unsent answers live in IndexedDB and downloaded audio in a per-user cache; this worker never
      opens or deletes either, so updating it cannot lose them. */
 const SHELL = "lq-shell-v2";
-const PAGES = ["/", "/login", "/play", "/library", "/radio", "/growth", "/history", "/settings", "/admin", "/check", "/more", "/missed"];
+const PAGES = ["/", "/login", "/play", "/library", "/radio", "/growth", "/history", "/settings", "/admin", "/check", "/more", "/missed", "/task"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(SHELL).then((c) => Promise.allSettled(PAGES.map((p) => c.add(new Request(p, { credentials: "omit" }))))));

@@ -84,7 +84,8 @@ export default function HomePage() {
   const next = plan?.slots.find((s) => s.state === "started" && (!onMove || s.context !== "desk")) ?? plan?.slots.find((s) => open(s) && (!onMove || s.context !== "desk"));
   const deskWaiting = !!(onMove && !next && plan?.slots.some((s) => open(s)));
   // a task whose answers are graded but whose explanation is not confirmed continues at its result
-  const slotHref = (s: Json) => (s.awaiting_feedback_ack && s.attempt_id ? `/play?attempt=${s.attempt_id}` : `/play?unit=${s.unit.id}&slot=${s.id}`);
+  const slotHref = (s: Json) => (s.kind === "repair" || s.kind === "recall" ? `/task?slot=${s.id}`
+    : s.awaiting_feedback_ack && s.attempt_id ? `/play?attempt=${s.attempt_id}` : `/play?unit=${s.unit.id}&slot=${s.id}`);
   const slotRow = (s: Json) => (
     <div key={s.id} className={`slot ${s.state}`}>
                 <span className="n" aria-hidden="true">{s.state === "completed" ? "✓" : s.idx + 1}</span>
@@ -126,7 +127,7 @@ export default function HomePage() {
                 ) : next ? (
                   <>
                     <Link className="btn primary big" href={slotHref(next)}>{plan.completed_slots || next.state === "started" ? "続ける" : "今日の学習を始める"}</Link>
-                    <p className="note">次: {next.unit?.part_label} <small>{next.reason_text}・{fmtMin(next.est_sec)}</small></p>
+                    <p className="note">次: {next.kind === "repair" ? "短い修復" : next.kind === "recall" ? "後日の確認" : next.unit?.part_label} <small>{next.reason_text}・{fmtMin(next.est_sec)}</small></p>
                   </>
                 ) : deskWaiting ? <p className="note">移動中の予定は終了・机上の課題が残っています。机で「移動中」をオフにすると続きができます。</p> : null}
                 <p className="faint">予定時間は音声の長さ・規定の再生回数・解答と解説の見込みからの推定で、ちょうどその時間で終わる保証ではありません。</p>

@@ -28,6 +28,17 @@
       "title": "Plan Ended",
       "type": "boolean"
      },
+     "repair_slot_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Repair Slot Id"
+     },
      "slot_completed": {
       "title": "Slot Completed",
       "type": "boolean"
@@ -1237,6 +1248,33 @@
     "title": "OfflineAnswer",
     "type": "object"
    },
+   "PhraseIn": {
+    "properties": {
+     "on": {
+      "default": true,
+      "title": "On",
+      "type": "boolean"
+     },
+     "term": {
+      "maxLength": 80,
+      "minLength": 1,
+      "title": "Term",
+      "type": "string"
+     },
+     "utterance_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Utterance Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "utterance_id",
+     "term"
+    ],
+    "title": "PhraseIn",
+    "type": "object"
+   },
    "PlanOut": {
     "properties": {
      "budget_sec": {
@@ -2434,6 +2472,18 @@
       "title": "Answers",
       "type": "object"
      },
+     "confidence": {
+      "additionalProperties": {
+       "enum": [
+        "sure",
+        "unsure",
+        "guess"
+       ],
+       "type": "string"
+      },
+      "title": "Confidence",
+      "type": "object"
+     },
      "plays": {
       "items": {
        "$ref": "#/components/schemas/PlayIn"
@@ -2561,6 +2611,21 @@
      }
     },
     "title": "SystemPatch",
+    "type": "object"
+   },
+   "TaskResultIn": {
+    "properties": {
+     "results": {
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "maxItems": 20,
+      "title": "Results",
+      "type": "array"
+     }
+    },
+    "title": "TaskResultIn",
     "type": "object"
    },
    "UnitCard": {
@@ -6950,6 +7015,130 @@
     "summary": "Sync Answers"
    }
   },
+  "/api/tasks/{slot_id}": {
+   "get": {
+    "operationId": "task_get_api_tasks__slot_id__get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "slot_id",
+      "required": true,
+      "schema": {
+       "title": "Slot Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Task Get Api Tasks  Slot Id  Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Task Get"
+   }
+  },
+  "/api/tasks/{slot_id}/complete": {
+   "post": {
+    "operationId": "task_complete_api_tasks__slot_id__complete_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "slot_id",
+      "required": true,
+      "schema": {
+       "title": "Slot Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/TaskResultIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Task Complete Api Tasks  Slot Id  Complete Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Task Complete"
+   }
+  },
   "/api/units/{unit_id}/dictation": {
    "post": {
     "operationId": "unit_dictation_api_units__unit_id__dictation_post",
@@ -7082,6 +7271,73 @@
      }
     },
     "summary": "Unit Missed"
+   }
+  },
+  "/api/units/{unit_id}/phrases": {
+   "post": {
+    "operationId": "unit_phrase_api_units__unit_id__phrases_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "unit_id",
+      "required": true,
+      "schema": {
+       "title": "Unit Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PhraseIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Unit Phrase Api Units  Unit Id  Phrases Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Unit Phrase"
    }
   },
   "/api/units/{unit_id}/reports": {

@@ -1269,6 +1269,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tasks/{slot_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Task Get */
+        get: operations["task_get_api_tasks__slot_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tasks/{slot_id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Task Complete */
+        post: operations["task_complete_api_tasks__slot_id__complete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/units/{unit_id}/dictation": {
         parameters: {
             query?: never;
@@ -1297,6 +1331,23 @@ export interface paths {
         put?: never;
         /** Unit Missed */
         post: operations["unit_missed_api_units__unit_id__missed_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/units/{unit_id}/phrases": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unit Phrase */
+        post: operations["unit_phrase_api_units__unit_id__phrases_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1341,6 +1392,8 @@ export interface components {
              * @default false
              */
             plan_ended: boolean;
+            /** Repair Slot Id */
+            repair_slot_id?: string | null;
             /** Slot Completed */
             slot_completed: boolean;
             /** Total Xp */
@@ -1780,6 +1833,18 @@ export interface components {
             /** Unit Revision */
             unit_revision: number;
         };
+        /** PhraseIn */
+        PhraseIn: {
+            /**
+             * On
+             * @default true
+             */
+            on: boolean;
+            /** Term */
+            term: string;
+            /** Utterance Id */
+            utterance_id: string;
+        };
         /** PlanOut */
         PlanOut: {
             /** Budget Sec */
@@ -2187,6 +2252,10 @@ export interface components {
                     [key: string]: unknown;
                 } | null;
             };
+            /** Confidence */
+            confidence?: {
+                [key: string]: "sure" | "unsure" | "guess";
+            };
             /** Plays */
             plays?: components["schemas"]["PlayIn"][];
         };
@@ -2213,6 +2282,13 @@ export interface components {
             replenish_modes?: string[] | null;
             /** Tts Accent */
             tts_accent?: string | null;
+        };
+        /** TaskResultIn */
+        TaskResultIn: {
+            /** Results */
+            results?: {
+                [key: string]: unknown;
+            }[];
         };
         /** UnitCard */
         UnitCard: {
@@ -4947,6 +5023,80 @@ export interface operations {
             };
         };
     };
+    task_get_api_tasks__slot_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                slot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    task_complete_api_tasks__slot_id__complete_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                slot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskResultIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     unit_dictation_api_units__unit_id__dictation_post: {
         parameters: {
             query?: never;
@@ -5000,6 +5150,45 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["MissedIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unit_phrase_api_units__unit_id__phrases_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PhraseIn"];
             };
         };
         responses: {

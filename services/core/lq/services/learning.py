@@ -613,6 +613,7 @@ def submit_attempt(
     now: datetime | None = None,
     client_meta: dict | None = None,
     plays: list[dict] | None = None,
+    confidence: dict | None = None,
 ) -> m.Attempt:
     """Grade and commit every consequence exactly once. `answers` must contain every question id; the
     value is an answer object or null for an explicit skip. `plays` are the playback events the device kept
@@ -620,6 +621,10 @@ def submit_attempt(
     lost still marks the attempt as assisted. Events already received are skipped by their ids."""
     now = now or datetime.now(UTC)
     att = _open_attempt(session, user, attempt_id)
+    if confidence and att.status == "open":
+        # L02: stored only with the submission, i.e. before any answer is shown; never changed afterwards
+        cm = {k: v for k, v in confidence.items() if v in ("sure", "unsure", "guess")}
+        client_meta = {**(client_meta or {}), "confidence": cm}
     if plays and att.status == "open":
         for p in plays:
             try:
@@ -859,6 +864,7 @@ def ack_feedback(session, user: m.User, attempt_id: str, *, now: datetime | None
     if att.feedback_viewed_at is None:
         att.feedback_viewed_at = now
     plan_info = None
+    repair_slot_id = None
     if att.complete and att.session_type in ("train", "review"):
         got = award_xp(
             session,
@@ -883,8 +889,11 @@ def ack_feedback(session, user: m.User, attempt_id: str, *, now: datetime | None
             )
             if got:
                 awarded.append({"kind": "review_bonus", "amount": got})
-        from lq.services import plans
+        from lq.services import plans, repair
 
+        # L01: a short repair of what went wrong joins today's tasks BEFORE the day's completion is judged
+        rep = repair.add_repair_task(session, user, att, now)
+        repair_slot_id = rep.id if rep else None
         if not att.slot_id:
             plan_info = plans.bind_free_attempt(session, user, att, now)  # U01 T10: same unit from the library
         elif att.slot_id:
@@ -899,6 +908,7 @@ def ack_feedback(session, user: m.User, attempt_id: str, *, now: datetime | None
         "slot_completed": bool(plan_info and plan_info.get("slot_completed")),
         "plan_completed": bool(plan_info and plan_info.get("plan_completed")),
         "plan_ended": bool(plan_info and plan_info.get("plan_ended")),
+        "repair_slot_id": repair_slot_id,
         "needs_all_answers": not att.complete,
     }
 

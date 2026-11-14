@@ -51,10 +51,27 @@ test("quest: play, answer, grading, explanation, XP, and the next unit", async (
   await expect(page.getByRole("heading", { name: /結果/ })).toBeVisible();
   await page.getByRole("button", { name: "解説を確認した" }).click();
   await expect(page.getByText("この教材の今日の基本XPは獲得済みです。")).toBeVisible();
-  await page.getByRole("button", { name: "次へ進む" }).click();
+  // L01: a wrong answer leads straight into a short repair task (inside the day's time); otherwise to the next unit
+  const repair = page.getByRole("link", { name: "短い修復へ進む" });
+  let added = 0;
+  if (await repair.count()) {
+    added = 1;
+    await repair.click();
+    await expect(page.getByRole("heading", { name: /短い修復/ })).toBeVisible();
+    await checkTouchLayout(page);
+    for (const box of await page.locator(".qbox").all()) {
+      await box.getByRole("button", { name: "最後の確認へ（通常速度・英文なし）" }).click();
+      await box.getByRole("button", { name: "分かった" }).click();
+    }
+    await page.getByRole("button", { name: "この課題を終える" }).click();
+    await expect(page.getByRole("heading", { name: "修復を実施しました" })).toBeVisible();
+    await expect(page.getByText(/初見の成績・難度帯・XPには入りません/)).toBeVisible();
+    await page.getByRole("button", { name: "次へ進む" }).click();
+  } else await page.getByRole("button", { name: "次へ進む" }).click();
   await expect(page).toHaveURL(/\/play\?unit=.*slot=/);
   await page.goto("/");
-  await expect(page.getByRole("img", { name: `今日の進捗 1 / ${total}` })).toBeVisible(); // the plan did not grow
+  // problem slots stay as planned; only a repair task may have been added
+  await expect(page.getByRole("img", { name: `今日の進捗 ${1 + added} / ${total + added}` })).toBeVisible();
   await expect(page.getByRole("link", { name: "続ける" })).toBeVisible();
   await expect(page.getByText(/XP（今日 \+10）/)).toBeVisible();
 });

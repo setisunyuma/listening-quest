@@ -218,10 +218,12 @@ def test_wrong_answer_changes_next_slot_but_not_slot_count(db, user):
         slots[0].unit_id = target[0].id
         db.commit()
         do_attempt(db, user, target[0], correct=first_correct, slot_id=slots[0].id)
-        after = plans._plan_slots(db, plan.id)
-        assert [(s.idx, s.time_cap_sec) for s in after] == caps and db.get(m.DailyPlan, plan.id).total_slots == len(
-            caps
-        )
+        all_after = plans._plan_slots(db, plan.id)
+        after = [s for s in all_after if s.kind == "unit"]  # L01 may add one short repair task (within the time)
+        repairs = [s for s in all_after if s.kind == "repair"]
+        assert [(s.idx, s.time_cap_sec) for s in after] == caps
+        assert db.get(m.DailyPlan, plan.id).total_slots == len(caps) + len(repairs) and len(repairs) <= 1
+        assert sum(s.est_sec for s in plans._live(all_after)) <= plan.budget_sec
         return after[1].unit_id, after[1].reason_text
 
     wrong_next, wrong_reason = run(False)
@@ -493,8 +495,12 @@ def test_plan_size_is_fixed(db, user):
             db, user, db.get(m.Unit, slot.unit_id), correct=False, slot_id=slot.id, now=T0 + timedelta(minutes=10 * i)
         )
     plan = db.get(m.DailyPlan, plan.id)
-    slots = plans._plan_slots(db, plan.id)
-    assert (plan.total_slots, plan.budget_sec, len(slots), [s.time_cap_sec for s in slots]) == (n, budget, n, caps)
+    all_slots = plans._plan_slots(db, plan.id)
+    slots = [s for s in all_slots if s.kind == "unit"]  # problem slots: fixed; repair tasks fit inside the time
+    repairs = [s for s in all_slots if s.kind == "repair"]
+    assert (plan.budget_sec, len(slots), [s.time_cap_sec for s in slots]) == (budget, n, caps)
+    assert plan.total_slots == n + len(repairs) and len(repairs) <= 2  # at most 2 repair tasks a day
+    assert sum(s.est_sec for s in plans._live(all_slots)) <= budget  # the day's time is never exceeded
     assert all(s.est_sec <= s.time_cap_sec for s in slots)
     assert plans.start_plan(db, user, T0 + timedelta(hours=5)).id == plan.id
 

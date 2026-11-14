@@ -70,6 +70,7 @@ function AnswerView({ unit, attempt, pack, onResult }: { unit: LearnerUnit; atte
   const [aids, setAids] = useState<Record<string, boolean>>(attempt?.aids ?? {});
   const [rate, setRate] = useState(1);
   const [answers, setAnswers] = useState<Record<string, Answer | undefined>>({});
+  const [confidence, setConfidence] = useState<Record<string, "sure" | "unsure" | "guess" | undefined>>({});  // L02: optional
   const [transcript, setTranscript] = useState<Json[] | null>(null);
   const [hints, setHints] = useState<Record<string, string>>({});
   const [active, setActive] = useState<string | null>(null);
@@ -154,7 +155,7 @@ function AnswerView({ unit, attempt, pack, onResult }: { unit: LearnerUnit; atte
     try {
       // every playback event goes with the answers: a replay or speed change that did not reach the server
       // earlier is applied before grading, so an assisted attempt can never be graded as unassisted
-      onResult(await api<Result>(`/attempts/${attempt!.attempt_id}/submit`, { body: { answers: body, plays: playEvents.current } }));
+      onResult(await api<Result>(`/attempts/${attempt!.attempt_id}/submit`, { body: { answers: body, plays: playEvents.current, confidence: Object.fromEntries(Object.entries(confidence).filter(([, v]) => v)) } }));
       kvDel(app.me.user_id, draftKey).catch(() => {});
     } catch (e) {
       const er = e as ApiError;
@@ -233,6 +234,14 @@ function AnswerView({ unit, attempt, pack, onResult }: { unit: LearnerUnit; atte
                 </button>
               ))}
             </div>
+            {!offline && answers[x.id] && (
+              <div className="row" role="group" aria-label={`問${x.slot}の確信度（任意）`}>
+                <small>確信度（任意）:</small>
+                {([["sure", "根拠あり"], ["unsure", "迷った"], ["guess", "勘"]] as const).map(([k, label]) => (
+                  <button key={k} className="small ghost" aria-pressed={confidence[x.id] === k} onClick={() => setConfidence({ ...confidence, [x.id]: confidence[x.id] === k ? undefined : k })}>{label}</button>
+                ))}
+              </div>
+            )}
             <button className="ghost small" aria-pressed={answers[x.id] === null} onClick={() => setAnswers({ ...answers, [x.id]: answers[x.id] === null ? undefined : null })}>{answers[x.id] === null ? "✓ スキップする（取り消す）" : "この問題をスキップ"}</button>
           </div>
         ))}
@@ -289,6 +298,14 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
   const [rate, setRate] = useState(1);
   const lineAudio: Record<string, string> = Object.fromEntries(result.questions.flatMap((q) => q.evidence.filter((e) => e.type === "utterance" && e.audio_url).map((e) => [e.utterance_id, e.audio_url])));
   const [loop, setLoop] = useState(false);
+  const [chosen, setChosen] = useState<Record<string, boolean>>({});
+  const choosePhrase = async (term: string) => {
+    const line = result.transcript.flatMap((sg: Json) => sg.lines).find((l: Json) => l.text.toLowerCase().includes(term.toLowerCase()));
+    if (!line) return;
+    const on = !chosen[term];
+    setChosen({ ...chosen, [term]: on });
+    try { await api(`/units/${result.unit_id}/phrases`, { body: { utterance_id: line.utterance_id, term, on } }); } catch (e) { setChosen({ ...chosen, [term]: !on }); setMsg((e as ApiError).detail); }
+  };
   const [hideEn, setHideEn] = useState(false);
   const [showJa, setShowJa] = useState(false);
   const [revealed, setRevealed] = useState<Set<string>>(new Set());
@@ -368,7 +385,9 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
         })}
         {result.glossary.length > 0 && (
           <div className="qbox" aria-label="語注"><h3>語注</h3>
-            {result.glossary.map((g: Json) => <p key={g.term}><strong className="en">{g.term}</strong>　{g.meaning_ja}</p>)}
+            {result.glossary.map((g: Json) => <p key={g.term} className="row"><span style={{ flex: 1 }}><strong className="en">{g.term}</strong>　{g.meaning_ja}</span>
+              <button className="small ghost" aria-pressed={!!chosen[g.term]} onClick={() => choosePhrase(g.term)}>{chosen[g.term] ? "✓ 覚える" : "覚える"}</button></p>)}
+            <p className="faint">「覚える」を付けた語句だけ、翌日以降の「今日やること」で、音から意味を思い出す確認に入ります。</p>
           </div>
         )}
         <details><summary className="btn ghost small">英文全体を見る</summary>
@@ -398,7 +417,8 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
               {ack.awarded.length > 0 ? <p className="verdict ok">+{ack.awarded.reduce((a, b) => a + b.amount, 0)} XP{ack.plan_completed ? "　今日の計画を完了！" : ""}</p>
                 : <p className="note">{ack.needs_all_answers ? "未回答があるため、この枠は未完了です（全問に答えると完了になります）。" : "この教材の今日の基本XPは獲得済みです。"}</p>}
               <div className="row actions">
-                <button className="primary big" onClick={next}>{result.slot_id && !ack.plan_completed ? "次へ進む" : "ホームへ"}</button>
+                {ack.repair_slot_id ? <Link className="btn primary big" href={`/task?slot=${ack.repair_slot_id}`}>短い修復へ進む</Link>
+                  : <button className="primary big" onClick={next}>{result.slot_id && !ack.plan_completed ? "次へ進む" : "ホームへ"}</button>}
                 {ack.needs_all_answers && canRetry && <button onClick={onRetry}>もう一度解く</button>}
                 {ack.needs_all_answers && result.slot_id && <button onClick={replace}>別の問題に替える</button>}
               </div>
