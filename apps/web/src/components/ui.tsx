@@ -40,11 +40,43 @@ export function DemoChip({ kind }: { kind: string }) {
   return kind === "demo_tone" ? <span className="chip demo" title="ビープ音による動作確認用の音声です。実用のリスニング教材ではありません。">音声動作確認用</span> : null;
 }
 
+/** R06: a bar chart drawn from the figure's rows (label, value). Only numbers are taken from material; no HTML/SVG
+ * from material is injected. Returns null when a row has no readable number, so the table is shown instead. */
+function BarChart({ fig, highlight }: { fig: Json; highlight: string[] }) {
+  const rows = (fig.rows || []).map((r: Json) => {
+    const cells = r.cells || [];
+    const raw = cells.length > 1 ? String(cells[cells.length - 1].text) : "";
+    const num = parseFloat(raw.replace(/[^0-9.\-]/g, ""));
+    return { id: r.id, label: cells.length ? String(cells[0].text) : "", raw, num };
+  });
+  if (!rows.length || rows.some((r: Json) => !Number.isFinite(r.num) || r.num < 0)) return null;
+  const max = Math.max(...rows.map((r: Json) => r.num)) || 1;
+  const rowH = 30, labelW = 46, w = 320, h = rows.length * rowH + 8;
+  return (
+    <svg className="fig-chart" viewBox={`0 0 ${w} ${h}`} role="img" aria-label={`${fig.title || "グラフ"}: ${rows.map((r: Json) => `${r.label} ${r.raw}`).join("、")}`} data-testid="fig-chart">
+      {rows.map((r: Json, i: number) => {
+        const bw = Math.max(2, ((w - labelW - 8) * r.num) / max);
+        const y = 4 + i * rowH;
+        return (
+          <g key={r.id} className={highlight.includes(r.id) ? "hl" : ""}>
+            <rect x={labelW} y={y + 4} width={bw} height={rowH - 12} rx={3} className="bar" />
+            <text x={labelW - 6} y={y + rowH / 2 + 2} textAnchor="end" className="val">{r.raw}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 export function Figure({ fig, highlight = [] }: { fig: Json; highlight?: string[] }) {
-  // Rendered from structured data as plain table cells. No HTML from material is ever injected.
+  // Rendered from structured data. No HTML from material is ever injected. Bar charts are drawn (R06); the labels
+  // stay in the table below so nothing depends on reading the bars alone.
+  const chart = fig.kind === "chart_bar" ? <BarChart fig={fig} highlight={highlight} /> : null;
   return (
     <figure style={{ margin: "10px 0" }}>
       {fig.title && <figcaption className="note">{fig.title}</figcaption>}
+      {chart}
+      {fig.kind === "scene_set" && <p className="faint">絵の内容を文章で示しています（形式調整版）。</p>}
       <div className="table-wrap">
         <table className="fig">
           {fig.columns?.length > 0 && <thead><tr>{fig.columns.map((c: string, i: number) => <th key={i} scope="col">{c}</th>)}</tr></thead>}

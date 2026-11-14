@@ -273,6 +273,108 @@ class _Builder:
         return qs
 
     def build(self) -> dict:
+        return self._conform(self._build())
+
+    def _conform(self, d: dict) -> dict:
+        """R06: make demo material satisfy the profile's format contract (choice counts, shared choices, pictures
+        as an arranged presentation, required figures, part-5 section roles and slot evidence). Demo content is
+        only a working stand-in; real material is checked against the same contract by lint."""
+        c = self.part.get("contract") or {}
+        qs = d["questions"]
+        n = c.get("choices")
+        fillers = [
+            "None of the above",
+            "It was not mentioned",
+            "Something else",
+            "Nobody said",
+            "No answer given",
+            "Not decided yet",
+        ]
+        if c.get("shared_choices") and qs:
+            texts = []
+            for q in qs:
+                for ch in q["choices"]:
+                    if ch["text"] not in texts:
+                        texts.append(ch["text"])
+            for f in fillers:
+                if n and len(texts) >= n:
+                    break
+                texts.append(f)
+            shared = [{"id": f"c{i + 1}", "text": t} for i, t in enumerate(texts[: n or len(texts)])]
+            for q in qs:
+                right = next(ch["text"] for ch in q["choices"] if ch["id"] == q["answer"]["choice_id"])
+                q["choices"] = [dict(x) for x in shared]
+                q["answer"]["choice_id"] = next(x["id"] for x in shared if x["text"] == right)
+                q["feedback"]["distractors"] = [
+                    {"choice_id": x["id"], "reason_ja": "正しい選択肢ではありません。"}
+                    for x in shared
+                    if x["text"] != right
+                ]
+        elif n:
+            for q in qs:
+                if q["type"] != "single_choice":
+                    continue
+                right = q["answer"]["choice_id"]
+                keep = [ch for ch in q["choices"] if ch["id"] == right] + [
+                    ch for ch in q["choices"] if ch["id"] != right
+                ]
+                keep = keep[:n]
+                for f in fillers:
+                    if len(keep) >= n:
+                        break
+                    if f not in [k["text"] for k in keep]:
+                        keep.append({"id": f"cx{len(keep)}", "text": f})
+                order = sorted(keep, key=lambda ch: ch["id"])
+                q["choices"] = order
+                q["feedback"]["distractors"] = [
+                    {"choice_id": ch["id"], "reason_ja": "正しい選択肢ではありません。"}
+                    for ch in order
+                    if ch["id"] != right
+                ]
+        if c.get("requires_pictures"):
+            d["presentation_profile"] = {**d["presentation_profile"], "kind": "audio_arranged", "figure_verbalized": True,
+                                         "notes": "demo: pictures described in words (形式調整版)"}  # fmt: skip
+        need = c.get("requires_figure")
+        if need and not any(f["kind"] == need for f in d["figures"]):
+            d["figures"].append({"id": f"f{len(d['figures']) + 1}", "kind": need, "title": "Notes", "columns": ["Item", "Detail"],
+                                 "rows": [{"id": "rw1", "cells": [{"id": "rw1c1", "text": "Topic"}, {"id": "rw1c2", "text": self.event}]}], "note": ""})  # fmt: skip
+        roles = c.get("segment_roles")
+        if roles and len(d["segments"]) == len(roles):
+            for seg, role in zip(d["segments"], roles, strict=True):
+                seg["label"] = role
+            by = {s["label"]: s for s in d["segments"]}
+            fig = next((f for f in d["figures"] if f["kind"] == need), d["figures"][0] if d["figures"] else None)
+            for q in qs:
+                rule = (c.get("slot_rules") or {}).get(str(q["slot"]))
+                if not rule:
+                    continue
+                ev = [e for e in q["evidence"] if "figure_id" in e]
+                for need_seg in rule.get("needs_segments", []):
+                    utts = by[need_seg]["utterances"]
+                    take = utts[:1]
+                    if need_seg == "comments" and rule.get("min_comment_speakers"):
+                        seen, take = set(), []
+                        for u in utts:
+                            if u["speaker_id"] not in seen:
+                                seen.add(u["speaker_id"])
+                                take.append(u)
+                    ev += [{"utterance_id": u["id"]} for u in take]
+                if rule.get("needs_figure") and fig and not any("figure_id" in e for e in ev):
+                    ev.append({"figure_id": fig["id"], "element_id": fig["rows"][0]["id"] if fig["rows"] else None})
+                    q["figure_ids"] = sorted(set(q.get("figure_ids", [])) | {fig["id"]})
+                q["evidence"] = [{k: v for k, v in e.items() if v is not None} for e in ev]
+                q["segment_ids"] = sorted(
+                    {
+                        s["id"]
+                        for s in d["segments"]
+                        for u in s["utterances"]
+                        for e in q["evidence"]
+                        if e.get("utterance_id") == u["id"]
+                    }
+                )
+        return d
+
+    def _build(self) -> dict:
         spec, part = self.spec, self.part
         self.radio_desc = ""
         n = part["questions_per_unit"]

@@ -147,6 +147,7 @@ nav.tabs .only-mobile { display: none; }
 .qbox:first-of-type { border-top: 0; margin-top: 0; padding-top: 0; }
 table.fig { border-collapse: collapse; width: 100%; font-size: .95rem; } table.fig th, table.fig td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
 table.fig th { color: var(--muted); font-weight: 700; background: rgba(255, 255, 255, .04); } table.fig tr.hl td { background: rgba(110, 231, 183, .12); }
+.fig-chart { width: 100%; max-width: 420px; display: block; margin: 6px 0 10px; } .fig-chart .bar { fill: #22d3ee; } .fig-chart .hl .bar { fill: #6ee7b7; } .fig-chart .val { fill: var(--muted); font-size: 12px; }
 .table-wrap { overflow-x: auto; }
 .evidence { border-left: 3px solid var(--mint); padding: 6px 10px; margin: 8px 0; background: rgba(94, 234, 212, .06); border-radius: 0 10px 10px 0; }
 .sticky-actions { position: sticky; bottom: calc(70px + env(safe-area-inset-bottom)); z-index: 5; background: #0a1324; box-shadow: 0 -10px 24px rgba(4, 6, 13, .85); border: 1px solid var(--line); border-radius: 16px; padding: 10px; margin-top: 14px;

@@ -299,7 +299,10 @@ def authored_to_unit(raw: dict, spec: GenSpec) -> dict:
         "title": a.title[:120], "topic": _slug(a.topic), "skill_tags": skills, "primary_skill": primary,
         "provisional_difficulty_band": spec.band, "calibration_status": "provisional",
         "family_id": f"{spec.mode}:{spec.part}:{_slug(a.family_slug)}", "variant_of": None,
-        "presentation_profile": {"kind": "official", "choices_read_aloud": False, "figure_verbalized": False, "notes": ""},
+        # R06: parts that choose between pictures are described in words here - an arranged presentation, never official
+        "presentation_profile": ({"kind": "audio_arranged", "choices_read_aloud": False, "figure_verbalized": True, "notes": "pictures described in words (形式調整版)"}
+                                 if (part.get("contract") or {}).get("requires_pictures")
+                                 else {"kind": "official", "choices_read_aloud": False, "figure_verbalized": False, "notes": ""}),
         "speakers": speakers,
         "pre_info": {"situation_en": a.pre_info_situation, "read_seconds": part.get("pre_read_sec", 10)} if a.pre_info_situation else None,
         "figures": [f.model_dump() for f in a.figures],
@@ -418,8 +421,64 @@ def lint_unit(unit: UnitContent, require_distractors: bool = True) -> list[str]:
             }
             if kinds != {"u", "f"}:
                 errs.append(f"question {q.id}: an integration item must need both the audio and the figure")
+    errs += contract_errors(unit, part)
     expected_groups = unit_scoring_groups(profile, unit.part, [q.id for q in unit.sorted_questions()])
     norm = lambda gs: sorted((tuple(g["question_ids"]), float(g["points"]), bool(g["all_or_nothing"])) for g in gs)  # noqa: E731
     if norm(expected_groups) != norm([g.model_dump() for g in unit.scoring_groups]):
         errs.append("scoring_groups do not match the profile's scoring rules for this part")
+    return errs
+
+
+def contract_errors(unit: UnitContent, part: dict) -> list[str]:
+    """R06: the exam format as a checkable contract (profile part["contract"]), checked for free before any paid
+    review or audio. Required conditions are errors; nothing here is a style warning."""
+    c = part.get("contract") or {}
+    errs: list[str] = []
+    qs = unit.sorted_questions()
+    n = c.get("choices")
+    if n:
+        for q in qs:
+            if q.type == "single_choice" and len(q.choices) != n:
+                errs.append(f"question {q.id}: this part needs {n} choices, got {len(q.choices)}")
+    if c.get("shared_choices") and qs:
+        first = sorted(ch.text.strip().lower() for ch in qs[0].choices)
+        if any(sorted(ch.text.strip().lower() for ch in q.choices) != first for q in qs[1:]):
+            errs.append("every question of this part must share the same choices")
+    if c.get("requires_pictures") and unit.presentation_profile.kind == "official":
+        errs.append(
+            "this part chooses between pictures in the official exam; material that describes them in words "
+            "must use the audio_arranged presentation (形式調整版), not official"
+        )
+    need_fig = c.get("requires_figure")
+    if need_fig and not any(f.kind == need_fig for f in unit.figures):
+        errs.append(f"this part needs a {need_fig} figure")
+    roles = c.get("segment_roles")
+    if roles:
+        got = [s.label for s in unit.segments]
+        if got != roles:
+            errs.append(f"segments must be labelled {roles} in this order (got {got})")
+        else:
+            seg_of = {u.id: s.label for s in unit.segments for u in s.utterances}
+            speakers_of = {u.id: u.speaker_id for s in unit.segments for u in s.utterances}
+            for q in qs:
+                rule = (c.get("slot_rules") or {}).get(str(q.slot))
+                if not rule:
+                    continue
+                used = {seg_of.get(e.utterance_id) for e in q.evidence if e.utterance_id}
+                for need in rule.get("needs_segments", []):
+                    if need not in used:
+                        errs.append(f"question {q.id} (slot {q.slot}): evidence must include the {need}")
+                if rule.get("needs_figure") and not any(e.figure_id for e in q.evidence):
+                    errs.append(f"question {q.id} (slot {q.slot}): evidence must include the figure")
+                k = rule.get("min_comment_speakers")
+                if k:
+                    spk = {
+                        speakers_of[e.utterance_id]
+                        for e in q.evidence
+                        if e.utterance_id and seg_of.get(e.utterance_id) == "comments"
+                    }
+                    if len(spk) < k:
+                        errs.append(
+                            f"question {q.id} (slot {q.slot}): must compare both students' comments with the lecture"
+                        )
     return errs

@@ -60,6 +60,12 @@ def expand_fixture(raw: dict) -> dict:
             n += 1
             utts.append({"id": f"u{n}", "speaker_id": _sid(lbl), "lang": "en", "text": text})
         segments.append({"id": f"s{si}", "label": "", "plays": part["plays"], "utterances": utts})
+    roles = (part.get("contract") or {}).get("segment_roles")
+    if roles and len(roles) == len(
+        segments
+    ):  # R06: part 5 segments carry their role (lecture / comments / conversation)
+        for seg, role in zip(segments, roles, strict=True):
+            seg["label"] = role
     figures = []
     for f in raw.get("figures", []):
         rows = [
@@ -103,11 +109,23 @@ def expand_fixture(raw: dict) -> dict:
         "schema_version": 2, "source": "fixture", "content_id": raw["id"], "revision": raw.get("revision", 1), "mode": raw["mode"], "profile_version": profile["id"],
         "part": raw["part"], "template_type": part["template_type"], "title": raw["title"], "topic": raw["topic"], "skill_tags": skills, "primary_skill": primary,
         "provisional_difficulty_band": raw["band"], "calibration_status": "provisional", "family_id": raw["family"], "variant_of": raw.get("variant_of"),
-        "presentation_profile": {"kind": "official", "choices_read_aloud": False, "figure_verbalized": False, "notes": ""}, "speakers": speakers,
+        "presentation_profile": _presentation(part), "speakers": speakers,
         "pre_info": {"situation_en": raw["pre"], "read_seconds": part.get("pre_read_sec", 10)} if raw.get("pre") else None, "figures": figures, "segments": segments,
         "questions": questions, "scoring_groups": unit_scoring_groups(profile, raw["part"], [q["id"] for q in questions]),
         "radio": {"supported": raw.get("radio", True), "reason": raw.get("radio_reason", ""), "figure_description_en": raw.get("radio_desc", "")},
     }  # fmt: skip
+
+
+def _presentation(part: dict) -> dict:
+    """R06: parts that choose between pictures are described in words in this app - an arranged presentation."""
+    if (part.get("contract") or {}).get("requires_pictures"):
+        return {
+            "kind": "audio_arranged",
+            "choices_read_aloud": False,
+            "figure_verbalized": True,
+            "notes": "pictures described in words (形式調整版)",
+        }
+    return {"kind": "official", "choices_read_aloud": False, "figure_verbalized": False, "notes": ""}
 
 
 def load_fixture_units(directory: Path | None = None) -> list[UnitContent]:
