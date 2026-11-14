@@ -158,6 +158,14 @@ progress { width: 100%; height: 10px; accent-color: var(--cyan); }
 input[type=range] { width: 100%; min-height: 44px; padding: 0; accent-color: var(--cyan); }
 table.list { width: 100%; border-collapse: collapse; font-size: .9rem; } table.list th, table.list td { padding: 8px 8px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
 table.list th { color: var(--muted); font-weight: 600; }
+table.list td small { overflow-wrap: anywhere; }
+/* Phone width: long failure reasons used to squeeze the title column to one letter per line. Stack each row. */
+@media (max-width: 640px) {
+  table.list thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  table.list, table.list tbody, table.list tr, table.list td { display: block; width: 100%; }
+  table.list tr { padding: 10px 0; border-bottom: 1px solid var(--line); }
+  table.list td { border-bottom: 0; padding: 3px 0; }
+}
 .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: .92rem; } .kv dt { color: var(--muted); } .kv dd { margin: 0; }
 .login { max-width: 400px; margin: 12vh auto 0; }
 

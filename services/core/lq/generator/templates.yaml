@@ -7,6 +7,10 @@ common_rules: |
   - Every wrong choice must be plausible but clearly wrong for a reason you can state from the script.
   - Do not use trick questions without textual support, and never allow two defensible answers.
   - Evidence must point to real utterance ids (and figure element ids when a figure is needed).
+    A question tagged "integration" that uses a figure (figure_ids not empty) must list at least one evidence
+    entry with an utterance_id AND at least one entry with figure_id/element_id: the answer must need both
+    what is heard and what is shown. If the figure alone or the audio alone is enough, do not tag it
+    "integration" and do not attach the figure.
   - Difficulty must come from the listed factors (vocabulary, discourse structure, inference depth,
     information density, length, number of speakers) - never from sheer word count or unnatural speed.
   - explanation_ja: 1-2 short Japanese sentences. distractors: one Japanese reason per wrong choice.
