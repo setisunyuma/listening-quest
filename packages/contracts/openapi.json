@@ -2809,6 +2809,63 @@
     "summary": "Admin Retry"
    }
   },
+  "/api/admin/jobs/{job_id}/rewrite": {
+   "post": {
+    "operationId": "admin_rewrite_api_admin_jobs__job_id__rewrite_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "job_id",
+      "required": true,
+      "schema": {
+       "title": "Job Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Rewrite Api Admin Jobs  Job Id  Rewrite Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Rewrite"
+   }
+  },
   "/api/admin/mock": {
    "get": {
     "operationId": "admin_mock_api_admin_mock_get",

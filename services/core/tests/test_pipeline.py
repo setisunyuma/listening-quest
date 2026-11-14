@@ -979,7 +979,7 @@ def test_a_draft_that_fails_format_checks_is_rewritten_once_with_the_reasons(db,
     notes = prov.specs[1].extra["fix_notes"]
     assert any("duplicate choice text" in n for n in notes)
     _, prompt = authoring.build_generation_prompt(prov.specs[1])
-    assert "failed these automatic format checks" in prompt and "duplicate choice text" in prompt
+    assert "failed these automatic checks" in prompt and "duplicate choice text" in prompt
     assert "fix_notes" not in prov.specs[0].extra  # the first request carries no feedback
 
 
@@ -1127,3 +1127,25 @@ def test_cost_report_separates_usable_material_from_waste(db, live_user):
     db.commit()
     rep = admin.cost_report(db, "live")
     assert rep["wasted_jobs"] == 1 and rep["wasted_usd"] == pytest.approx(budget.job_cost(db, bad)["counted_usd"])
+
+
+def test_a_quarantined_unit_can_be_rewritten_once_with_the_reason(db, user):
+    from lq.services import admin
+
+    prov = _LintOnce(bad_drafts=5)  # every draft breaks a format rule -> quarantined
+    factory.set_provider_override("demo", demo_providers(content=prov))
+    jid = enqueue(db)
+    worker.drain("w")
+    _, unit = unit_of(db, jid)
+    assert unit.status == "QUARANTINED"
+    job2, created = admin.rewrite_quarantined(db, "demo", jid)
+    db.commit()
+    again, created_again = admin.rewrite_quarantined(db, "demo", jid)
+    assert created and not created_again and again.id == job2.id  # one rewrite per quarantined job
+    prov.bad = 0  # the rewrite comes back clean
+    factory.set_provider_override("demo", demo_providers(content=prov))
+    assert worker.drain("w") == ["succeeded"]
+    notes = prov.specs[-1].extra["fix_notes"]
+    assert any("rejected by quality checks" in n and "duplicate choice text" in n for n in notes)
+    with pytest.raises(ValueError):
+        admin.rewrite_quarantined(db, "demo", job2.id)  # READY material is not rewritten

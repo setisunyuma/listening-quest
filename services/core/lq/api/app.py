@@ -809,6 +809,18 @@ def admin_retry(job_id: str, session: Session = Depends(db), user: m.User = Depe
     return admin.job_dto(session, job)
 
 
+@app.post("/api/admin/jobs/{job_id}/rewrite")
+def admin_rewrite(job_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    try:
+        job, created = admin.rewrite_quarantined(session, user.realm, job_id)
+    except LookupError as e:
+        raise L.NotFound(str(e)) from e
+    except ValueError as e:
+        raise L.Invalid(str(e)) from e
+    session.commit()
+    return {"job_id": job.id, "created": created}
+
+
 @app.get("/api/admin/units")
 def admin_units(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
     return {"units": admin.list_units(session, user.realm)}

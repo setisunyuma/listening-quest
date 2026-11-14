@@ -100,7 +100,8 @@ export default function AdminPage() {
                 <td><small>{j.last_completed_step ? `完了した工程: ${STEP[j.last_completed_step] ?? j.last_completed_step}` : "未着手"}{j.status === "BLOCKED" ? <><br />{j.blocked_label ?? j.blocked_reason}</> : null}
                   {(j.status === "FAILED" || j.status === "RETRY_WAIT") && <><br />{j.unit_status_reason ?? j.stop_detail}（試行 {j.attempts}/{j.max_attempts}）</>}</small></td>
                 <td><small>{j.cost.requests ? `確定 $${j.cost.settled_usd.toFixed(4)}${j.cost.unknown_usd ? `・不明 $${j.cost.unknown_usd.toFixed(4)}` : ""}` : "—"}</small></td>
-                <td>{["FAILED", "BLOCKED", "RETRY_WAIT"].includes(j.status) && j.unit_status !== "QUARANTINED" && <button className="small" onClick={() => run(async () => { await api(`/admin/jobs/${j.id}/retry`, { body: {} }); return "再試行を予約しました。"; })}>再試行</button>}</td>
+                <td>{["FAILED", "BLOCKED", "RETRY_WAIT"].includes(j.status) && j.unit_status !== "QUARANTINED" && <button className="small" onClick={() => run(async () => { await api(`/admin/jobs/${j.id}/retry`, { body: {} }); return "再試行を予約しました。"; })}>再試行</button>}
+                  {j.unit_status === "QUARANTINED" && j.kind === "generate" && j.params.origin !== "rewrite" && <button className="small" onClick={() => { if (window.confirm("隔離の理由を伝えて、新しい教材を1件作り直します。1件分の生成費用（目安 $0.03〜0.10、1日・月の予算の範囲内）がかかります。")) run(async () => { const r = await api<Json>(`/admin/jobs/${j.id}/rewrite`, { body: {} }); return r.created ? "作り直しを予約しました。" : "この教材の作り直しは予約済みです。"; }); }}>指摘を伝えて作り直す</button>}</td>
               </tr>
             ))}</tbody></table></div>
         )}

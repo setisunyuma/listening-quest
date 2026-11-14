@@ -179,3 +179,24 @@ def cost_report(session, realm: str, today=None, days: int = 31) -> dict:
         "in_progress_usd": round(other, 6),
         "note": "このアプリの計算（確定＋推計＋不明＋予約中）。実際の請求額は OpenAI の請求画面が正です。",
     }
+
+
+def rewrite_quarantined(session, realm: str, job_id: str) -> tuple[m.GenerationJob, bool]:
+    """Queue ONE new generation for a quarantined unit, with the quarantine reason passed to the writer as
+    something to fix. Manual only (a button), paid like any generation and inside the same budgets; asking
+    again for the same job returns the job already queued instead of paying twice."""
+    from lq.jobs import queue
+
+    job = session.get(m.GenerationJob, job_id)
+    if job is None or job.realm != realm or job.kind != "generate":
+        raise LookupError("job not found")
+    unit = session.get(m.Unit, job.unit_id) if job.unit_id else None
+    if unit is None or unit.status != "QUARANTINED":
+        raise ValueError("only quarantined material can be rewritten")
+    reason = (unit.status_reason or "").strip()[:1200]
+    params = {k: v for k, v in (job.params or {}).items() if k != "extra"}
+    params["seed"] = f"{params.get('seed', 'x')}-rw"
+    params["extra"] = {"fix_notes": [f"An earlier draft for this request was rejected by quality checks: {reason}. "
+                                     "Write a new unit that avoids this problem."]}  # fmt: skip
+    params["origin"] = "rewrite"
+    return queue.enqueue(session, realm, "generate", params, dedupe_key=f"rewrite:{job.id}")

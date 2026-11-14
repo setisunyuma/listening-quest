@@ -205,7 +205,7 @@ def build_generation_prompt(spec: GenSpec) -> tuple[str, str]:
     fixes = (spec.extra or {}).get("fix_notes")
     if fixes:
         user += (
-            "\nA previous draft for this request failed these automatic format checks. Write a new draft that"
+            "\nA previous draft for this request failed these automatic checks. Write a new draft that"
             " passes them:\n- " + "\n- ".join(fixes)
         )
     return system, user

@@ -149,7 +149,11 @@ def step_content(lease: Lease, prov, meter, realm: str, params: dict) -> str:
     content = None
     lint_fixes: list[str] = []
     for attempt in range(3):  # schema violations / format-check failures: bounded retries, each one budgeted
-        ask = spec if not lint_fixes else dataclasses.replace(spec, extra={**spec.extra, "fix_notes": lint_fixes})
+        ask = (
+            spec
+            if not lint_fixes
+            else dataclasses.replace(spec, extra={**spec.extra, "fix_notes": [*(spec.extra.get("fix_notes") or []), *lint_fixes]})
+        )
         raw = prov.content.generate(ask, meter)
         try:
             cand = UnitContent.model_validate(raw)
