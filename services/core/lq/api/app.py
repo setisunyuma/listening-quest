@@ -684,6 +684,15 @@ def assessment_get(
     return assessment.paper_dto(session, assessment.get_session(session, user, session_id))
 
 
+@app.post("/api/assessments/{session_id}/conditions")
+def assessment_condition(
+    session_id: str, body: S.ConditionIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    out = assessment.record_condition(session, user, session_id, body.kind, body.detail, now_utc())
+    session.commit()
+    return out
+
+
 @app.post("/api/assessments/{session_id}/submit")
 def assessment_submit(
     session_id: str, body: S.AssessmentSubmitIn, session: Session = Depends(db), user: m.User = Depends(current_user)

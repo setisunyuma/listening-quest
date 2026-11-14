@@ -490,6 +490,8 @@ class MockSet(Base):
     realm: Mapped[str] = mapped_column(String(8))
     mode: Mapped[str] = mapped_column(String(32))
     profile_id: Mapped[str] = mapped_column(String(64))
+    # R05: the exact profile the set was built with; display, layout and scoring use this, not the current file
+    profile_snapshot: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     kind: Mapped[str] = mapped_column(String(24))  # full_mock | app_check
     status: Mapped[str] = mapped_column(String(16), default="READY")  # READY | USED | STALE
     items: Mapped[list] = mapped_column(JSONB)  # [{unit_id, part, slots:{question_id: slot}}]

@@ -653,3 +653,55 @@ def budget_off(db) -> bool:
 
     cfg = budget.get_system(db, "live")
     return cfg["paid_enabled"] is False and cfg["verification"] is None
+
+
+# ---- R05: a set keeps the profile it was built with; interrupted runs are labelled
+
+
+def test_r05_set_uses_its_own_profile_after_the_current_profile_changes(db, user, monkeypatch):
+    import copy
+
+    from lq.domain import profiles as PR
+
+    _reserve_full_set(db, "cefr_c1")
+    ms = assessment.assemble(db, "demo", "cefr_c1")
+    db.commit()
+    old_label = assessment.mock_set_dto(ms)["label"]
+    c = login()
+    sid = c.post("/api/assessments", json={"mock_set_id": ms.id}).json()["session_id"]
+    paper_a = c.get(f"/api/assessments/{sid}").json()
+    # a new version B becomes current: different label and part names; version A disappears from disk
+    real = PR.load_profiles()
+    a_id = ms.profile_id
+    b = copy.deepcopy(real[a_id])
+    b["id"], b["exam"]["label_ja"] = "cefr_c1/app_v2", "新しい版"
+    for p in b["parts"]:
+        p["label_ja"] = "改名済み " + p["label_ja"]
+    changed = {k: v for k, v in real.items() if k != a_id} | {b["id"]: b}
+    monkeypatch.setattr(PR, "load_profiles", lambda: changed)
+    paper_after = c.get(f"/api/assessments/{sid}").json()
+    assert paper_after["label"] == paper_a["label"] == old_label
+    assert [i["part_label"] for i in paper_after["items"]] == [i["part_label"] for i in paper_a["items"]]
+    c.post(f"/api/assessments/{sid}/conditions", json={"kind": "resume", "detail": "PWA restart"})
+    res = c.post(f"/api/assessments/{sid}/submit", json={"answers": {}}).json()
+    assert res["profile_id"] == a_id and res["label"] == old_label
+    assert res["standard"] is False and res["conditions"] == ["resume"]  # interrupted: never standard conditions
+    # an old set without a snapshot whose profile id no longer exists is refused, not re-read as "current"
+    ms2 = db.get(m.MockSet, ms.id)
+    ms2.profile_snapshot = None
+    db.commit()
+    import pytest
+
+    with pytest.raises(L.Conflict):
+        assessment.set_profile(ms2)
+
+
+def test_r05_lint_uses_the_units_own_profile_version():
+    from helpers import make_content
+
+    from lq.generator.authoring import lint_unit
+
+    u = make_content(seed="lintv")
+    assert not [e for e in lint_unit(u) if "profile" in e]
+    bad = u.model_copy(update={"profile_version": "common_test/1999_old"})
+    assert lint_unit(bad) == ["unknown profile version 'common_test/1999_old' (no fallback to the current version)"]

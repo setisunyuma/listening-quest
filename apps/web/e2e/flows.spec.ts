@@ -200,11 +200,21 @@ test("assessment: duration shown before start, no explanations until submitted",
   await page.getByRole("button", { name: "音声を開始する" }).click();
   await expect(page.getByText(/♪ 再生中|読み込み中/).first()).toBeVisible();
   const groups = page.getByRole("group", { name: /解答欄\d+/ });
-  for (let i = 0; i < 6; i++) await groups.nth(i).getByRole("button").first().click();
+  for (let i = 0; i < 3; i++) await groups.nth(i).getByRole("button").first().click();
+  await expect(page.getByText("3 / 7 回答")).toBeVisible();
+  // R05: an interruption (reload / app restart) keeps answers and is recorded as a condition
+  await page.waitForTimeout(400);
+  await page.reload();
+  await page.getByRole("button", { name: "続きから" }).click();
+  await expect(page.getByText("中断・再開あり（条件付き）")).toBeVisible();
+  await expect(page.getByText("3 / 7 回答")).toBeVisible();
+  await expect(page.getByText(/経過 0:00 /)).toHaveCount(0);  // the clock does not restart from zero
+  for (let i = 3; i < 6; i++) await groups.nth(i).getByRole("button").first().click();
   await expect(page.getByText("6 / 7 回答")).toBeVisible();
   page.once("dialog", (d) => { expect(d.message()).toContain("未回答が 1 問"); d.accept(); });
   await page.getByRole("button", { name: "提出して採点する" }).click();
   await expect(page.getByRole("heading", { name: "アプリ内実力チェックの結果" })).toBeVisible();
+  await expect(page.getByText(/条件付きの結果（中断・再開あり）/)).toBeVisible();
   await expect(page.getByText(/C1 \d \/ 7/).first()).toBeVisible();
   await expect(page.getByText("－ 未回答")).toBeVisible();
   await expect(page.getByText("CEFRの認定や公式試験の結果を示すものではありません")).toBeVisible();
