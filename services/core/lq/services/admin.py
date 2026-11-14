@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 
 from lq.db import models as m
 from lq.generator import budget
@@ -200,3 +200,57 @@ def rewrite_quarantined(session, realm: str, job_id: str) -> tuple[m.GenerationJ
                                      "Write a new unit that avoids this problem."]}  # fmt: skip
     params["origin"] = "rewrite"
     return queue.enqueue(session, realm, "generate", params, dedupe_key=f"rewrite:{job.id}")
+
+
+UNUSABLE = ("QUARANTINED", "FAILED")
+
+
+def storage_summary(session, realm: str) -> dict:
+    """Bytes of stored audio by what it belongs to. Only audio of material no learner can reach is reclaimable."""
+    A, U = m.Asset, m.Unit
+    rows = session.execute(
+        select(U.status, U.invalidated_at.is_(None), func.count(A.id), func.coalesce(func.sum(A.bytes), 0))
+        .join(U, U.id == A.unit_id)
+        .where(U.realm == realm)
+        .group_by(U.status, U.invalidated_at.is_(None))
+    ).all()
+    out = {"usable_bytes": 0, "invalidated_bytes": 0, "unusable_bytes": 0, "unusable_files": 0, "other_bytes": 0}
+    for status, active, n, b in rows:
+        if status in UNUSABLE:
+            out["unusable_bytes"] += int(b)
+            out["unusable_files"] += int(n)
+        elif not active:
+            out["invalidated_bytes"] += int(b)  # kept: the learner's history still links to it
+        elif status == "READY":
+            out["usable_bytes"] += int(b)
+        else:
+            out["other_bytes"] += int(b)  # still being made
+    return out
+
+
+def cleanup_unusable(session, realm: str, older_than_days: int = 7, now: datetime | None = None) -> dict:
+    """Delete the audio of quarantined / failed material older than `older_than_days`, plus orphaned files.
+    The unit rows, reports and review records stay (only the sound files go), so nothing in the learner's
+    history changes; such material was never offered to the learner."""
+    from datetime import timedelta
+
+    from lq.services.content import gc_orphan_objects
+    from lq.storage import get_storage
+
+    now = now or datetime.now(UTC)
+    A, U = m.Asset, m.Unit
+    rows = session.execute(
+        select(A).join(U, U.id == A.unit_id).where(U.realm == realm, U.status.in_(UNUSABLE), U.created_at < now - timedelta(days=older_than_days))
+    ).scalars().all()  # fmt: skip
+    st = get_storage()
+    freed = 0
+    for a in rows:
+        try:
+            st.delete(a.storage_key)
+        except FileNotFoundError:
+            pass
+        freed += a.bytes or 0
+        session.delete(a)
+    session.flush()
+    orphans = gc_orphan_objects(session)
+    return {"deleted_files": len(rows), "freed_bytes": int(freed), "orphans_removed": len(orphans)}

@@ -152,7 +152,9 @@ def step_content(lease: Lease, prov, meter, realm: str, params: dict) -> str:
         ask = (
             spec
             if not lint_fixes
-            else dataclasses.replace(spec, extra={**spec.extra, "fix_notes": [*(spec.extra.get("fix_notes") or []), *lint_fixes]})
+            else dataclasses.replace(
+                spec, extra={**spec.extra, "fix_notes": [*(spec.extra.get("fix_notes") or []), *lint_fixes]}
+            )
         )
         raw = prov.content.generate(ask, meter)
         try:

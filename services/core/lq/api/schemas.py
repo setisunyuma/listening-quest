@@ -45,6 +45,7 @@ class SettingsPatch(BaseModel):
     primary_side: Literal["left", "right"] | None = None
     font_scale: float | None = None
     radio_include_new: bool | None = None
+    auto_offline: bool | None = None
 
 
 class AudioRef(BaseModel):

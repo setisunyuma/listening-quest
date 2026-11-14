@@ -821,6 +821,18 @@ def admin_rewrite(job_id: str, session: Session = Depends(db), user: m.User = De
     return {"job_id": job.id, "created": created}
 
 
+@app.get("/api/admin/storage")
+def admin_storage(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    return admin.storage_summary(session, user.realm)
+
+
+@app.post("/api/admin/storage/cleanup")
+def admin_storage_cleanup(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    out = admin.cleanup_unusable(session, user.realm)
+    session.commit()
+    return out
+
+
 @app.get("/api/admin/units")
 def admin_units(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
     return {"units": admin.list_units(session, user.realm)}

@@ -38,6 +38,7 @@ DEFAULT_USER_SETTINGS = {
     "primary_side": "right",
     "font_scale": 1.0,
     "radio_include_new": True,
+    "auto_offline": False,  # save the day's not-started units to the device whenever the app opens online
 }
 ANSWER_ACCESS_KINDS = ("answer_access", "radio_access", "assessment")
 ERROR_REASONS = ("sound", "vocabulary", "numbers_negation", "inference", "organizing", "focus", "other")

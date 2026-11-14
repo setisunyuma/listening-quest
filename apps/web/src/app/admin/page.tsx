@@ -282,7 +282,28 @@ function Diagnostics() {
         </table></div>
         <p className="faint">{data.version ? `版 ${data.version}・` : ""}{data.region ? `地域 ${data.region}・` : ""}確認 {new Date(data.checked_at).toLocaleTimeString("ja-JP")}</p>
         <button className="small" onClick={reload}>もう一度確認</button>
+        <StorageBox />
       </details>
     </section>
+  );
+}
+
+const mb = (b: number) => `${(b / 1e6).toFixed(1)} MB`;
+
+function StorageBox() {
+  const { data, reload } = useData<Json>(() => api("/admin/storage"), []);
+  const [msg, setMsg] = useState("");
+  if (!data) return null;
+  const clean = async () => {
+    if (!window.confirm(`隔離・失敗した教材の音声（${mb(data.unusable_bytes)}）と、どこからも参照されていないファイルを削除します。学習で使える教材と履歴には影響しません。元には戻せません。`)) return;
+    try { const r = await api<Json>("/admin/storage/cleanup", { body: {} }); setMsg(`${r.deleted_files} 件（${mb(r.freed_bytes)}）と、参照のないファイル ${r.orphans_removed} 件を削除しました。`); reload(); }
+    catch (e) { setMsg((e as ApiError).detail); }
+  };
+  return (
+    <div className="qbox"><h3>音声の保存量</h3>
+      <p className="note">学習に使える教材 {mb(data.usable_bytes)}・無効化した教材 {mb(data.invalidated_bytes)}（履歴から参照するため保持）・隔離／失敗 {mb(data.unusable_bytes)}{data.other_bytes > 0 ? `・作成中 ${mb(data.other_bytes)}` : ""}</p>
+      {data.unusable_bytes > 0 && <button className="small" onClick={clean}>隔離・失敗した教材の音声を削除（7日以上前のもの）</button>}
+      {msg && <Msg kind="ok">{msg}</Msg>}
+    </div>
   );
 }

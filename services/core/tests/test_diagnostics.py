@@ -32,3 +32,34 @@ def test_live_diagnostics_report_the_key_only_as_set_or_not(db, monkeypatch):
     finally:
         get_settings.cache_clear()
     assert db.query(m.User).count() == 1
+
+
+def test_cleanup_removes_only_audio_of_unusable_material(db, user):
+    from datetime import UTC, datetime, timedelta
+
+    from helpers import ready_unit
+
+    from lq.services import admin
+    from lq.services import content as C
+    from lq.storage import get_storage
+
+    good = ready_unit(db, seed="keep1")
+    bad = ready_unit(db, seed="drop1")
+    C.quarantine(db, bad, "test")
+    bad.created_at = datetime.now(UTC) - timedelta(days=30)
+    db.commit()
+    before = admin.storage_summary(db, "demo")
+    assert before["unusable_bytes"] > 0 and before["usable_bytes"] > 0
+    bad_keys = [a.storage_key for a in db.query(m.Asset).filter(m.Asset.unit_id == bad.id)]
+    good_keys = [a.storage_key for a in db.query(m.Asset).filter(m.Asset.unit_id == good.id)]
+    r = login().post("/api/admin/storage/cleanup")
+    assert (
+        r.status_code == 200
+        and r.json()["deleted_files"] == len(bad_keys)
+        and r.json()["freed_bytes"] == before["unusable_bytes"]
+    )
+    st = get_storage()
+    assert not any(st.exists(k) for k in bad_keys) and all(st.exists(k) for k in good_keys)
+    db.expire_all()
+    assert db.get(m.Unit, bad.id) is not None  # the record stays; only sound files go
+    assert admin.storage_summary(db, "demo")["unusable_bytes"] == 0

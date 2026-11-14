@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/Shell";
 import { BandChip, DemoChip, Msg, Ring, useData } from "@/components/ui";
 import { api, ApiError, CATEGORY_LABEL, fmtMin, MODE_LABEL, type Home, type Json, type Plan } from "@/lib/api";
@@ -44,6 +44,15 @@ export default function HomePage() {
     }
     packs.reload();
     setMsg({ kind: "ok", text: `${n}件の問題と音声を端末に保存しました。オフラインでも解答できます（採点は同期後）。` });
+  });
+  // setting "auto_offline": once per plan and app start, save the not-started units while online
+  const autoDone = useRef("");
+  useEffect(() => {
+    const plan = data?.plan;
+    if (!app.settings.auto_offline || !app.online || !plan || busy || autoDone.current === plan.id) return;
+    if (!plan.slots.some((s) => s.state === "pending" && !s.reserved && s.unit)) return;
+    autoDone.current = plan.id;
+    takeOffline(plan);
   });
   const release = (plan: Plan) => act("release", async () => {
     if (app.pending > 0) { await app.syncNow(); }

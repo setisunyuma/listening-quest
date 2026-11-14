@@ -42,6 +42,8 @@ export default function SettingsPage() {
       </section>
       <section className="panel"><h2>再生と表示</h2>
         <label className="check"><input type="checkbox" checked={!!s.radio_include_new} onChange={(e) => save({ radio_include_new: e.target.checked })} />ラジオに未学習の教材も含める</label>
+        <label className="check"><input type="checkbox" checked={!!s.auto_offline} onChange={(e) => save({ auto_offline: e.target.checked })} />今日のクエストを自動で端末に保存（オフライン用）</label>
+        <p className="faint">オンラインでアプリを開くたびに、未開始の問題と音声を端末に保存します。通信量は1回あたり数MBです（iPhone では Wi-Fi かどうかを判別できないため、モバイル通信でも保存します）。保存した枠は、誤答による別の問題への入れ替えの対象外になります。</p>
         <label className="check"><input type="checkbox" checked={!!s.sfx} onChange={(e) => save({ sfx: e.target.checked })} />効果音（達成時の短い音）</label>
         <label className="check"><input type="checkbox" checked={!!s.reduce_effects} onChange={(e) => save({ reduce_effects: e.target.checked })} />演出と背景の動きを減らす</label>
         <label className="field">主な操作ボタンの位置<select value={s.primary_side} onChange={(e) => save({ primary_side: e.target.value })}><option value="right">右寄せ（標準）</option><option value="left">左寄せ（左手操作向け）</option></select></label>
