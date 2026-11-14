@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { GoalPanel } from "@/components/Goals";
+import { PracticePanel } from "@/components/Practice";
 import { useApp } from "@/components/Shell";
 import { BandChip, DemoChip, Msg, Ring, useData } from "@/components/ui";
 import { api, ApiError, CATEGORY_LABEL, fmtMin, MODE_LABEL, type Home, type Json, type Plan } from "@/lib/api";
@@ -180,6 +181,7 @@ export default function HomePage() {
       </section>
 
       <GoalPanel />
+      <PracticePanel />
 
       <section className="panel" aria-label="継続の記録">
         <div className="stats">

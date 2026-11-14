@@ -201,7 +201,7 @@ class PreInfo(Strict):
 
 
 class PresentationProfile(Strict):
-    kind: Literal["official", "audio_arranged"] = "official"
+    kind: Literal["official", "audio_arranged", "practice"] = "official"
     choices_read_aloud: bool = False
     figure_verbalized: bool = False
     notes: str = ""
@@ -231,6 +231,54 @@ class StudyNotes(Strict):
     translations: list[LineTranslation] = []
 
 
+PRACTICE_KINDS = ("P1A", "P1B", "P2A", "P2B", "P3A", "P3B", "P4A", "P4B")
+CRITICAL_KINDS = ("subject", "conclusion", "negation", "number", "condition", "attribution", "certainty")
+
+
+class PracticeItem(Strict):
+    """One rubric item of a practice task = one question (統合指示書 M01). Choices that are critical
+    misunderstandings are labelled, so good answers elsewhere never offset them."""
+
+    question_id: _ID
+    rubric: str = Field(min_length=1, max_length=32)
+    main: bool = True
+    stage: Literal["initial", "final"] = "final"  # P2B: the provisional answer is kept apart from the final one
+    sub_skills: list[str] = []  # versioned sub-skills (curriculum.yaml), mapped onto the 8 common skills
+    critical_choices: dict[
+        str, Literal["subject", "conclusion", "negation", "number", "condition", "attribution", "certainty"]
+    ] = {}
+    accept_choice_ids: list[_ID] = []  # further acceptable answers (a set of reasonable actions)
+    pending_if_unmatched: bool = False  # short answers: text that matches nothing is "判定保留", never wrong
+
+
+class Clarification(Strict):
+    """A permitted check inside the scene (e.g. asking the office). The reply is pre-authored; asking is recorded
+    and never counts as first-time understanding."""
+
+    id: _ID
+    label_ja: str = Field(min_length=1, max_length=120)
+    reply_en: str = Field(min_length=1, max_length=600)
+    informs: list[_ID] = []  # question ids the reply bears on
+
+
+class PracticeBlock(Strict):
+    practice_kind: Literal["P1A", "P1B", "P2A", "P2B", "P3A", "P3B", "P4A", "P4B"]
+    curriculum_version: str
+    purpose_ja: str = Field(min_length=1, max_length=300)  # what the learner needs to achieve in the scene
+    listener_ja: str = ""  # who the result is for (hand-over tasks)
+    success_ja: str = Field(min_length=1, max_length=300)
+    support_level: int = Field(default=1, ge=1, le=4)
+    input_mode: Literal["voice_first", "desk"] = "voice_first"
+    scene: str = Field(min_length=1, max_length=48)  # scene / speaker set-up tag (variety is checked on these)
+    items: list[PracticeItem] = Field(min_length=1)
+    clarifications: list[Clarification] = []
+    max_clarifications: int = Field(default=0, ge=0, le=3)
+    prosody_required: bool = False  # P4B: scored only after the tone was confirmed on real audio
+    prosody_confirmed: bool = False
+    audio_needed_checked: bool = False  # Q01 / V15: the key condition was varied and the answer changed with it
+    generated: bool = True  # generated scripts are shown as generated material, never as real recordings
+
+
 class UnitContent(Strict):
     schema_version: Literal[2] = 2
     source: _ID
@@ -258,6 +306,7 @@ class UnitContent(Strict):
     scoring_groups: list[ScoringGroup] = []
     radio: RadioInfo = RadioInfo()
     estimated_duration_sec: int | None = None
+    practice: PracticeBlock | None = None  # practice track only (統合指示書 A01); never part of exam scoring
     study_notes: StudyNotes = StudyNotes()
 
     @model_validator(mode="after")
@@ -349,6 +398,31 @@ class UnitContent(Strict):
                 grouped.add(qid)
         if self.pre_info is None and self.part.startswith("part3") and self.mode.startswith("eiken"):
             errs.append("Eiken Real-Life units need pre_info")
+        if self.practice is not None:
+            qmap = {q.id: q for q in self.questions}
+            if self.presentation_profile.kind != "practice":
+                errs.append("practice material uses the practice presentation (never official)")
+            seen = set()
+            for it in self.practice.items:
+                q = qmap.get(it.question_id)
+                if q is None:
+                    errs.append(f"practice item: unknown question {it.question_id}")
+                    continue
+                seen.add(it.question_id)
+                cids = {c.id for c in q.choices}
+                for cid in [*it.critical_choices, *it.accept_choice_ids]:
+                    if cid not in cids:
+                        errs.append(f"practice item {it.question_id}: unknown choice {cid}")
+                if q.type == "single_choice" and q.answer.choice_id in it.critical_choices:
+                    errs.append(f"practice item {it.question_id}: the answer cannot be a critical error")
+            if seen != set(qmap):
+                errs.append("every question of a practice task needs a rubric item")
+            for c in self.practice.clarifications:
+                for qid in c.informs:
+                    if qid not in qmap:
+                        errs.append(f"clarification {c.id}: unknown question {qid}")
+            if len(self.practice.clarifications) and not self.practice.max_clarifications:
+                errs.append("clarifications are listed but max_clarifications is 0")
         if errs:
             raise ValueError("; ".join(errs))
         return self
@@ -412,7 +486,10 @@ HASHED_FIELDS = (
 
 def content_hash(unit: UnitContent) -> str:
     data = unit.model_dump(mode="json")
-    return sha256_hex(canonical_json({k: data[k] for k in HASHED_FIELDS}))
+    hashed = {k: data[k] for k in HASHED_FIELDS}
+    if data.get("practice") is not None:  # only practice material carries it: existing hashes do not change
+        hashed["practice"] = data["practice"]
+    return sha256_hex(canonical_json(hashed))
 
 
 def stimulus_fingerprint(unit: UnitContent) -> str:
@@ -440,6 +517,12 @@ def estimate_duration_sec(unit: UnitContent, segment_ms: dict[str, int] | None =
 
 
 # ---------------------------------------------------------------- views
+
+
+def _rubric_label(kind: str, rubric: str) -> str:
+    from lq.domain.practice import task_def
+
+    return next((r["label_ja"] for r in task_def(kind)["rubric"] if r["id"] == rubric), rubric)
 
 
 def learner_view(unit: UnitContent, *, show_audio_prompts: bool = False) -> dict:
@@ -477,6 +560,29 @@ def learner_view(unit: UnitContent, *, show_audio_prompts: bool = False) -> dict
         "figures": [f.model_dump() for f in unit.figures],
         "segments": [{"id": s.id, "label": s.label, "plays": s.plays} for s in unit.segments],
         "questions": questions,
+        # practice tasks: what to achieve and which checks are permitted (never the replies or answers)
+        "practice": None
+        if unit.practice is None
+        else {
+            "kind": unit.practice.practice_kind,
+            "purpose_ja": unit.practice.purpose_ja,
+            "listener_ja": unit.practice.listener_ja,
+            "success_ja": unit.practice.success_ja,
+            "input_mode": unit.practice.input_mode,
+            "max_clarifications": unit.practice.max_clarifications,
+            "clarifications": [{"id": c.id, "label_ja": c.label_ja} for c in unit.practice.clarifications],
+            "items": [
+                {
+                    "question_id": it.question_id,
+                    "rubric": it.rubric,
+                    "label_ja": _rubric_label(unit.practice.practice_kind, it.rubric),
+                    "main": it.main,
+                    "stage": it.stage,
+                }
+                for it in unit.practice.items
+            ],
+            "generated": unit.practice.generated,
+        },  # fmt: skip
     }
 
 

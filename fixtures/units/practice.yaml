@@ -1,0 +1,559 @@
+# Practice track examples (統合実装指示書 E01/E02/C01/C02). Generated scripts written for this app (not real
+# recordings, not official exam material). Each task has an objective rubric: one question per rubric item.
+# `critical` marks choices that are critical misunderstandings; `accept` lists further acceptable choices.
+
+# ---------------------------------------------------------------- P1A 条件に合う行動を選ぶ (Eiken Pre-1 stage)
+- id: pr-p1a-studio-a
+  mode: eiken_pre1
+  part: P1A
+  title: 施設の利用案内 1
+  topic: campus-facilities
+  band: 3
+  family: pr-p1a-studio
+  speakers: {S: female}
+  practice:
+    purpose: 来週の水曜に録音スタジオを2時間使いたい。予約が必要か、どこで手続きするかを決める。
+    success: 自分の条件に合う次の行動と、その決め手を選べる。
+    scene: announcement-1
+    support: 1
+    input_mode: voice_first
+  script:
+    - - "S: Thank you for calling the Media Center. Our recording studio is free for students."
+      - "S: Sessions of up to one hour can be booked online at any time."
+      - "S: If you need more than one hour, please come to the front desk on the second floor, because longer sessions need a staff signature."
+      - "S: Please note that the studio is closed on Wednesday mornings for maintenance, but it is open from one p.m."
+  questions:
+    - prompt: What should you do next?
+      skill: condition_matching
+      rubric: action
+      choices: [Book the studio online right away., Go to the front desk on the second floor., Choose a different day because the studio is closed on Wednesdays., Call again later to check whether a booking is needed.]
+      answer: 2
+      critical: {1: condition, 3: negation}
+      evidence: [3]
+      answer_en: Go to the front desk, because a two-hour session needs a staff signature.
+      ja: 2時間は「1時間を超える」ので、オンラインではなく2階の窓口で手続きします。
+      wrong: [オンライン予約は1時間までです（条件の取り違え）。, 水曜は午前だけ休みで、午後は使えます（否定の取り違え）。, 必要な条件は案内の中で分かります。]
+    - prompt: Which condition decided your answer?
+      skill: condition_matching
+      rubric: condition
+      choices: [The session is longer than one hour., The studio is free for students., You are calling from outside the campus., The session is in the morning.]
+      answer: 1
+      critical: {4: condition}
+      evidence: [2, 3]
+      answer_en: The session is longer than one hour.
+      ja: 決め手は「1時間を超える」ことです。無料かどうかは手続きの場所を決めません。
+      wrong: [無料であることは手続きの場所に関係しません。, 学外からの電話の話は出てきません。, 午前かどうかは予約方法の条件ではありません（午後の利用です）。]
+    - prompt: What is the exception mentioned about Wednesdays?
+      skill: numbers_negation
+      rubric: exception
+      choices: [The studio is closed all day., The studio is closed only in the morning., Bookings must be made by phone., Sessions are limited to one hour.]
+      answer: 2
+      evidence: [4]
+      answer_en: It is closed only on Wednesday mornings.
+      ja: 水曜は午前のみ点検で閉まり、午後1時から使えます。
+      wrong: [終日ではありません。, 電話予約の話はありません。, 時間の上限は曜日に関係しません。]
+
+- id: pr-p1a-studio-b
+  mode: eiken_pre1
+  part: P1A
+  title: 施設の利用案内 2
+  topic: campus-facilities
+  band: 3
+  family: pr-p1a-studio-short
+  speakers: {S: male}
+  practice:
+    purpose: 来週の水曜の午後に録音スタジオを45分使いたい。予約が必要か、どこで手続きするかを決める。
+    success: 自分の条件に合う次の行動と、その決め手を選べる。
+    scene: voicemail-1
+    support: 1
+    input_mode: voice_first
+  script:
+    - - "S: Hi, this is Ken from the Media Center returning your message about the recording studio."
+      - "S: Students can use it for free. Anything up to one hour, you can just book online, any time."
+      - "S: Longer sessions have to be arranged at the front desk on the second floor."
+      - "S: Oh, and it's closed on Wednesday mornings, but open in the afternoon."
+  questions:
+    - prompt: What should you do next?
+      skill: condition_matching
+      rubric: action
+      choices: [Book the studio online., Go to the front desk on the second floor., Choose a different day because the studio is closed on Wednesdays., Call again later to check whether a booking is needed.]
+      answer: 1
+      critical: {2: condition, 3: negation}
+      evidence: [2]
+      answer_en: Book online, because 45 minutes is within one hour.
+      ja: 45分は1時間以内なので、オンラインでいつでも予約できます。
+      wrong: [窓口が必要なのは1時間を超える場合です（条件の取り違え）。, 水曜は午前だけ休みで、午後は使えます（否定の取り違え）。, 必要な条件は留守電の中で分かります。]
+    - prompt: Which condition decided your answer?
+      skill: condition_matching
+      rubric: condition
+      choices: [The session is one hour or shorter., The studio is free for students., The session is on a Wednesday., Ken returned your message.]
+      answer: 1
+      evidence: [2, 3]
+      answer_en: The session is one hour or shorter.
+      ja: 決め手は「1時間以内」であることです。
+      wrong: [無料かどうかは手続きを決めません。, 曜日は手続きの方法を決めません。, 折り返しの電話であることは条件ではありません。]
+    - prompt: What is the exception mentioned about Wednesdays?
+      skill: numbers_negation
+      rubric: exception
+      choices: [The studio is closed all day., The studio is closed only in the morning., Bookings must be made by phone., Sessions are limited to one hour.]
+      answer: 2
+      evidence: [4]
+      answer_en: It is closed only on Wednesday mornings.
+      ja: 水曜は午前だけ閉まり、午後は開いています。
+      wrong: [終日ではありません。, 電話予約の話はありません。, 時間の上限は曜日に関係しません。]
+
+- id: pr-p1a-hall-missing
+  mode: eiken_pre1
+  part: P1A
+  title: 施設の利用案内 3
+  topic: campus-facilities
+  band: 3
+  family: pr-p1a-hall
+  speakers: {S: female}
+  practice:
+    purpose: 金曜の夜に小ホールを使って20人で練習したい。申し込みが締切に間に合うかを決める。
+    success: 必要な情報がそろわないときは「確認が必要」と判断できる。
+    scene: announcement-2
+    support: 2
+    input_mode: voice_first
+    clarifications:
+      - id: c1
+        label: 申込の締切を窓口に確認する
+        reply: "The deadline is three working days before the day you use the hall."
+        informs: [1]
+    max_clarifications: 1
+  script:
+    - - "S: The small hall can be used by student groups of up to thirty people."
+      - "S: Applications are accepted at the Student Affairs office until five p.m. on weekdays."
+      - "S: The hall is available until nine p.m. from Monday to Friday."
+  questions:
+    - prompt: Can you be sure the application will be in time if you apply on Wednesday?
+      skill: condition_matching
+      rubric: action
+      choices: ["Yes, because the office is open on weekdays.", "No, because the hall closes at nine p.m.", You need to check the application deadline first., "No, because groups must be smaller than twenty people."]
+      answer: 3
+      critical: {2: condition, 4: number}
+      evidence: [2]
+      answer_en: The announcement gives the office hours but not the deadline, so it needs checking.
+      ja: 窓口の受付時間は分かりますが、何日前までに申し込むかは言っていません。確認が必要が正答です。
+      wrong: [受付時間と締切は別の情報です。, 夜9時まで使えるので、利用時間は問題ありません（条件の取り違え）。, 30人まで使えます（数の取り違え）。]
+    - prompt: Which condition from the announcement does your group meet?
+      skill: numbers_negation
+      rubric: condition
+      choices: [The group size is within the limit., The hall is free of charge., The practice ends before five p.m., The hall can be used on weekends.]
+      answer: 1
+      evidence: [1]
+      answer_en: Twenty people is within the limit of thirty.
+      ja: 20人は30人以内です。
+      wrong: [料金の話はありません。, 練習は夜です。5時は申込の受付時間です。, 週末の利用は言っていません。]
+    - prompt: Until what time is the hall available on Fridays?
+      skill: numbers_negation
+      rubric: exception
+      choices: [Five p.m., Seven p.m., Nine p.m., It is not available on Fridays.]
+      answer: 3
+      evidence: [3]
+      answer_en: Until nine p.m.
+      ja: 月〜金は夜9時まで使えます。
+      wrong: [5時は申込窓口の時間です。, 7時という数字は出てきません。, 金曜も使えます。]
+
+# ---------------------------------------------------------------- P1B 短い説明を要点として持ち帰る
+- id: pr-p1b-bike
+  mode: eiken_pre1
+  part: P1B
+  title: 地域の取り組みの説明
+  topic: community
+  band: 3
+  family: pr-p1b-bike
+  speakers: {N: male}
+  practice:
+    purpose: 地域の新しい自転車の取り組みを聞き、友人に「何が変わるか・なぜか・誰に関係するか」を伝える。
+    success: 主旨・理由・誰に関係するかを取り出せる。
+    scene: news-1
+    support: 1
+    input_mode: voice_first
+  script:
+    - - "N: Starting in April, the city will let residents borrow electric bicycles from six stations near the train lines."
+      - "N: According to the city, the main reason is to reduce car traffic around the stations during the morning rush."
+      - "N: The service will be free for the first thirty minutes, and it is open to anyone who lives or works in the city."
+      - "N: A local shop owner said she hopes more visitors will stop at small stores, but the city has not made that claim."
+  questions:
+    - prompt: What is changing?
+      skill: main_idea
+      rubric: gist
+      choices: [Residents can borrow electric bicycles near the train lines., The city is closing six train stations., Cars will be banned near the stations., Bicycle shops will open near the stations.]
+      answer: 1
+      critical: {2: subject}
+      evidence: [1]
+      answer_en: Residents can borrow electric bicycles from stations near the train lines.
+      ja: 線路沿いの6か所で電動自転車を借りられるようになります。
+      wrong: [駅が閉鎖されるのではありません（主体の取り違え）。, 車の禁止とは言っていません。, 店の開店の話ではありません。]
+    - prompt: Why is the city doing this?
+      skill: main_idea
+      rubric: reason
+      choices: [To reduce car traffic around the stations in the morning., To bring more visitors to small stores., To raise money for the train lines., To replace the city buses.]
+      answer: 1
+      critical: {2: attribution}
+      evidence: [2]
+      answer_en: To reduce morning car traffic around the stations.
+      ja: 市が挙げた主な理由は朝の駅周辺の車の混雑を減らすことです。
+      wrong: [小さな店への来客は店主の期待で、市の主張ではありません（帰属の取り違え）。, 収入の話はありません。, バスの話はありません。]
+    - prompt: Who can use the service?
+      skill: explicit_detail
+      rubric: attribution
+      choices: [Anyone who lives or works in the city., Only students., Only people who own a bicycle., Only tourists.]
+      answer: 1
+      evidence: [3]
+      answer_en: Anyone who lives or works in the city.
+      ja: 市内に住むか働く人なら誰でも使えます。
+      wrong: [学生に限りません。, 自転車を持っている必要はありません。, 観光客向けとは言っていません。]
+
+# ---------------------------------------------------------------- P2A インタビューの論旨を追う (Eiken 1 stage)
+- id: pr-p2a-sleep
+  mode: eiken_1
+  part: P2A
+  title: 研究者へのインタビュー
+  topic: research
+  band: 3
+  family: pr-p2a-sleep
+  speakers: {I: female, R: male}
+  practice:
+    purpose: インタビューを聞き、研究者の当初の予想・考えを変えた情報・現在の結論・残る留保を整理する。
+    success: 結論・根拠・誰の考えか・どこまで言えるかを区別できる。
+    scene: interview-1
+    support: 1
+    input_mode: desk
+  script:
+    - - "I: Many people assume that teenagers sleep late because of their phones. Is that what you expected too?"
+      - "R: Honestly, yes. When we started, I thought screen time would explain most of it."
+      - "R: But when we compared students who gave up their phones for a month, their bedtime moved by only about ten minutes."
+      - "R: What changed my mind was the data on school start times. When one school started an hour later, students slept almost forty minutes more."
+      - "I: So phones don't matter at all?"
+      - "R: I wouldn't go that far. They may still matter for some students. What I can say is that start times seem to matter more in our sample."
+  questions:
+    - prompt: What is the researcher's current conclusion?
+      skill: main_idea
+      rubric: conclusion
+      choices: [School start times seem to matter more than phones in their sample., Phones are the main cause of late sleep., Phones do not affect sleep at all., Students should give up their phones for a month.]
+      answer: 1
+      critical: {3: certainty}
+      evidence: [4, 6]
+      answer_en: In their sample, start times seem to matter more than phones.
+      ja: 現在の結論は「この標本では始業時刻の方が影響が大きいようだ」です。
+      wrong: [これは当初の予想で、考えを変えています。, 「全く関係ない」とまでは言っていません（確実性の取り違え）。, 1か月手放すのは研究の手続きで、提案ではありません。]
+    - prompt: What information changed the researcher's mind?
+      skill: speaker_attitude
+      rubric: ground
+      choices: [Students slept about forty minutes more when school started an hour later., Students went to bed ten minutes earlier after giving up phones., The interviewer disagreed with him., Most teenagers use their phones at night.]
+      answer: 1
+      evidence: [4]
+      answer_en: The data on later school start times.
+      ja: 始業を1時間遅らせた学校で睡眠が約40分増えたデータです。
+      wrong: [10分の変化は小さく、考えを変えた理由として挙げたものではありません。, インタビュアーは反対していません。, それは一般的な思い込みとして紹介されています。]
+    - prompt: Who first suggested that phones explain late sleep?
+      skill: speaker_attitude
+      rubric: attribution
+      choices: ["The interviewer, presenting a common assumption.", "The researcher, as his final conclusion.", The students in the study., The school that changed its start time.]
+      answer: 1
+      critical: {2: attribution}
+      evidence: [1]
+      answer_en: The interviewer, as what many people assume.
+      ja: 質問者が「多くの人はそう考える」と一般的な前提として出しています。研究者の結論ではありません。
+      wrong: [研究者の最終結論ではありません（帰属の取り違え）。, 生徒の発言は出てきません。, 学校は主張していません。]
+    - prompt: How certain is the researcher about the role of phones?
+      skill: speaker_attitude
+      rubric: certainty
+      choices: [He thinks phones may still matter for some students., He is sure phones never matter., He is sure phones are the main cause., He refuses to answer.]
+      answer: 1
+      critical: {2: certainty, 3: certainty}
+      evidence: [6]
+      answer_en: He leaves open that phones may matter for some students.
+      ja: 「一部の生徒には関係するかもしれない」と留保を残しています。
+      wrong: [断定していません（確実性の取り違え）。, 主な原因とは考えていません（確実性の取り違え）。, 答えています。]
+
+# ---------------------------------------------------------------- P2B 更新情報で判断を修正する
+- id: pr-p2b-venue
+  mode: eiken_1
+  part: P2B
+  title: 会場の変更連絡
+  topic: student-event
+  band: 3
+  family: pr-p2b-venue
+  speakers: {C: female}
+  practice:
+    purpose: 学生イベント（約40人・プロジェクター必要）の会場を選び、変更連絡を聞いて判断を更新する。
+    success: 変わった点だけを更新し、変わらない条件を保ったまま最終判断ができる。
+    scene: update-1
+    support: 1
+    input_mode: voice_first
+    clarifications:
+      - id: c1
+        label: Room B の新しい定員を事務に確認する
+        reply: "Room B now holds thirty people because of the new tables."
+        informs: [4]
+    max_clarifications: 1
+  script:
+    - - "C: For Friday's event, there are two rooms. Room A holds fifty people and has a projector."
+      - "C: Room B holds forty-five people, has no projector, but is closer to the entrance."
+    - - "C: Quick update. The projector in Room A is being repaired and won't be available on Friday."
+      - "C: Room B now has a portable projector, but its capacity has changed because of new tables. Everything else stays the same."
+  questions:
+    - prompt: "After the first message, which room fits your event?"
+      skill: condition_matching
+      rubric: provisional
+      segments: [1]
+      choices: [Room A., Room B., Neither room., You cannot tell yet.]
+      answer: 1
+      evidence: [1, 2]
+      answer_en: Room A - it holds fifty people and has a projector.
+      ja: 最初の時点では、40人とプロジェクターの条件を満たすのはRoom Aです。
+      wrong: [Room Bにはプロジェクターがありません。, Room Aは条件を満たします。, 最初の情報で決められます。]
+    - prompt: What changed in the update?
+      skill: condition_matching
+      rubric: changed
+      segments: [2]
+      choices: [Room A lost its projector and Room B got one., Both rooms lost their projectors., The event moved to another day., Room A became smaller.]
+      answer: 1
+      critical: {4: condition}
+      evidence: [3, 4]
+      answer_en: Room A's projector is unavailable and Room B now has a portable projector.
+      ja: Room Aのプロジェクターが使えなくなり、Room Bに持ち運び式が入りました。
+      wrong: [Room Bには入りました。, 日付は変わっていません。, Room Aの定員は変わっていません（条件の取り違え）。]
+    - prompt: Which information did NOT change?
+      skill: inference
+      rubric: kept
+      segments: [2]
+      choices: [Room A still holds fifty people., Room B still holds forty-five people., Room A still has a projector., Room B is no longer near the entrance.]
+      answer: 1
+      critical: {2: condition}
+      evidence: [1, 4]
+      answer_en: Room A's capacity of fifty did not change.
+      ja: Room Aの定員50人は変わっていません。Room Bの定員は変わったと言っています。
+      wrong: [Room Bの定員は変わりました（数の取り違え）。, Room Aのプロジェクターは使えなくなりました。, 入口に近いことは「その他は同じ」に含まれます。]
+    - prompt: What is your final decision?
+      skill: condition_matching
+      rubric: final
+      segments: [2]
+      choices: [Book Room A., Book Room B., Check Room B's new capacity before deciding., Cancel the event.]
+      answer: 3
+      critical: {2: certainty}
+      evidence: [4]
+      answer_en: Room B now meets the projector need, but its new capacity is unknown, so check it first.
+      ja: Room Bはプロジェクターの条件を満たしましたが、新しい定員が分かりません。確認してから決めるのが正答です。
+      wrong: [Room Aはプロジェクターが使えません。, 定員が40人以上か分からないまま確定しています（確実性の取り違え）。, 中止する理由はありません。]
+
+# ---------------------------------------------------------------- P3A 会議を聞いて引き継ぐ (C1 stage)
+- id: pr-p3a-festival
+  mode: cefr_c1
+  part: P3A
+  title: 打ち合わせの引継ぎ
+  topic: student-event
+  band: 3
+  family: pr-p3a-festival
+  speakers: {Amy: female, Ben: male, Chen: male}
+  practice:
+    purpose: 学園祭の打ち合わせを聞き、欠席したメンバーへ決定事項・未決定・担当と期限を引き継ぐ。
+    listener: 打ち合わせを欠席したメンバー
+    success: 決まったこと・まだ決まっていないこと・誰がいつまでに何をするかを区別できる。
+    scene: meeting-3
+    support: 1
+    input_mode: desk
+  script:
+    - - "Amy: Let's decide the food stall. Ben suggested curry last week."
+      - "Ben: Actually, I'd like to drop that idea. The kitchen rules say we can't use gas burners."
+      - "Chen: Then how about crepes? We only need hot plates."
+      - "Amy: I'm fine with crepes, as long as the cost stays under twenty thousand yen."
+      - "Ben: Agreed. So crepes it is. I can get price quotes for the hot plates by Wednesday."
+      - "Chen: What about the opening time? Ten or eleven?"
+      - "Amy: Let's leave that until we hear from the student council."
+  questions:
+    - prompt: What did the group decide about the food stall?
+      skill: discourse_structure
+      rubric: decided
+      choices: [They will sell crepes., They will sell curry., They will sell both curry and crepes., They have not chosen the food yet.]
+      answer: 1
+      critical: {2: subject}
+      evidence: [3, 5]
+      answer_en: They decided on crepes.
+      ja: カレーは提案者自身が撤回し、クレープに決まりました。
+      wrong: [カレーは撤回されました（撤回された案を決定として伝える誤り）。, 両方ではありません。, クレープに決まっています。]
+    - prompt: What is still undecided?
+      skill: discourse_structure
+      rubric: undecided
+      choices: [The opening time., The food., Who gets the price quotes., The budget limit.]
+      answer: 1
+      critical: {2: certainty}
+      evidence: [6, 7]
+      answer_en: The opening time is still undecided.
+      ja: 開店時刻は生徒会の返事を待つことになり、未決定です。
+      wrong: [食べ物は決まっています。, 見積もりの担当は決まっています。, 予算の上限は条件として示されています。]
+    - prompt: Who will do what, by when?
+      skill: speaker_attitude
+      rubric: owner
+      choices: [Ben will get price quotes for the hot plates by Wednesday., Chen will get price quotes by Wednesday., Amy will contact the student council by Wednesday., Ben will buy the hot plates by Wednesday.]
+      answer: 1
+      critical: {2: subject}
+      evidence: [5]
+      answer_en: Ben will get price quotes by Wednesday.
+      ja: 水曜までにホットプレートの見積もりを取るのはBenです。
+      wrong: [Chenではありません（主体の取り違え）。, Amyの担当は言われていません。, 購入ではなく見積もりです。]
+    - prompt: Under what condition did Amy agree?
+      skill: speaker_attitude
+      rubric: condition
+      choices: [The cost stays under twenty thousand yen., The stall opens at ten., Chen cooks the crepes., The student council approves the menu.]
+      answer: 1
+      evidence: [4]
+      answer_en: As long as the cost stays under twenty thousand yen.
+      ja: 費用が2万円未満であることを条件に賛成しています。
+      wrong: [開店時刻は未決定です。, 調理担当の話は出ていません。, 生徒会は開店時刻の件です。]
+
+# ---------------------------------------------------------------- P3B 講義を使えるメモにする
+- id: pr-p3b-bees
+  mode: cefr_c1
+  part: P3B
+  title: ミニ講義のメモ
+  topic: ecology
+  band: 3
+  family: pr-p3b-bees
+  speakers: {L: female}
+  practice:
+    purpose: ミニ講義を聞き、主張1件・根拠2件まで・まだ言えないこと1件をメモにまとめる。
+    success: 主張と例を区別し、限界を保ったメモで質問に答えられる。
+    scene: lecture-1
+    support: 1
+    input_mode: desk
+  script:
+    - - "L: Today's claim is simple: city rooftops can support wild bees, not just honeybees."
+      - "L: In a two-year survey of forty rooftops, researchers found twenty-five species of wild bees."
+      - "L: Rooftops with a mix of native plants had about twice as many species as rooftops with only grass."
+      - "L: For example, one hospital roof planted with herbs attracted bees within a single summer."
+      - "L: What we can't say yet is whether these bees actually nest on the roofs or just visit to feed."
+  questions:
+    - prompt: What is the main claim of the lecture?
+      skill: main_idea
+      rubric: claim
+      choices: [City rooftops can support wild bees., Honeybees are disappearing from cities., Hospitals should plant herbs., Grass roofs are best for bees.]
+      answer: 1
+      critical: {4: certainty}
+      evidence: [1]
+      answer_en: City rooftops can support wild bees.
+      ja: 主張は「都市の屋上が野生のハチを支えうる」です。
+      wrong: [ミツバチの減少は話していません。, 病院の屋上は例です。, 草だけの屋上の方が種類は少ないと述べています。]
+    - prompt: Which is evidence for the claim, not just an example?
+      skill: discourse_structure
+      rubric: evidence
+      choices: [Roofs with native plants had about twice as many species as grass-only roofs., One hospital roof attracted bees in a summer., Bees visit roofs to feed., Honeybees live in cities.]
+      answer: 1
+      evidence: [3]
+      answer_en: The comparison of native-plant roofs and grass-only roofs.
+      ja: 40の屋上の比較（在来植物で約2倍）が根拠です。病院の屋上は説明のための例です。
+      wrong: [病院の屋上は一例です。, 餌を取りに来るかは「まだ言えない」点に関わります。, ミツバチの話は根拠になっていません。]
+    - prompt: What can the researchers NOT say yet?
+      skill: discourse_structure
+      rubric: limit
+      choices: [Whether the bees nest on the roofs or only visit., How many species they found., Whether plants matter at all., Whether the survey lasted two years.]
+      answer: 1
+      critical: {3: certainty}
+      evidence: [5]
+      answer_en: Whether the bees nest on the roofs or only visit to feed.
+      ja: 巣を作っているのか、餌を取りに来るだけなのかはまだ言えないと述べています。
+      wrong: [25種と述べています。, 植物の違いは比較で示しています（言えないことを言えるとする取り違え）。, 2年間の調査と述べています。]
+
+# ---------------------------------------------------------------- P4A 複数の説明を不一致ごとまとめる (C2 stage)
+- id: pr-p4a-river
+  mode: cefr_c2
+  part: P4A
+  title: 二つの説明の比較
+  topic: environment
+  band: 3
+  family: pr-p4a-river
+  speakers: {A: female, B: male}
+  practice:
+    purpose: 同じ川の水質について2人の説明を聞き、誰が何を言ったか・一致と相違・この音声だけでは決まらない点を整理する。
+    listener: 市の会議に出る同僚
+    success: 一方に潰さず、出典・主張の範囲・未確定を保って伝えられる。
+    scene: two-sources-1
+    support: 1
+    input_mode: desk
+  script:
+    - - "A: Our monthly samples show that nitrogen levels in the river fell by about twenty percent over five years."
+      - "A: That's measured at the city bridge only, so I can't speak for the upstream farms."
+    - - "B: Fishermen near the farms tell me the water still turns green every summer, so I'm not convinced it has improved."
+      - "B: I agree the levels at the bridge are lower, but no one has published upstream data yet."
+  questions:
+    - prompt: "Who said that levels at the city bridge are lower?"
+      skill: integration
+      rubric: attribution
+      choices: [Both speakers., Only Speaker A., Only Speaker B., Neither speaker.]
+      answer: 1
+      critical: {2: attribution, 3: attribution}
+      evidence: [1, 4]
+      answer_en: Both - A measured it and B agreed.
+      ja: Aが測定結果として述べ、Bも橋での値が下がったことに同意しています。
+      wrong: [Bも同意しています（帰属の取り違え）。, Aも述べています（帰属の取り違え）。, 両者とも述べています。]
+    - prompt: How far does Speaker A's claim reach?
+      skill: speaker_attitude
+      rubric: scope
+      choices: ["Only to the city bridge, not the upstream farms.", To the whole river., To the summer algae near the farms., To all rivers in the region.]
+      answer: 1
+      critical: {2: certainty}
+      evidence: [2]
+      answer_en: Only to the measurements at the city bridge.
+      ja: Aは「橋でしか測っていない」と範囲を限定しています。
+      wrong: [川全体とは言っていません（主張の射程の取り違え）。, 夏の緑はBが漁師から聞いた話です。, 地域の全河川の話はしていません。]
+    - prompt: What cannot be decided from these two accounts?
+      skill: inference
+      rubric: undetermined
+      choices: [Whether the water near the upstream farms has improved., Whether the levels at the bridge fell., Whether Speaker B talked to fishermen., Whether Speaker A took monthly samples.]
+      answer: 1
+      evidence: [2, 4]
+      answer_en: Whether the upstream water has improved - no upstream data has been published.
+      ja: 上流のデータは公表されておらず、上流の水質が良くなったかはこの音声だけでは決まりません。
+      wrong: [橋での低下は両者が認めています。, Bは漁師から聞いたと言っています。, Aは月ごとの採水と言っています。]
+
+# ---------------------------------------------------------------- P4B 含意と語調を根拠付きで解釈する
+- id: pr-p4b-report
+  mode: cefr_c2
+  part: P4B
+  title: 遠回しな返答
+  topic: workplace
+  band: 3
+  family: pr-p4b-report
+  speakers: {M: female, T: male}
+  practice:
+    purpose: 同僚の返答の働き（依頼を受けたのか、遠回しに断ったのか）を、文脈と根拠から判断する。
+    success: 最も支持される解釈とその根拠を選び、断定できないときは確認を選べる。
+    scene: dialogue-2
+    support: 1
+    input_mode: voice_first
+    prosody_required: true
+    clarifications:
+      - id: c1
+        label: 明日の午前に間に合うかを本人に確認する
+        reply: "Honestly, tomorrow morning won't work. I could do it by Friday."
+        informs: [1]
+    max_clarifications: 1
+  script:
+    - - "M: Could you finish the report by tomorrow morning? The client moved the meeting up."
+      - "T: Tomorrow morning... Well, I'm already covering two other projects this week, so, sure, I'll see what I can do."
+      - "M: Okay. Let me know by five today, then."
+  questions:
+    - prompt: What is the most supported reading of Tom's reply?
+      skill: speaker_attitude
+      rubric: interpretation
+      choices: [He is reluctant and has not really promised to finish by tomorrow morning., He has firmly agreed to finish by tomorrow morning., He is angry with Mia., He has refused to work on the report at all.]
+      answer: 1
+      critical: {2: certainty}
+      accept: []
+      evidence: [2, 3]
+      answer_en: He is reluctant and leaves the promise open - "I'll see what I can do".
+      ja: 他の仕事を挙げた後の「できる範囲でやってみる」は約束ではなく、気の進まなさを示します。Miaも5時までの連絡を求めています。
+      wrong: [「sure」があっても約束はしていません（確実性の取り違え）。, 怒りを示す根拠はありません。, 全く引き受けないとも言っていません。]
+    - prompt: Which evidence best supports that reading?
+      skill: inference
+      rubric: ground
+      choices: ['He mentions his other projects before saying he will "see what he can do", and Mia asks for an answer by five.', 'He says "sure".', 'He repeats "tomorrow morning".', Mia says the client moved the meeting.]
+      answer: 1
+      evidence: [2, 3]
+      answer_en: The other projects, the non-committal phrase and Mia's follow-up.
+      ja: 先に他の仕事を挙げ、確約しない言い方をし、相手も確認を求めていることが根拠です。
+      wrong: ["「sure」だけでは承諾と断定できません。", 繰り返しだけでは働きは決まりません。, 依頼の理由で、返答の解釈の根拠ではありません。]

@@ -97,7 +97,7 @@ nav.tabs .only-mobile { display: none; }
 .chip.b5 { color: #c4a5ff; border-color: rgba(196, 165, 255, .55); }
 .chip.rainbow { background: var(--rainbow); color: #111; border: 0; } .chip.purple { background: var(--purple-deep); color: #fff; border-color: var(--purple); }
 .chip.demo { color: #ffd166; border-color: rgba(255, 209, 102, .5); }
-.chip.cat-review { color: var(--purple); } .chip.cat-weak { color: #ff9a8b; } .chip.cat-explore { color: var(--mint); }
+.chip.cat-review { color: var(--purple); } .chip.cat-weak { color: #ff9a8b; } .chip.cat-explore { color: var(--mint); } .chip.cat-practice { color: #fbbf24; }
 .group { margin: 0 0 12px; border: 1px solid var(--line); border-radius: var(--radius); background: rgba(10, 16, 34, .55); overflow: hidden; }
 .group > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 14px 16px; min-height: 56px;
   background: linear-gradient(90deg, rgba(94, 234, 212, .07), rgba(167, 139, 250, .06)); }

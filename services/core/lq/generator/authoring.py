@@ -422,6 +422,14 @@ def lint_unit(unit: UnitContent, require_distractors: bool = True) -> list[str]:
             if kinds != {"u", "f"}:
                 errs.append(f"question {q.id}: an integration item must need both the audio and the figure")
     errs += contract_errors(unit, part)
+    if profile.get("kind") == "practice" or unit.practice is not None:
+        from lq.domain.practice import lint_practice
+
+        if unit.practice is None:
+            errs.append("material for a practice profile needs its practice task definition")
+        elif profile.get("kind") != "practice":
+            errs.append("practice tasks use a practice profile, never the exam profile")
+        errs += lint_practice(unit)
     expected_groups = unit_scoring_groups(profile, unit.part, [q.id for q in unit.sorted_questions()])
     norm = lambda gs: sorted((tuple(g["question_ids"]), float(g["points"]), bool(g["all_or_nothing"])) for g in gs)  # noqa: E731
     if norm(expected_groups) != norm([g.model_dump() for g in unit.scoring_groups]):

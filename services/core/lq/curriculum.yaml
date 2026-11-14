@@ -1,0 +1,165 @@
+# Practice track (統合実装指示書 A01 / E01 / E02 / C01 / C02 / G01). Versioned task definitions.
+# These eight tasks are this app's own practice designs. They are NOT official Eiken / CEFR tasks, and success here is
+# never shown as passing a grade or reaching a CEFR level. `ability_refs` are app-internal reference ids that point to
+# the descriptor areas consulted (CEFR Companion Volume 2020 listening / mediation / note-taking scales, Eiken Can-do);
+# they are not official ids. Durations are starting estimates including listening, answering and checking.
+version: practice/2026-11-v1
+
+tasks:
+  P1A:
+    stage: eiken_pre1
+    title_ja: 条件に合う行動を選ぶ
+    goal_ja: 案内・留守電・サービス説明を聞き、目的と条件を照合して次の行動を決める
+    scene_ja: 大学施設の利用案内を聞き、予約の要否・窓口・締切に間に合うかを判断する
+    demand_ja: 目的と複数条件の照合、例外の理解
+    minutes: [4, 6]
+    prerequisites: []
+    prereq_skills: [condition_matching, numbers_negation]
+    next: [P2B]
+    rubric:
+      - {id: action, label_ja: 行動の妥当性, main: true}
+      - {id: condition, label_ja: 決め手の条件, main: true}
+      - {id: exception, label_ja: 例外の理解, main: false}
+    critical: [condition, negation, number]
+    supports: [条件カード2つ, 条件カード3つ, 例外を含む, 変更連絡を含む]
+    clarifications: {max: 1, note_ja: 音声内にない条件は「確認が必要」を選べる}
+    input_modes: [voice_first, desk]
+    ability_refs: [LQ-REF:EIKEN-P1-CANDO-LISTEN, LQ-REF:CEFR-CV-LISTEN-ANNOUNCEMENTS]
+  P1B:
+    stage: eiken_pre1
+    title_ja: 短い説明を要点として持ち帰る
+    goal_ja: ニュースや説明を、話題・主張・理由に分けて理解する
+    scene_ja: 地域の新しい取り組みの説明を聞き、友人に「何が変わるか・なぜか・誰に関係するか」を伝える
+    demand_ja: 主旨・理由・情報の帰属の区別
+    minutes: [4, 7]
+    prerequisites: []
+    prereq_skills: [main_idea, explicit_detail]
+    next: [P2A]
+    rubric:
+      - {id: gist, label_ja: 主旨, main: true}
+      - {id: reason, label_ja: 重要な理由, main: true}
+      - {id: attribution, label_ja: 情報の帰属, main: false}
+    critical: [subject, attribution]
+    supports: [見出し付き, 見出しなし]
+    clarifications: {max: 0}
+    input_modes: [voice_first, desk]
+    ability_refs: [LQ-REF:EIKEN-P1-CANDO-LISTEN, LQ-REF:CEFR-CV-LISTEN-MEDIA]
+  P2A:
+    stage: eiken_1
+    title_ja: インタビューの論旨を追う
+    goal_ja: 話者が何を重視し、なぜ判断を変え、どこまで主張しているかを理解する
+    scene_ja: 研究者・企画担当者のインタビューで、当初の予想・判断を変えた情報・現在の結論・残る留保を整理する
+    demand_ja: 主張と根拠、質問者と回答者の立場、確実性
+    minutes: [5, 8]
+    prerequisites: [P1B]
+    prereq_skills: [main_idea, speaker_attitude]
+    next: [P3B]
+    rubric:
+      - {id: conclusion, label_ja: 結論, main: true}
+      - {id: ground, label_ja: 根拠, main: true}
+      - {id: attribution, label_ja: 話者帰属, main: true}
+      - {id: certainty, label_ja: 確実性・留保, main: true}
+    critical: [attribution, certainty]
+    supports: [論旨の枠あり, 枠なし]
+    clarifications: {max: 0}
+    input_modes: [voice_first, desk]
+    ability_refs: [LQ-REF:EIKEN-1-CANDO-LISTEN, LQ-REF:CEFR-CV-LISTEN-INTERVIEWS]
+  P2B:
+    stage: eiken_1
+    title_ja: 更新情報で判断を修正する
+    goal_ja: 最初の説明に固執せず、新しい条件・反例・訂正を受けて判断を更新する
+    scene_ja: 学生イベントの会場を選んだ後に、利用時間や設備の変更連絡を聞く
+    demand_ja: 条件の保持・更新対象の特定・未確定情報の扱い
+    minutes: [5, 8]
+    prerequisites: [P1A]
+    prereq_skills: [condition_matching, inference]
+    next: [P3A]
+    rubric:
+      - {id: provisional, label_ja: 暫定判断（更新前）, main: false, stage: initial}
+      - {id: changed, label_ja: 更新された項目, main: true}
+      - {id: kept, label_ja: 変わらない条件の保持, main: true}
+      - {id: final, label_ja: 最終判断, main: true}
+    critical: [condition, certainty]
+    supports: [変更1件, 変更2件, 未確定を含む]
+    clarifications: {max: 1, note_ja: 情報が足りないときは、事前に用意した確認の返答を1回聞ける}
+    input_modes: [voice_first, desk]
+    ability_refs: [LQ-REF:EIKEN-1-CANDO-LISTEN, LQ-REF:CEFR-CV-LISTEN-INSTRUCTIONS]
+  P3A:
+    stage: cefr_c1
+    title_ja: 会議を聞いて引き継ぐ
+    goal_ja: 提案・撤回・合意・未決定を区別し、欠席者に引き継ぐ
+    scene_ja: 大学イベントの打ち合わせ（2〜4人）を聞き、決定事項・未決定・担当と期限・条件をまとめる
+    demand_ja: 最終状態の特定、条件付き賛成、未決定の保持
+    minutes: [6, 9]
+    prerequisites: [P2B]
+    prereq_skills: [discourse_structure, speaker_attitude]
+    next: []
+    rubric:
+      - {id: decided, label_ja: 決定事項, main: true}
+      - {id: undecided, label_ja: 未決定, main: true}
+      - {id: owner, label_ja: 担当と期限, main: true}
+      - {id: condition, label_ja: 条件, main: false}
+    critical: [certainty, subject]
+    supports: [最後のまとめあり, まとめなし, 条件が分散, 遠回しな不同意]
+    clarifications: {max: 0}
+    input_modes: [voice_first, desk]
+    ability_refs: [LQ-REF:CEFR-CV-LISTEN-BETWEEN-OTHERS, LQ-REF:CEFR-CV-MEDIATION-RELAY]
+  P3B:
+    stage: cefr_c1
+    title_ja: 講義を使えるメモにする
+    goal_ja: 全文書き取りではなく、主張・根拠・限界を保持して後から使えるようにする
+    scene_ja: 3〜5分のミニ講義・研究紹介を聞き、主張1件・根拠2件まで・まだ言えないこと1件を整理する
+    demand_ja: 主張と例の区別、因果・比較、限界
+    minutes: [7, 10]
+    prerequisites: [P2A]
+    prereq_skills: [main_idea, discourse_structure]
+    next: [P4A]
+    rubric:
+      - {id: claim, label_ja: 主張, main: true}
+      - {id: evidence, label_ja: 根拠（例との区別）, main: true}
+      - {id: limit, label_ja: 限界, main: true}
+    critical: [certainty]
+    supports: [見出し明示, 言い換え・短い脱線, 論点の分散]
+    clarifications: {max: 0}
+    input_modes: [desk, voice_first]
+    ability_refs: [LQ-REF:CEFR-CV-LISTEN-LECTURES, LQ-REF:CEFR-CV-NOTE-TAKING]
+  P4A:
+    stage: cefr_c2
+    title_ja: 複数の説明を不一致ごとまとめる
+    goal_ja: 複数音声を一方に潰さず、一致・相違・未確定を整理する
+    scene_ja: 同じテーマの2〜3本の説明で、誰が何を述べたか・この音声だけでは決まらない点を整理する
+    demand_ja: 出典帰属、主張の射程、矛盾の保持
+    minutes: [8, 12]
+    prerequisites: [P3B]
+    prereq_skills: [integration, speaker_attitude]
+    next: []
+    rubric:
+      - {id: attribution, label_ja: 出典帰属, main: true}
+      - {id: scope, label_ja: 主張の射程, main: true}
+      - {id: undetermined, label_ja: 決まらない点の保持, main: true}
+    critical: [attribution, certainty]
+    supports: [明確な二者比較, 一部一致, 異なる評価基準, 情報不足を含む]
+    clarifications: {max: 0}
+    input_modes: [voice_first, desk]
+    ability_refs: [LQ-REF:CEFR-CV-MEDIATION-SYNTHESISE, LQ-REF:CEFR-CV-LISTEN-OVERALL]
+  P4B:
+    stage: cefr_c2
+    title_ja: 含意と語調を根拠付きで解釈する
+    goal_ja: 皮肉・保留・遠回しな拒否・評価を、決めつけず文脈と音声に基づいて理解する
+    scene_ja: 20〜60秒のやり取りで、同じ語句が文脈と語調で別の働きをする対照例を聞き比べる
+    demand_ja: 解釈と根拠の整合、過剰な断定の抑制
+    minutes: [4, 7]
+    prerequisites: []
+    # P4B looks at evidence for intent, speaker attribution and evidence-based inference on its own
+    prereq_skills: [speaker_attitude, inference]
+    prereq_from_kinds: [P2A, P3A]
+    next: []
+    rubric:
+      - {id: interpretation, label_ja: 最も支持される解釈, main: true}
+      - {id: ground, label_ja: 根拠, main: true}
+    critical: [certainty]
+    supports: [関係が明示された短い場面, 文脈の統合範囲を広げる]
+    clarifications: {max: 1, note_ja: 断定できないときは確認の質問を選べる}
+    prosody_required: true
+    input_modes: [voice_first, desk]
+    ability_refs: [LQ-REF:CEFR-CV-LISTEN-BETWEEN-OTHERS, LQ-REF:CEFR-CV-SOCIOLINGUISTIC]

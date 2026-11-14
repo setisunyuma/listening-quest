@@ -46,6 +46,45 @@
    "title": "Choice",
    "type": "object"
   },
+  "Clarification": {
+   "additionalProperties": false,
+   "description": "A permitted check inside the scene (e.g. asking the office). The reply is pre-authored; asking is recorded\nand never counts as first-time understanding.",
+   "properties": {
+    "id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Id",
+     "type": "string"
+    },
+    "informs": {
+     "default": [],
+     "items": {
+      "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+      "type": "string"
+     },
+     "title": "Informs",
+     "type": "array"
+    },
+    "label_ja": {
+     "maxLength": 120,
+     "minLength": 1,
+     "title": "Label Ja",
+     "type": "string"
+    },
+    "reply_en": {
+     "maxLength": 600,
+     "minLength": 1,
+     "title": "Reply En",
+     "type": "string"
+    }
+   },
+   "required": [
+    "id",
+    "label_ja",
+    "reply_en"
+   ],
+   "title": "Clarification",
+   "type": "object"
+  },
   "DistractorReason": {
    "additionalProperties": false,
    "properties": {
@@ -384,6 +423,197 @@
    "title": "OrderingAnswer",
    "type": "object"
   },
+  "PracticeBlock": {
+   "additionalProperties": false,
+   "properties": {
+    "audio_needed_checked": {
+     "default": false,
+     "title": "Audio Needed Checked",
+     "type": "boolean"
+    },
+    "clarifications": {
+     "default": [],
+     "items": {
+      "$ref": "#/$defs/Clarification"
+     },
+     "title": "Clarifications",
+     "type": "array"
+    },
+    "curriculum_version": {
+     "title": "Curriculum Version",
+     "type": "string"
+    },
+    "generated": {
+     "default": true,
+     "title": "Generated",
+     "type": "boolean"
+    },
+    "input_mode": {
+     "default": "voice_first",
+     "enum": [
+      "voice_first",
+      "desk"
+     ],
+     "title": "Input Mode",
+     "type": "string"
+    },
+    "items": {
+     "items": {
+      "$ref": "#/$defs/PracticeItem"
+     },
+     "minItems": 1,
+     "title": "Items",
+     "type": "array"
+    },
+    "listener_ja": {
+     "default": "",
+     "title": "Listener Ja",
+     "type": "string"
+    },
+    "max_clarifications": {
+     "default": 0,
+     "maximum": 3,
+     "minimum": 0,
+     "title": "Max Clarifications",
+     "type": "integer"
+    },
+    "practice_kind": {
+     "enum": [
+      "P1A",
+      "P1B",
+      "P2A",
+      "P2B",
+      "P3A",
+      "P3B",
+      "P4A",
+      "P4B"
+     ],
+     "title": "Practice Kind",
+     "type": "string"
+    },
+    "prosody_confirmed": {
+     "default": false,
+     "title": "Prosody Confirmed",
+     "type": "boolean"
+    },
+    "prosody_required": {
+     "default": false,
+     "title": "Prosody Required",
+     "type": "boolean"
+    },
+    "purpose_ja": {
+     "maxLength": 300,
+     "minLength": 1,
+     "title": "Purpose Ja",
+     "type": "string"
+    },
+    "scene": {
+     "maxLength": 48,
+     "minLength": 1,
+     "title": "Scene",
+     "type": "string"
+    },
+    "success_ja": {
+     "maxLength": 300,
+     "minLength": 1,
+     "title": "Success Ja",
+     "type": "string"
+    },
+    "support_level": {
+     "default": 1,
+     "maximum": 4,
+     "minimum": 1,
+     "title": "Support Level",
+     "type": "integer"
+    }
+   },
+   "required": [
+    "practice_kind",
+    "curriculum_version",
+    "purpose_ja",
+    "success_ja",
+    "scene",
+    "items"
+   ],
+   "title": "PracticeBlock",
+   "type": "object"
+  },
+  "PracticeItem": {
+   "additionalProperties": false,
+   "description": "One rubric item of a practice task = one question (統合指示書 M01). Choices that are critical\nmisunderstandings are labelled, so good answers elsewhere never offset them.",
+   "properties": {
+    "accept_choice_ids": {
+     "default": [],
+     "items": {
+      "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+      "type": "string"
+     },
+     "title": "Accept Choice Ids",
+     "type": "array"
+    },
+    "critical_choices": {
+     "additionalProperties": {
+      "enum": [
+       "subject",
+       "conclusion",
+       "negation",
+       "number",
+       "condition",
+       "attribution",
+       "certainty"
+      ],
+      "type": "string"
+     },
+     "default": {},
+     "title": "Critical Choices",
+     "type": "object"
+    },
+    "main": {
+     "default": true,
+     "title": "Main",
+     "type": "boolean"
+    },
+    "pending_if_unmatched": {
+     "default": false,
+     "title": "Pending If Unmatched",
+     "type": "boolean"
+    },
+    "question_id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Question Id",
+     "type": "string"
+    },
+    "rubric": {
+     "maxLength": 32,
+     "minLength": 1,
+     "title": "Rubric",
+     "type": "string"
+    },
+    "stage": {
+     "default": "final",
+     "enum": [
+      "initial",
+      "final"
+     ],
+     "title": "Stage",
+     "type": "string"
+    },
+    "sub_skills": {
+     "default": [],
+     "items": {
+      "type": "string"
+     },
+     "title": "Sub Skills",
+     "type": "array"
+    }
+   },
+   "required": [
+    "question_id",
+    "rubric"
+   ],
+   "title": "PracticeItem",
+   "type": "object"
+  },
   "PreInfo": {
    "additionalProperties": false,
    "description": "Shown before playback (e.g. Eiken Real-Life situation and question).",
@@ -421,7 +651,8 @@
      "default": "official",
      "enum": [
       "official",
-      "audio_arranged"
+      "audio_arranged",
+      "practice"
      ],
      "title": "Kind",
      "type": "string"
@@ -858,6 +1089,17 @@
   "part": {
    "title": "Part",
    "type": "string"
+  },
+  "practice": {
+   "anyOf": [
+    {
+     "$ref": "#/$defs/PracticeBlock"
+    },
+    {
+     "type": "null"
+    }
+   ],
+   "default": null
   },
   "pre_info": {
    "anyOf": [

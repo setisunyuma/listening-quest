@@ -557,6 +557,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/attempts/{attempt_id}/clarify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attempt Clarify
+         * @description A permitted check inside a practice scene; recorded before the reply is returned.
+         */
+        post: operations["attempt_clarify_api_attempts__attempt_id__clarify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/attempts/{attempt_id}/error-reasons": {
         parameters: {
             query?: never;
@@ -1021,6 +1041,40 @@ export interface paths {
         put?: never;
         /** Plan Shorten */
         post: operations["plan_shorten_api_plans__plan_id__shorten_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/practice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Practice Overview */
+        get: operations["practice_overview_api_practice_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/practice/{kind}/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Practice Start */
+        post: operations["practice_start_api_practice__kind__start_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1570,6 +1624,22 @@ export interface components {
              */
             realm: string;
         };
+        /** ClarifyIn */
+        ClarifyIn: {
+            /** Clarification Id */
+            clarification_id: string;
+            /** Event Id */
+            event_id: string;
+            /**
+             * Initial Answers
+             * @default {}
+             */
+            initial_answers: {
+                [key: string]: {
+                    [key: string]: unknown;
+                } | null;
+            };
+        };
         /** ConditionIn */
         ConditionIn: {
             /**
@@ -1750,6 +1820,10 @@ export interface components {
             mode: string;
             /** Part */
             part: string;
+            /** Practice */
+            practice?: {
+                [key: string]: unknown;
+            } | null;
             /** Pre Info */
             pre_info: {
                 [key: string]: unknown;
@@ -2176,6 +2250,10 @@ export interface components {
             missed: string[];
             /** Not First Reasons */
             not_first_reasons: string[];
+            /** Practice */
+            practice?: {
+                [key: string]: unknown;
+            } | null;
             /** Presentation */
             presentation: string;
             /** Questions */
@@ -3623,6 +3701,45 @@ export interface operations {
             };
         };
     };
+    attempt_clarify_api_attempts__attempt_id__clarify_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                attempt_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClarifyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     attempt_reason_api_attempts__attempt_id__error_reasons_post: {
         parameters: {
             query?: never;
@@ -4544,6 +4661,74 @@ export interface operations {
                 "application/json": components["schemas"]["ShortenIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    practice_overview_api_practice_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    practice_start_api_practice__kind__start_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                kind: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

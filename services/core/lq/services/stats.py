@@ -190,12 +190,28 @@ def repair_outcomes(session, user, mode):
     return outcomes(session, user, mode)
 
 
+def _practice_agg(atts: list[m.Attempt]) -> dict:
+    res = [(a.result or {}).get("practice") or {} for a in atts]
+    first = [r["first_understanding"] for r in res if r.get("first_understanding") is not None]
+    after = [r["task_success"] for r in res if r.get("clarifications") and r.get("task_success") is not None]
+    return {
+        "label": "実践課題（試験形式とは別集計・級や CEFR の認定ではありません）", "tasks": len(atts),
+        "evidence_tasks": sum(1 for r in res if r.get("evidence_eligible")),
+        "first_mean": round(sum(first) / len(first), 3) if first else None,
+        "after_check_mean": round(sum(after) / len(after), 3) if after else None,
+        "critical": sum(1 for r in res if r.get("critical_first")),
+    }  # fmt: skip
+
+
 def growth(session, user: m.User, now: datetime, mode: str, days: int = 30) -> dict:
     cfg = rules.load_config()
     since = now - timedelta(days=days)
     rows = [(a, u) for a, u in _valid_attempts(session, user, mode, since) if u.invalidated_at is None]
     excluded = sum(1 for a, u in _valid_attempts(session, user, mode, since) if u.invalidated_at is not None)
-    answer = [a for a, _ in rows if a.session_type in ("train", "review")]
+    every = [a for a, _ in rows if a.session_type in ("train", "review")]
+    # practice tasks are their own track (統合指示書 A01 / M01): never mixed into exam-format figures
+    practice_atts = [a for a in every if a.presentation == "practice"]
+    answer = [a for a in every if a.presentation != "practice"]
     first_official = [a for a in answer if a.category == "first" and a.presentation == "official"]
     first_arranged = [a for a in answer if a.category == "first" and a.presentation != "official"]
     review = [a for a in answer if L.is_unassisted_review(a)]
@@ -294,7 +310,8 @@ def growth(session, user: m.User, now: datetime, mode: str, days: int = 30) -> d
             d["first_sum"] += a.unit_score or 0.0
     return {
         "mode": mode, "mode_label": MODE_LABELS_JA[mode], "period_days": days, "period_from": since.date().isoformat(), "period_to": now.date().isoformat(),
-        "volume": {"units": len({a.unit_id for a in answer}), "answers": sum(a.result["total"] for a in answer), "radio_listened_sec": radio_ms // 1000, "xp_all_modes": xp, "label": "学習量（能力の推定ではありません）"},
+        "practice": _practice_agg(practice_atts),
+        "volume": {"units": len({a.unit_id for a in every}), "answers": sum(a.result["total"] for a in every), "radio_listened_sec": radio_ms // 1000, "xp_all_modes": xp, "label": "学習量（能力の推定ではありません）"},
         "first_official": {**_agg(first_official), "label": "初見の成績（本番形式・規定回数・補助なし）"},
         "first_arranged": {**_agg(first_arranged), "label": "初見の成績（音声向けアレンジ条件）"},
         "review": {**_agg(review), "label": "既出問題の定着（期限が来た復習・補助なし）"},
