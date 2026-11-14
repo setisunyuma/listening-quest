@@ -537,3 +537,26 @@ class MissedLine(Base):
     unit_id: Mapped[str] = mapped_column(ForeignKey("units.id", ondelete="CASCADE"), primary_key=True)
     utterance_id: Mapped[str] = mapped_column(String(64), primary_key=True)
     created_at: Mapped[datetime] = ts()
+
+
+class PushSubscription(Base):
+    """A device that asked for notifications (Web Push). Holds no secret of ours: endpoint and keys come from
+    the browser and only let us send encrypted messages to that one device."""
+
+    __tablename__ = "push_subscriptions"
+    id: Mapped[str] = pk()
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    endpoint: Mapped[str] = mapped_column(Text, unique=True)
+    p256dh: Mapped[str] = mapped_column(String(200))
+    auth: Mapped[str] = mapped_column(String(100))
+    user_agent: Mapped[str] = mapped_column(String(300), default="")
+    fail_count: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = ts()
+
+
+class NotificationState(Base):
+    """What was last notified per user, so each kind of message is sent at most once per period."""
+
+    __tablename__ = "notification_state"
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    data: Mapped[dict] = mapped_column(JSONB, default=dict)

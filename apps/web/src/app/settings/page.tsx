@@ -49,6 +49,7 @@ export default function SettingsPage() {
         <label className="field">主な操作ボタンの位置<select value={s.primary_side} onChange={(e) => save({ primary_side: e.target.value })}><option value="right">右寄せ（標準）</option><option value="left">左寄せ（左手操作向け）</option></select></label>
         <label className="field">文字の大きさ<select value={s.font_scale} onChange={(e) => save({ font_scale: Number(e.target.value) })}><option value={0.9}>小</option><option value={1}>標準</option><option value={1.15}>大</option><option value={1.3}>特大</option></select></label>
       </section>
+      <Notifications s={s} save={save} />
       <section className="panel"><h2>ホーム画面に追加（iPhone）</h2>
         <ol className="note"><li>Safariでこのページを開く</li><li>共有ボタン（□に↑）をタップ</li><li>「ホーム画面に追加」を選ぶ</li></ol>
         <p className="faint">追加後はアプリのように起動できます。ロック中の再生継続などは端末・OSの状態によって変わります。</p>
@@ -71,5 +72,62 @@ export default function SettingsPage() {
         ) : <button className="danger" onClick={() => logout()}>ログアウト（端末の保存データを削除）</button>}
       </section>
     </>
+  );
+}
+
+
+function b64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
+  const pad = "=".repeat((4 - (b64.length % 4)) % 4);
+  const raw = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"));
+  const out = new Uint8Array(new ArrayBuffer(raw.length));
+  for (let i = 0; i < raw.length; i++) out[i] = raw.charCodeAt(i);
+  return out;
+}
+
+function Notifications({ s, save }: { s: Json; save: (p: Json) => Promise<void> }) {
+  const [state, setState] = useState<"unknown" | "unsupported" | "off" | "on" | "denied">("unknown");
+  const [msg, setMsg] = useState("");
+  useEffect(() => {
+    (async () => {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) { setState("unsupported"); return; }
+      if (Notification.permission === "denied") { setState("denied"); return; }
+      const reg = await navigator.serviceWorker.getRegistration();
+      setState((await reg?.pushManager.getSubscription()) ? "on" : "off");
+    })().catch(() => setState("unsupported"));
+  }, []);
+  const enable = async () => {
+    setMsg("");
+    try {
+      if ((await Notification.requestPermission()) !== "granted") { setState("denied"); return; }
+      const reg = await navigator.serviceWorker.ready;
+      const { public_key } = await api<Json>("/push/key");
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToBytes(public_key) });
+      const j = sub.toJSON();
+      await api("/push/subscriptions", { body: { endpoint: j.endpoint, p256dh: j.keys?.p256dh, auth: j.keys?.auth } });
+      setState("on"); setMsg("この端末で通知を受け取る設定にしました。");
+    } catch (e) { setMsg((e as ApiError).detail || (e as Error).message); }
+  };
+  const disable = async () => {
+    const reg = await navigator.serviceWorker.getRegistration();
+    const sub = await reg?.pushManager.getSubscription();
+    if (sub) { const j = sub.toJSON(); await api("/push/unsubscribe", { body: { endpoint: j.endpoint, p256dh: j.keys?.p256dh, auth: j.keys?.auth } }).catch(() => {}); await sub.unsubscribe(); }
+    setState("off"); setMsg("この端末の通知をやめました。");
+  };
+  const test = async () => { try { const r = await api<Json>("/push/test", { body: {} }); setMsg(r.ok ? "テスト通知を送りました。数秒で届きます。" : "送信できませんでした。通知をいったんオフにして、もう一度オンにしてください。"); } catch (e) { setMsg((e as ApiError).detail); } };
+  return (
+    <section className="panel" aria-labelledby="notif-h"><h2 id="notif-h">通知</h2>
+      {state === "unsupported" && <p className="note">この画面では通知を使えません。iPhone では、Safari の共有ボタン →「ホーム画面に追加」で追加したアイコンから開くと使えます（iOS 16.4 以降）。</p>}
+      {state === "denied" && <p className="note">通知が拒否されています。iPhone の「設定」→「通知」→ Listening Quest で許可してから、もう一度お試しください。</p>}
+      {state === "off" && <button className="primary" onClick={enable}>この端末で通知を受け取る</button>}
+      {state === "on" && <div className="row"><button onClick={test}>テスト通知を送る</button><button className="ghost" onClick={disable}>この端末の通知をやめる</button></div>}
+      <label className="field">毎日のリマインダー（今日のクエストが未完了のとき）
+        <select value={s.notify_reminder_hour ?? -1} onChange={(e) => save({ notify_reminder_hour: Number(e.target.value) })}>
+          <option value={-1}>送らない</option>
+          {Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{h}時</option>)}
+        </select></label>
+      <label className="check"><input type="checkbox" checked={s.notify_new_material !== false} onChange={(e) => save({ notify_new_material: e.target.checked })} />新しい教材ができたら知らせる（1日1回まで）</label>
+      <label className="check"><input type="checkbox" checked={s.notify_problems !== false} onChange={(e) => save({ notify_problems: e.target.checked })} />生成の失敗や予算による停止を知らせる（6時間に1回まで）</label>
+      {msg && <Msg kind="ok">{msg}</Msg>}
+    </section>
   );
 }

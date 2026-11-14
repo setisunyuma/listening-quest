@@ -1503,6 +1503,35 @@
     "title": "PlayOut",
     "type": "object"
    },
+   "PushSubscribeIn": {
+    "properties": {
+     "auth": {
+      "maxLength": 100,
+      "minLength": 8,
+      "title": "Auth",
+      "type": "string"
+     },
+     "endpoint": {
+      "maxLength": 2000,
+      "minLength": 10,
+      "title": "Endpoint",
+      "type": "string"
+     },
+     "p256dh": {
+      "maxLength": 200,
+      "minLength": 20,
+      "title": "P256Dh",
+      "type": "string"
+     }
+    },
+    "required": [
+     "endpoint",
+     "p256dh",
+     "auth"
+    ],
+    "title": "PushSubscribeIn",
+    "type": "object"
+   },
    "RadioProgramIn": {
     "properties": {
      "include_new": {
@@ -2119,6 +2148,41 @@
        }
       ],
       "title": "Font Scale"
+     },
+     "notify_new_material": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notify New Material"
+     },
+     "notify_problems": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notify Problems"
+     },
+     "notify_reminder_hour": {
+      "anyOf": [
+       {
+        "maximum": 23.0,
+        "minimum": -1.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notify Reminder Hour"
      },
      "playback_rate": {
       "anyOf": [
@@ -5554,6 +5618,218 @@
      }
     },
     "summary": "Plan Reserve"
+   }
+  },
+  "/api/push/key": {
+   "get": {
+    "operationId": "push_key_api_push_key_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Push Key Api Push Key Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Push Key"
+   }
+  },
+  "/api/push/subscriptions": {
+   "post": {
+    "operationId": "push_subscribe_api_push_subscriptions_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PushSubscribeIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Push Subscribe Api Push Subscriptions Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Push Subscribe"
+   }
+  },
+  "/api/push/test": {
+   "post": {
+    "operationId": "push_test_api_push_test_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Push Test Api Push Test Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Push Test"
+   }
+  },
+  "/api/push/unsubscribe": {
+   "post": {
+    "operationId": "push_unsubscribe_api_push_unsubscribe_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PushSubscribeIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Push Unsubscribe Api Push Unsubscribe Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Push Unsubscribe"
    }
   },
   "/api/radio/programs": {

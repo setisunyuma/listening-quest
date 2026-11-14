@@ -39,6 +39,9 @@ DEFAULT_USER_SETTINGS = {
     "font_scale": 1.0,
     "radio_include_new": True,
     "auto_offline": False,  # save the day's not-started units to the device whenever the app opens online
+    "notify_reminder_hour": None,  # local hour for the daily reminder; None = no reminder
+    "notify_new_material": True,
+    "notify_problems": True,
 }
 ANSWER_ACCESS_KINDS = ("answer_access", "radio_access", "assessment")
 ERROR_REASONS = ("sound", "vocabulary", "numbers_negation", "inference", "organizing", "focus", "other")
@@ -84,6 +87,10 @@ def update_user_settings(user: m.User, patch: dict) -> dict:
                 raise Invalid("unknown timezone") from e
         if k == "playback_rate" and not (0.5 <= float(v) <= 1.5):
             raise Invalid("playback_rate must be 0.5..1.5")
+        if k == "notify_reminder_hour" and v is not None and int(v) == -1:
+            v = None  # the settings API cannot send null, so -1 switches the reminder off
+        if k == "notify_reminder_hour" and v is not None and not (0 <= int(v) <= 23):
+            raise Invalid("notify_reminder_hour must be 0..23 or null")
         if k == "primary_side" and v not in ("left", "right"):
             raise Invalid("primary_side must be left or right")
         cur[k] = v

@@ -46,6 +46,9 @@ class SettingsPatch(BaseModel):
     font_scale: float | None = None
     radio_include_new: bool | None = None
     auto_offline: bool | None = None
+    notify_reminder_hour: int | None = Field(default=None, ge=-1, le=23)  # -1 turns the reminder off
+    notify_new_material: bool | None = None
+    notify_problems: bool | None = None
 
 
 class AudioRef(BaseModel):
@@ -390,6 +393,12 @@ class ReportIn(BaseModel):
 
 class ResolveReportIn(BaseModel):
     action: Literal["dismiss", "withdraw", "restore"]
+
+
+class PushSubscribeIn(BaseModel):
+    endpoint: str = Field(min_length=10, max_length=2000)
+    p256dh: str = Field(min_length=20, max_length=200)
+    auth: str = Field(min_length=8, max_length=100)
 
 
 class MissedIn(BaseModel):

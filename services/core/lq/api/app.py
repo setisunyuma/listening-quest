@@ -11,7 +11,7 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, Response, UploadFile
 from fastapi.responses import JSONResponse
-from sqlalchemy import func, select, text
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.orm import Session
 
 from lq.api import schemas as S
@@ -22,7 +22,20 @@ from lq.domain.content import MODE_LABELS_JA, MODES, SKILL_LABELS_JA, SKILLS, un
 from lq.domain.profiles import current_profile, load_profiles
 from lq.generator import budget
 from lq.jobs import queue
-from lq.services import admin, assessment, auth, backup, diagnostics, feedback, importer, plans, radio, replenish, stats
+from lq.services import (
+    admin,
+    assessment,
+    auth,
+    backup,
+    diagnostics,
+    feedback,
+    importer,
+    notify,
+    plans,
+    radio,
+    replenish,
+    stats,
+)
 from lq.services import learning as L
 from lq.storage import get_storage
 
@@ -208,6 +221,60 @@ def me(request: Request, user: m.User = Depends(current_user)):
         "csrf_token": request.state.csrf,
         "settings": L.user_settings(user),
     }
+
+
+@app.get("/api/push/key")
+def push_key(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    from lq import push
+
+    key = push.public_key_b64(session)
+    session.commit()  # the key pair is created on first use
+    n = session.execute(
+        select(func.count()).select_from(m.PushSubscription).where(m.PushSubscription.user_id == user.id)
+    ).scalar_one()
+    return {"public_key": key, "devices": int(n)}
+
+
+@app.post("/api/push/subscriptions")
+def push_subscribe(
+    body: S.PushSubscribeIn, request: Request, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    if not body.endpoint.startswith("https://"):
+        raise L.Invalid("push endpoint must be https")
+    sub = session.execute(
+        select(m.PushSubscription).where(m.PushSubscription.endpoint == body.endpoint)
+    ).scalar_one_or_none()
+    if sub is None:
+        sub = m.PushSubscription(endpoint=body.endpoint, user_id=user.id, p256dh=body.p256dh, auth=body.auth)
+        session.add(sub)
+    sub.user_id, sub.p256dh, sub.auth = user.id, body.p256dh, body.auth
+    sub.user_agent = (request.headers.get("user-agent") or "")[:300]
+    session.commit()
+    return {"subscribed": True}
+
+
+@app.post("/api/push/unsubscribe")
+def push_unsubscribe(
+    body: S.PushSubscribeIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    session.execute(
+        delete(m.PushSubscription).where(
+            m.PushSubscription.endpoint == body.endpoint, m.PushSubscription.user_id == user.id
+        )
+    )
+    session.commit()
+    return {"subscribed": False}
+
+
+@app.post("/api/push/test")
+def push_test(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    out = notify.send_all(
+        session,
+        user,
+        {"title": "Listening Quest", "body": "通知のテストです。届いていれば設定は完了です。", "url": "/settings"},
+    )
+    session.commit()
+    return out
 
 
 @app.patch("/api/settings")

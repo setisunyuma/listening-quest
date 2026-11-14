@@ -110,6 +110,16 @@ def run_forever() -> None:
                     db.commit()
                 if made:
                     log.info("auto-replenish queued %d job(s)", made)
+                try:  # notifications ride on the same timer; a push failure never stops generation
+                    from lq.services import notify
+
+                    with session_factory()() as db:
+                        sent = notify.run_all(db)
+                        db.commit()
+                    if sent:
+                        log.info("sent %d notification(s)", sent)
+                except Exception:
+                    log.error("notifications failed: %s", traceback.format_exc())
             if run_one(wid) is None:
                 time.sleep(s.worker_poll_sec)
         except KeyboardInterrupt:
