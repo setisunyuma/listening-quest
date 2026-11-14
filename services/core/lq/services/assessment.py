@@ -11,7 +11,7 @@ from sqlalchemy import or_, select
 from lq.db import models as m
 from lq.domain.content import canonical_json, is_correct, learner_view, normalize_answer, sha256_hex
 from lq.domain.profiles import current_profile, get_profile, score_exam, slot_layout, total_slots
-from lq.generator.authoring import lint_unit
+from lq.generator.authoring import contract_errors, lint_unit
 from lq.jobs import queue
 from lq.services import learning as L
 from lq.services.content import load_content
@@ -30,6 +30,21 @@ def _in_use_unit_ids(session, realm: str) -> set[str]:
     ).scalars():
         used.update(i["unit_id"] for i in ms.items)
     return used
+
+
+def fits_profile(session, unit: m.Unit, profile: dict) -> bool:
+    """R06: material of the current format version always fits. Older versions of the same exam are re-checked for
+    free against the current part contract (nothing is regenerated or overwritten); only those that pass are used."""
+    if unit.profile_version == profile["id"]:
+        return True
+    part = next((p for p in profile["parts"] if p["part"] == unit.part), None)
+    if part is None:
+        return False
+    return not contract_errors(load_content(unit), part)
+
+
+def _arranged(session, unit: m.Unit) -> bool:
+    return load_content(unit).presentation_profile.kind != "official"
 
 
 def reserved_inventory(session, realm: str, mode: str) -> dict:
@@ -69,6 +84,7 @@ def reserved_inventory(session, realm: str, mode: str) -> dict:
             and u.id not in used
             and u.question_count == p["questions_per_unit"]
             and "assessment" in u.session_types
+            and fits_profile(session, u, profile)
         ]
         inflight = sum(
             1
@@ -160,6 +176,8 @@ def assemble(session, realm: str, mode: str) -> m.MockSet:
     for u in rows:
         if u.id in used or u.id in exposed or "assessment" not in u.session_types:
             continue
+        if not fits_profile(session, u, profile):
+            continue
         by_part.setdefault(u.part, []).append(u)
     layout = slot_layout(profile)
     items, problems, families, duration_ms = [], [], set(), 0
@@ -202,6 +220,7 @@ def assemble(session, realm: str, mode: str) -> m.MockSet:
                 "section": entry["section"],
                 "slots": {q.id: s for q, s in zip(qs, entry["slots"], strict=True)},
                 "duration_ms": exam.duration_ms,
+                "presentation": content.presentation_profile.kind,
             }
         )
     if shortage:
@@ -212,7 +231,8 @@ def assemble(session, realm: str, mode: str) -> m.MockSet:
     if n != total_slots(profile):
         raise L.Invalid(f"set has {n} answer slots, profile needs {total_slots(profile)}")
     ms = m.MockSet(realm=realm, mode=mode, profile_id=profile["id"], profile_snapshot=profile, kind=profile["exam"]["kind"], items=items, duration_sec=round(duration_ms / 1000),
-                   validation={"slots": n, "units": len(items), "checked": ["format", "answer_slots", "speakers", "plays", "scoring_groups", "exam_audio"]})  # fmt: skip
+                   validation={"slots": n, "units": len(items), "checked": ["format", "contract", "answer_slots", "speakers", "plays", "scoring_groups", "exam_audio"],
+                               "arranged_parts": sorted({i["part"] for i in items if i["presentation"] != "official"})})  # fmt: skip
     session.add(ms)
     session.flush()
     return ms
@@ -403,6 +423,10 @@ def submit(session, user: m.User, session_id: str, answers: dict, now: datetime 
             attempt_id=att.id,
             source="assessment",
         )
+    arranged = _set_arranged_parts(session, sess)
+    conds = sorted(
+        {c["kind"] for c in (sess.meta or {}).get("conditions", [])} | ({"arranged_format"} if arranged else set())
+    )
     result = {
         **score,
         "slots": {str(s): bool(v) for s, v in sorted(slot_correct.items())},
@@ -412,14 +436,28 @@ def submit(session, user: m.User, session_id: str, answers: dict, now: datetime 
         "mode": sess.mode,
         "profile_id": profile["id"],
         # R05: interrupted / replayed / audio-error runs are kept, but never shown as standard-condition results
-        "conditions": sorted({c["kind"] for c in (sess.meta or {}).get("conditions", [])}),
-        "standard": not (sess.meta or {}).get("conditions"),
+        "conditions": conds,
+        "standard": not conds,
+        # R06: parts that are described in words (形式調整版) keep the set out of standard-condition results
+        "arranged_parts": arranged,
     }
     sess.status = "submitted"
     sess.submit_hash = h
     sess.result = result
     sess.ended_at = now
     return result
+
+
+def _set_arranged_parts(session, sess: m.LearningSession) -> list[str]:
+    parts = set()
+    for it in (sess.meta or {}).get("items", []):
+        kind = it.get("presentation")
+        if kind is None:  # sets assembled before R06: look at the material itself
+            u = session.get(m.Unit, it["unit_id"])
+            kind = "official" if u is None or not _arranged(session, u) else "audio_arranged"
+        if kind != "official":
+            parts.add(it["part"])
+    return sorted(parts)
 
 
 def result_dto(session, user: m.User, session_id: str) -> dict:

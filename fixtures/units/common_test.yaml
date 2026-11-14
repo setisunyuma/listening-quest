@@ -160,7 +160,7 @@
     - - "W: Last Saturday was busy. Right after breakfast, I went to the post office to send a package."
       - "W: I had planned to go straight to the gym, but I remembered my library books were due, so I returned them first."
       - "W: After working out at the gym, I was so hungry that I stopped at a noodle shop before going home."
-  common_choices: [She worked out at the gym., She returned her library books., She ate at a noodle shop., She sent a package.]
+  common_choices: [She worked out at the gym., She returned her library books., She ate at a noodle shop., She sent a package., She bought some groceries.]
   questions:
     - prompt: "Which event happened first?"
       skill: discourse_structure
@@ -172,6 +172,7 @@
         - "ジムは図書館の後です。"
         - "図書館は郵便局の後です。"
         - "食事は最後です。"
+        - "買い物の話は出てきません。"
     - prompt: "Which event happened second?"
       skill: discourse_structure
       answer: 2
@@ -182,6 +183,7 @@
         - "ジムは本を返した後です。"
         - "食事は最後です。"
         - "荷物を送ったのは最初です。"
+        - "買い物の話は出てきません。"
     - prompt: "Which event happened third?"
       skill: discourse_structure
       answer: 1
@@ -192,6 +194,7 @@
         - "本の返却は2番目です。"
         - "食事はジムの後です。"
         - "荷物を送ったのは最初です。"
+        - "買い物の話は出てきません。"
     - prompt: "Which event happened fourth?"
       skill: discourse_structure
       answer: 3
@@ -202,6 +205,7 @@
         - "ジムは3番目です。"
         - "本の返却は2番目です。"
         - "荷物を送ったのは最初です。"
+        - "買い物の話は出てきません。"
 
 - id: ct-4a-match-gifts
   mode: common_test
@@ -392,19 +396,19 @@
       answer_en: A delayed bedtime reduces night-time sleep.
       ja: 就寝が遅れる結果、夜の睡眠が減ると述べています。
       wrong: [成績が上がるとは言っていません。, 昼寝が長くなるとは言っていません。, 夢の話は出てきません。]
-    - prompt: Which statement best matches the lecture?
-      skill: main_idea
-      segments: [1]
+    - prompt: How do the two students' naps compare with the lecture's advice?
+      skill: integration
+      segments: [1, 2]
       choices:
-        - Any nap improves memory regardless of its length.
-        - Short naps taken early in the afternoon can support learning.
-        - Students should replace night-time sleep with naps.
-        - Naps are harmful for most students.
-      answer: 2
-      evidence: [6]
-      answer_en: Short naps taken early in the afternoon can support learning.
-      ja: 「昼寝は短く、午後の早い時間に」という結論に合います。
-      wrong: [長い昼寝には欠点があると述べています。, 夜の睡眠の代わりにするとは言っていません。, 短い昼寝の効果を紹介しています。]
+        - Both Ken's nap and Mai's nap follow the advice.
+        - Ken's nap follows the advice, but Mai's nap does not.
+        - Ken's nap does not follow the advice, but Mai's nap does.
+        - Neither Ken's nap nor Mai's nap follows the advice.
+      answer: 3
+      evidence: [6, 7, 8]
+      answer_en: Ken naps for an hour around six, against the advice; Mai's fifteen-minute nap after lunch follows it.
+      ja: 講義の助言は「短く、午後の早い時間に」。Kenは午後6時頃に1時間で助言と逆、Maiは昼食直後に15分で助言どおりです。
+      wrong: [Kenは長く遅い昼寝で助言に合いません。, 逆です。Kenが合わず、Maiが合っています。, Maiの昼寝は短く早い時間で助言に合っています。]
     - prompt: "Which statement is supported by the lecture, the students' comments, and the survey?"
       skill: integration
       segments: [1, 2, 3]

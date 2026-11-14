@@ -1,291 +1,291 @@
 {
- "id": "common_test/2026_main",
- "mode": "common_test",
- "version": "2026_main",
- "current": true,
- "label_ja": "共通テスト リスニング（2026本試験形式）",
- "kind": "exam_format",
- "sources": [
-  {
-   "url": "https://www.dnc.ac.jp/kyotsu/kakomondai/r8/r8_honshiken_mondai.html",
-   "note": "令和8年度本試験の問題掲載ページ。構成・解答欄・配点は仕様書記載の値を採用。",
-   "checked_at": "2026-11-12",
-   "verified": "構成・配点は仕様書の指定値。公式PDFとの逐語照合は未実施（docs/DECISIONS.md 参照）"
+  "id": "common_test/2026_main",
+  "mode": "common_test",
+  "version": "2026_main",
+  "current": false,
+  "label_ja": "共通テスト リスニング（2026本試験形式）",
+  "kind": "exam_format",
+  "sources": [
+    {
+      "url": "https://www.dnc.ac.jp/kyotsu/kakomondai/r8/r8_honshiken_mondai.html",
+      "note": "令和8年度本試験の問題掲載ページ。構成・解答欄・配点は仕様書記載の値を採用。",
+      "checked_at": "2026-11-12",
+      "verified": "構成・配点は仕様書の指定値。公式PDFとの逐語照合は未実施（docs/DECISIONS.md 参照）"
+    }
+  ],
+  "exam": {
+    "label_ja": "全体模試",
+    "kind": "full_mock",
+    "answer_time_min": 30,
+    "venue_note_ja": "解答時間は30分。会場では機器の準備・音量確認等を含む時間枠が別に設けられます。",
+    "score": "points",
+    "total_points": 100
+  },
+  "timing": {
+    "between_plays_sec": 3,
+    "note": "待ち時間は本アプリの初期値。公式音源の実測値ではありません。"
+  },
+  "parts": [
+    {
+      "part": "1A",
+      "section": "1",
+      "label_ja": "第1問A 短文理解",
+      "template_type": "short_statement",
+      "units": 4,
+      "questions_per_unit": 1,
+      "plays": 2,
+      "question_medium": "screen",
+      "question_timing": "before",
+      "min_speakers": 1,
+      "answer_wait_sec": 8,
+      "pre_read_sec": 0
+    },
+    {
+      "part": "1B",
+      "section": "1",
+      "label_ja": "第1問B 場面と絵の対応",
+      "template_type": "scene_match",
+      "units": 4,
+      "questions_per_unit": 1,
+      "plays": 2,
+      "question_medium": "screen",
+      "question_timing": "before",
+      "min_speakers": 1,
+      "answer_wait_sec": 8,
+      "pre_read_sec": 0
+    },
+    {
+      "part": "2",
+      "section": "2",
+      "label_ja": "第2問 短い対話と問い",
+      "template_type": "short_dialogue_audio_question",
+      "units": 3,
+      "questions_per_unit": 1,
+      "plays": 2,
+      "question_medium": "audio",
+      "question_timing": "after",
+      "min_speakers": 2,
+      "answer_wait_sec": 8,
+      "pre_read_sec": 0
+    },
+    {
+      "part": "3",
+      "section": "3",
+      "label_ja": "第3問 短い対話",
+      "template_type": "short_dialogue",
+      "units": 6,
+      "questions_per_unit": 1,
+      "plays": 1,
+      "question_medium": "screen",
+      "question_timing": "before",
+      "min_speakers": 2,
+      "answer_wait_sec": 10,
+      "pre_read_sec": 5
+    },
+    {
+      "part": "4A_order",
+      "section": "4",
+      "label_ja": "第4問A 順序",
+      "template_type": "ordering",
+      "units": 1,
+      "questions_per_unit": 4,
+      "plays": 1,
+      "question_medium": "screen",
+      "question_timing": "before",
+      "min_speakers": 1,
+      "answer_wait_sec": 20,
+      "pre_read_sec": 10
+    },
+    {
+      "part": "4A_match",
+      "section": "4",
+      "label_ja": "第4問A 対応づけ",
+      "template_type": "matching",
+      "units": 1,
+      "questions_per_unit": 4,
+      "plays": 1,
+      "question_medium": "screen",
+      "question_timing": "before",
+      "min_speakers": 1,
+      "answer_wait_sec": 20,
+      "pre_read_sec": 10
+    },
+    {
+      "part": "4B",
+      "section": "4",
+      "label_ja": "第4問B 条件選択",
+      "template_type": "condition_choice",
+      "units": 1,
+      "questions_per_unit": 1,
+      "plays": 1,
+      "question_medium": "screen",
+      "question_timing": "before",
+      "min_speakers": 4,
+      "answer_wait_sec": 20,
+      "pre_read_sec": 15
+    },
+    {
+      "part": "5",
+      "section": "5",
+      "label_ja": "第5問 講義・追加発言・会話と図表の統合",
+      "template_type": "lecture_integrated",
+      "units": 1,
+      "questions_per_unit": 7,
+      "segments": 3,
+      "plays": 1,
+      "question_medium": "screen",
+      "question_timing": "before",
+      "min_speakers": 3,
+      "answer_wait_sec": 60,
+      "pre_read_sec": 60
+    },
+    {
+      "part": "6A",
+      "section": "6",
+      "label_ja": "第6問A 二人の対話",
+      "template_type": "two_person_dialogue",
+      "units": 1,
+      "questions_per_unit": 2,
+      "plays": 1,
+      "question_medium": "screen",
+      "question_timing": "before",
+      "min_speakers": 2,
+      "answer_wait_sec": 30,
+      "pre_read_sec": 15
+    },
+    {
+      "part": "6B",
+      "section": "6",
+      "label_ja": "第6問B 三人の会話",
+      "template_type": "multi_person_discussion",
+      "units": 1,
+      "questions_per_unit": 2,
+      "plays": 1,
+      "question_medium": "screen",
+      "question_timing": "before",
+      "min_speakers": 3,
+      "answer_wait_sec": 30,
+      "pre_read_sec": 15
+    }
+  ],
+  "scoring": [
+    {
+      "slots": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "points_each": 4
+    },
+    {
+      "slots": [
+        5,
+        6,
+        7,
+        8
+      ],
+      "points_each": 3
+    },
+    {
+      "slots": [
+        9,
+        10,
+        11
+      ],
+      "points_each": 4
+    },
+    {
+      "slots": [
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "points_each": 3
+    },
+    {
+      "slots": [
+        18,
+        19,
+        20,
+        21
+      ],
+      "points": 4,
+      "all_or_nothing": true
+    },
+    {
+      "slots": [
+        22,
+        23,
+        24,
+        25
+      ],
+      "points_each": 1
+    },
+    {
+      "slots": [
+        26
+      ],
+      "points_each": 4
+    },
+    {
+      "slots": [
+        27
+      ],
+      "points_each": 3
+    },
+    {
+      "slots": [
+        28,
+        29
+      ],
+      "points": 2,
+      "all_or_nothing": true
+    },
+    {
+      "slots": [
+        30,
+        31
+      ],
+      "points": 2,
+      "all_or_nothing": true
+    },
+    {
+      "slots": [
+        32
+      ],
+      "points_each": 4
+    },
+    {
+      "slots": [
+        33
+      ],
+      "points_each": 5
+    },
+    {
+      "slots": [
+        34,
+        35
+      ],
+      "points_each": 3
+    },
+    {
+      "slots": [
+        36,
+        37
+      ],
+      "points_each": 4
+    }
+  ],
+  "section_points": {
+    "1": 28,
+    "2": 12,
+    "3": 18,
+    "4": 12,
+    "5": 16,
+    "6": 14
   }
- ],
- "exam": {
-  "label_ja": "全体模試",
-  "kind": "full_mock",
-  "answer_time_min": 30,
-  "venue_note_ja": "解答時間は30分。会場では機器の準備・音量確認等を含む時間枠が別に設けられます。",
-  "score": "points",
-  "total_points": 100
- },
- "timing": {
-  "between_plays_sec": 3,
-  "note": "待ち時間は本アプリの初期値。公式音源の実測値ではありません。"
- },
- "parts": [
-  {
-   "part": "1A",
-   "section": "1",
-   "label_ja": "第1問A 短文理解",
-   "template_type": "short_statement",
-   "units": 4,
-   "questions_per_unit": 1,
-   "plays": 2,
-   "question_medium": "screen",
-   "question_timing": "before",
-   "min_speakers": 1,
-   "answer_wait_sec": 8,
-   "pre_read_sec": 0
-  },
-  {
-   "part": "1B",
-   "section": "1",
-   "label_ja": "第1問B 場面と絵の対応",
-   "template_type": "scene_match",
-   "units": 4,
-   "questions_per_unit": 1,
-   "plays": 2,
-   "question_medium": "screen",
-   "question_timing": "before",
-   "min_speakers": 1,
-   "answer_wait_sec": 8,
-   "pre_read_sec": 0
-  },
-  {
-   "part": "2",
-   "section": "2",
-   "label_ja": "第2問 短い対話と問い",
-   "template_type": "short_dialogue_audio_question",
-   "units": 3,
-   "questions_per_unit": 1,
-   "plays": 2,
-   "question_medium": "audio",
-   "question_timing": "after",
-   "min_speakers": 2,
-   "answer_wait_sec": 8,
-   "pre_read_sec": 0
-  },
-  {
-   "part": "3",
-   "section": "3",
-   "label_ja": "第3問 短い対話",
-   "template_type": "short_dialogue",
-   "units": 6,
-   "questions_per_unit": 1,
-   "plays": 1,
-   "question_medium": "screen",
-   "question_timing": "before",
-   "min_speakers": 2,
-   "answer_wait_sec": 10,
-   "pre_read_sec": 5
-  },
-  {
-   "part": "4A_order",
-   "section": "4",
-   "label_ja": "第4問A 順序",
-   "template_type": "ordering",
-   "units": 1,
-   "questions_per_unit": 4,
-   "plays": 1,
-   "question_medium": "screen",
-   "question_timing": "before",
-   "min_speakers": 1,
-   "answer_wait_sec": 20,
-   "pre_read_sec": 10
-  },
-  {
-   "part": "4A_match",
-   "section": "4",
-   "label_ja": "第4問A 対応づけ",
-   "template_type": "matching",
-   "units": 1,
-   "questions_per_unit": 4,
-   "plays": 1,
-   "question_medium": "screen",
-   "question_timing": "before",
-   "min_speakers": 1,
-   "answer_wait_sec": 20,
-   "pre_read_sec": 10
-  },
-  {
-   "part": "4B",
-   "section": "4",
-   "label_ja": "第4問B 条件選択",
-   "template_type": "condition_choice",
-   "units": 1,
-   "questions_per_unit": 1,
-   "plays": 1,
-   "question_medium": "screen",
-   "question_timing": "before",
-   "min_speakers": 4,
-   "answer_wait_sec": 20,
-   "pre_read_sec": 15
-  },
-  {
-   "part": "5",
-   "section": "5",
-   "label_ja": "第5問 講義・追加発言・会話と図表の統合",
-   "template_type": "lecture_integrated",
-   "units": 1,
-   "questions_per_unit": 7,
-   "segments": 3,
-   "plays": 1,
-   "question_medium": "screen",
-   "question_timing": "before",
-   "min_speakers": 3,
-   "answer_wait_sec": 60,
-   "pre_read_sec": 60
-  },
-  {
-   "part": "6A",
-   "section": "6",
-   "label_ja": "第6問A 二人の対話",
-   "template_type": "two_person_dialogue",
-   "units": 1,
-   "questions_per_unit": 2,
-   "plays": 1,
-   "question_medium": "screen",
-   "question_timing": "before",
-   "min_speakers": 2,
-   "answer_wait_sec": 30,
-   "pre_read_sec": 15
-  },
-  {
-   "part": "6B",
-   "section": "6",
-   "label_ja": "第6問B 三人の会話",
-   "template_type": "multi_person_discussion",
-   "units": 1,
-   "questions_per_unit": 2,
-   "plays": 1,
-   "question_medium": "screen",
-   "question_timing": "before",
-   "min_speakers": 3,
-   "answer_wait_sec": 30,
-   "pre_read_sec": 15
-  }
- ],
- "scoring": [
-  {
-   "slots": [
-    1,
-    2,
-    3,
-    4
-   ],
-   "points_each": 4
-  },
-  {
-   "slots": [
-    5,
-    6,
-    7,
-    8
-   ],
-   "points_each": 3
-  },
-  {
-   "slots": [
-    9,
-    10,
-    11
-   ],
-   "points_each": 4
-  },
-  {
-   "slots": [
-    12,
-    13,
-    14,
-    15,
-    16,
-    17
-   ],
-   "points_each": 3
-  },
-  {
-   "slots": [
-    18,
-    19,
-    20,
-    21
-   ],
-   "points": 4,
-   "all_or_nothing": true
-  },
-  {
-   "slots": [
-    22,
-    23,
-    24,
-    25
-   ],
-   "points_each": 1
-  },
-  {
-   "slots": [
-    26
-   ],
-   "points_each": 4
-  },
-  {
-   "slots": [
-    27
-   ],
-   "points_each": 3
-  },
-  {
-   "slots": [
-    28,
-    29
-   ],
-   "points": 2,
-   "all_or_nothing": true
-  },
-  {
-   "slots": [
-    30,
-    31
-   ],
-   "points": 2,
-   "all_or_nothing": true
-  },
-  {
-   "slots": [
-    32
-   ],
-   "points_each": 4
-  },
-  {
-   "slots": [
-    33
-   ],
-   "points_each": 5
-  },
-  {
-   "slots": [
-    34,
-    35
-   ],
-   "points_each": 3
-  },
-  {
-   "slots": [
-    36,
-    37
-   ],
-   "points_each": 4
-  }
- ],
- "section_points": {
-  "1": 28,
-  "2": 12,
-  "3": 18,
-  "4": 12,
-  "5": 16,
-  "6": 14
- }
 }
