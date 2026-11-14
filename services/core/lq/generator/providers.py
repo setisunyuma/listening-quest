@@ -28,6 +28,7 @@ class GenSpec:
     pool: str = "practice"
     avoid_topics: tuple[str, ...] = ()
     extra: dict = field(default_factory=dict)
+    practice_kind: str = ""  # 統合指示書 T01: a practice task (P1A..P4B) instead of an exam item
 
 
 class ContentProvider(Protocol):

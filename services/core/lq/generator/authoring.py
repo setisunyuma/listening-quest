@@ -129,6 +129,35 @@ class AuthoredUnit(_S):
     translations_ja: list[ATranslation]
 
 
+class ACritical(_S):
+    choice_id: str
+    kind: Literal["subject", "conclusion", "negation", "number", "condition", "attribution", "certainty"]
+
+
+class ARubric(_S):
+    question_id: str
+    rubric: str  # one of the task's rubric ids
+    critical: list[ACritical]  # choices that are critical misunderstandings
+    accept_choice_ids: list[str]  # further acceptable answers (a set of reasonable actions); [] if none
+
+
+class AClarification(_S):
+    id: str
+    label_ja: str  # what the learner may ask inside the scene
+    reply_en: str  # the pre-authored reply
+    informs: list[str]  # question ids the reply bears on
+
+
+class AuthoredPractice(AuthoredUnit):
+    purpose_ja: str
+    listener_ja: str
+    success_ja: str
+    scene: str  # short tag of the scene / speaker set-up
+    rubrics: list[ARubric]
+    clarifications: list[AClarification]
+    audio_dependency_en: str  # which condition in the audio decides the answer, and what would change it
+
+
 _DROP = ("title", "default", "minLength", "maxLength", "pattern", "minItems", "maxItems", "minimum", "maximum")
 
 
@@ -147,8 +176,8 @@ def _strictify(node):
 
 
 @lru_cache
-def authored_schema() -> dict:
-    return _strictify(AuthoredUnit.model_json_schema())
+def authored_schema(practice: bool = False) -> dict:
+    return _strictify((AuthoredPractice if practice else AuthoredUnit).model_json_schema())
 
 
 SOLUTION_SCHEMA = {
@@ -184,7 +213,48 @@ SOLUTION_SCHEMA = {
 }
 
 
+def build_practice_prompt(spec: GenSpec) -> tuple[str, str]:
+    """T01: a practice task is generated from its versioned definition: purpose, listener, required conditions,
+    rubric items, critical misunderstandings, permitted checks - never only a word count and a grade name."""
+    from lq.domain.practice import load_curriculum
+
+    t = templates()
+    cur = load_curriculum()
+    task = cur["tasks"][spec.practice_kind]
+    part = part_spec(get_profile(f"practice_{spec.mode}/2026-11-v1"), spec.practice_kind)
+    rub = "; ".join(
+        f"{r['id']} ({r['label_ja']}{', provisional answer before the update' if r.get('stage') == 'initial' else ''})"
+        for r in task["rubric"]
+    )
+    clar = task.get("clarifications", {})
+    user = (
+        f"Practice task {spec.practice_kind} for the {spec.mode} stage (an app practice task, NOT an official exam item).\n"
+        f"Goal: {task['goal_ja']}. Example scene: {task['scene_ja']}. Cognitive demand: {task['demand_ja']}.\n"
+        f"Write a realistic scene with a clear purpose, a listener for any hand-over, and the conditions needed to act. Use only knowledge given "
+        f"in the audio (no outside facts, no culture-specific knowledge without context). Natural speed and length for the scene; do not make it "
+        f"harder by speed, rare words, noise or extreme accents.\n"
+        f"Questions: exactly {part['questions_per_unit']}, one per rubric item, in this order: {rub}. Single choice, 4 options.\n"
+        f"For each question list the choices that are critical misunderstandings with their kind (one of {', '.join(task['critical'])}). "
+        f"Include an option such as 'need to check' / 'cannot be decided from this audio' and make it the answer whenever the audio lacks the "
+        f"needed information. Options must not be solvable by matching the same word.\n"
+        f"Speakers: at least {part['min_speakers']}. Give each segment a short label. "
+        + (f"Permitted checks: at most {clar.get('max', 0)}; for each give the question the learner may ask and the pre-written reply. " if clar.get("max") else "No permitted checks: return an empty list. ")
+        + "In audio_dependency_en state which condition in the audio decides the answer and how the answer would change if it changed.\n"
+        f"Primary skill to test: {spec.primary_skill}. Allowed skill tags: {', '.join(SKILLS)}. Band {spec.band} of 5: {t['band_guidance'][spec.band]}.\n"
+        f"Variation seed: {spec.seed}. Use short ids such as s1, u1, q1, c1."
+    )  # fmt: skip
+    fixes = (spec.extra or {}).get("fix_notes")
+    if fixes:
+        user += (
+            "\nA previous draft failed these automatic checks. Write a new draft that passes them:\n- "
+            + "\n- ".join(fixes)
+        )
+    return t["common_rules"], user
+
+
 def build_generation_prompt(spec: GenSpec) -> tuple[str, str]:
+    if spec.practice_kind:
+        return build_practice_prompt(spec)
     t = templates()
     profile = current_profile(spec.mode)
     part = part_spec(profile, spec.part)
@@ -264,6 +334,8 @@ def study_notes(glossary: list[dict], translations: list[dict], utterance_ids: s
 
 def authored_to_unit(raw: dict, spec: GenSpec) -> dict:
     """Convert model output to a UnitContent dict. Format-level fields come from the profile, not the model."""
+    if spec.practice_kind:
+        return _practice_to_unit(raw, spec)
     a = AuthoredUnit.model_validate(raw)
     profile = current_profile(spec.mode)
     part = part_spec(profile, spec.part)
@@ -314,6 +386,57 @@ def authored_to_unit(raw: dict, spec: GenSpec) -> dict:
             [g.model_dump() for g in a.glossary], [t.model_dump() for t in a.translations_ja],
             {u.id for seg in a.segments for u in seg.utterances},
         ),
+    }  # fmt: skip
+
+
+def _practice_to_unit(raw: dict, spec: GenSpec) -> dict:
+    from lq.domain.practice import load_curriculum
+
+    a = AuthoredPractice.model_validate(raw)
+    cur = load_curriculum()
+    task = cur["tasks"][spec.practice_kind]
+    rub = {r["id"]: r for r in task["rubric"]}
+    profile = get_profile(f"practice_{spec.mode}/2026-11-v1")
+    part = part_spec(profile, spec.practice_kind)
+    speakers = [s.model_dump() for s in a.speakers]
+    if not any(s["role"] == "narrator" for s in speakers):
+        speakers.insert(0, {"id": "narrator", "role": "narrator", "label": "Narrator", "voice_hint": "neutral"})
+    questions = []
+    for q in sorted(a.questions, key=lambda x: x.slot):
+        questions.append({
+            "id": q.id, "slot": q.slot, "segment_ids": q.segment_ids, "prompt_en": q.prompt_en, "prompt_medium": "screen", "prompt_timing": "after",
+            "type": "single_choice", "choices": [c.model_dump() for c in q.choices], "items": [], "figure_ids": q.figure_ids,
+            "answer": {"type": "single_choice", "choice_id": (q.answer_choice_ids or [""])[0]}, "skill_tags": [s for s in q.skill_tags if s in SKILLS],
+            "evidence": [{k: v for k, v in e.model_dump().items() if v} for e in q.evidence],
+            "feedback": {"answer_en": q.answer_en, "explanation_ja": q.explanation_ja, "hint_ja": q.hint_ja, "distractors": [d.model_dump() for d in q.distractors]},
+        })  # fmt: skip
+    items = []
+    for r in a.rubrics:
+        d = rub.get(r.rubric, {})
+        items.append({"question_id": r.question_id, "rubric": r.rubric, "main": bool(d.get("main")), "stage": d.get("stage", "final"),
+                      "critical_choices": {c.choice_id: c.kind for c in r.critical}, "accept_choice_ids": r.accept_choice_ids})  # fmt: skip
+    skills = sorted({s for q in questions for s in q["skill_tags"]})
+    max_c = int(task.get("clarifications", {}).get("max", 0))
+    return {
+        "schema_version": 2, "source": spec.source, "content_id": f"{spec.mode}-{spec.practice_kind.lower()}-{_slug(spec.seed)}", "revision": 1,
+        "mode": spec.mode, "profile_version": profile["id"], "part": spec.practice_kind, "template_type": "practice_task",
+        "title": a.title[:120], "topic": _slug(a.topic), "skill_tags": skills, "primary_skill": spec.primary_skill if spec.primary_skill in skills else (skills or ["main_idea"])[0],
+        "provisional_difficulty_band": spec.band, "calibration_status": "provisional", "family_id": f"{spec.mode}:{spec.practice_kind}:{_slug(a.family_slug)}", "variant_of": None,
+        "presentation_profile": {"kind": "practice", "choices_read_aloud": False, "figure_verbalized": False, "notes": "生成した練習用の場面（実録音ではありません）"},
+        "speakers": speakers, "pre_info": None, "figures": [f.model_dump() for f in a.figures],
+        "segments": [{"id": s.id, "label": s.label, "plays": part["plays"], "utterances": [{**u.model_dump(), "lang": "en"} for u in s.utterances]} for s in a.segments],
+        "questions": questions, "scoring_groups": [],
+        "radio": {"supported": False, "reason": "実践課題はラジオでは扱いません", "figure_description_en": ""},
+        "study_notes": study_notes([g.model_dump() for g in a.glossary], [t.model_dump() for t in a.translations_ja], {u.id for seg in a.segments for u in seg.utterances}),
+        "practice": {
+            "practice_kind": spec.practice_kind, "curriculum_version": cur["version"], "purpose_ja": a.purpose_ja[:300] or task["goal_ja"],
+            "listener_ja": a.listener_ja[:200], "success_ja": a.success_ja[:300] or task["goal_ja"], "support_level": 1,
+            "input_mode": (task.get("input_modes") or ["voice_first"])[0], "scene": _slug(a.scene)[:48] or "scene", "items": items,
+            "clarifications": [c.model_dump() for c in a.clarifications][:max_c], "max_clarifications": min(max_c, len(a.clarifications)),
+            "prosody_required": bool(task.get("prosody_required")), "prosody_confirmed": False,
+            # Q01 / V15: the author's statement is recorded; the blind review still has to solve it from the audio
+            "audio_needed_checked": bool(a.audio_dependency_en.strip()), "generated": True,
+        },
     }  # fmt: skip
 
 

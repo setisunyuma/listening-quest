@@ -107,6 +107,26 @@ def plan_jobs(session, user: m.User, mode: str, now: datetime) -> list[dict]:
     return specs
 
 
+def practice_jobs(session, user: m.User) -> list[dict]:
+    """One generation job per open practice kind that has no unseen READY task and nothing on the way."""
+    from lq.domain.practice import task_def
+    from lq.services import practice
+
+    J = m.GenerationJob
+    inflight = {
+        j.params.get("practice_kind")
+        for j in session.execute(select(J).where(J.realm == user.realm, J.status.in_(("QUEUED", "RUNNING", "RETRY_WAIT", "BLOCKED")))).scalars()
+    }  # fmt: skip
+    out = []
+    for k in practice.available_kinds(session, user):
+        if k in inflight or practice.unseen_unit(session, user, k) is not None:
+            continue
+        t = task_def(k)
+        out.append({"mode": t["stage"], "part": k, "template_type": "practice_task", "primary_skill": t["prereq_skills"][0], "band": 3,
+                    "source": "generated", "pool": "practice", "practice_kind": k})  # fmt: skip
+    return out
+
+
 def run_for_user(session, user: m.User, now: datetime | None = None) -> int:
     now = now or datetime.now(UTC)
     cfg_sys = budget.get_system(session, user.realm)
@@ -124,6 +144,13 @@ def run_for_user(session, user: m.User, now: datetime | None = None) -> int:
     ).scalar_one()
     modes = cfg_sys["replenish_modes"] or [L.user_settings(user)["active_mode"]]  # never all five unconditionally
     made = 0
+    # T01 / Q01: practice tasks get a minimum stock only for the kinds open to this learner (never all stages)
+    for spec in practice_jobs(session, user):
+        if made_today + made >= cfg.replenish["max_jobs_per_day"]:
+            return made
+        _, created = queue.enqueue(session, user.realm, "generate", {**spec, "seed": f"auto-{day}-{spec['practice_kind']}"},
+                                   dedupe_key=f"replenish:{user.realm}:{spec['practice_kind']}:{day}:p")  # fmt: skip
+        made += 1 if created else 0
     for mode in modes:
         for spec in plan_jobs(session, user, mode, now):
             if made_today + made >= cfg.replenish["max_jobs_per_day"]:

@@ -1021,14 +1021,24 @@ def admin_generate(
 ) -> dict[str, Any]:
     if body.mode not in MODES or body.primary_skill not in SKILLS:
         raise L.Invalid("unknown mode or skill")
-    part = next((p for p in current_profile(body.mode)["parts"] if p["part"] == body.part), None)
+    from lq.domain.content import PRACTICE_KINDS
+
+    practice_kind = body.part if body.part in PRACTICE_KINDS else ""
+    if practice_kind:  # T01: a practice task of the stage it belongs to (never an exam item)
+        from lq.domain.practice import task_def
+
+        if task_def(practice_kind)["stage"] != body.mode or body.pool != "practice":
+            raise L.Invalid("this practice task belongs to another stage (and is never exam material)")
+        part = {"template_type": "practice_task"}
+    else:
+        part = next((p for p in current_profile(body.mode)["parts"] if p["part"] == body.part), None)
     if part is None:
         raise L.Invalid("unknown part for this mode")
     ids = []
     batch = new_id()[:10]
     for i in range(body.count):
         params = {"mode": body.mode, "part": body.part, "template_type": part["template_type"], "primary_skill": body.primary_skill, "band": body.band, "topic_hint": body.topic_hint,
-                  "seed": f"manual-{batch}-{i}", "source": "generated", "pool": body.pool}  # fmt: skip
+                  "seed": f"manual-{batch}-{i}", "source": "generated", "pool": body.pool, "practice_kind": practice_kind}  # fmt: skip
         if body.source_text.strip():
             params["extra"] = {"source_text": body.source_text.strip()}
             params["origin"] = "own_text"
