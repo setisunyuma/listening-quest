@@ -2018,6 +2018,17 @@
       "title": "Glossary",
       "type": "array"
      },
+     "ja_audio_state": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Ja Audio State"
+     },
      "missed": {
       "default": [],
       "items": {
@@ -2032,6 +2043,18 @@
       },
       "title": "Not First Reasons",
       "type": "array"
+     },
+     "notes_audit": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notes Audit"
      },
      "practice": {
       "anyOf": [
@@ -2355,6 +2378,32 @@
        }
       ],
       "title": "Auto Offline"
+     },
+     "check_interval_days": {
+      "anyOf": [
+       {
+        "maximum": 60.0,
+        "minimum": 0.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Interval Days"
+     },
+     "check_minutes": {
+      "anyOf": [
+       {
+        "maximum": 20.0,
+        "minimum": 3.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Check Minutes"
      },
      "daily_goal_minutes": {
       "anyOf": [
@@ -4039,6 +4088,76 @@
      }
     },
     "summary": "Admin Invalidate"
+   }
+  },
+  "/api/admin/units/{unit_id}/notes": {
+   "put": {
+    "description": "R08: correct translations / glossary only; the content hash, history and audio stay, the notes audit restarts.",
+    "operationId": "admin_unit_notes_api_admin_units__unit_id__notes_put",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "unit_id",
+      "required": true,
+      "schema": {
+       "title": "Unit Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": true,
+        "title": "Body",
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Unit Notes Api Admin Units  Unit Id  Notes Put",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Unit Notes"
    }
   },
   "/api/admin/units/{unit_id}/restore": {
@@ -6919,6 +7038,64 @@
      }
     },
     "summary": "Radio Progress"
+   }
+  },
+  "/api/radio/programs/{program_id}/rebuild": {
+   "post": {
+    "description": "R11: rebuild a program without its withdrawn units (existing audio reused).",
+    "operationId": "radio_rebuild_api_radio_programs__program_id__rebuild_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "program_id",
+      "required": true,
+      "schema": {
+       "title": "Program Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Radio Rebuild Api Radio Programs  Program Id  Rebuild Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Radio Rebuild"
    }
   },
   "/api/radio/relisten": {

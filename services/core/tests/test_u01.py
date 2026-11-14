@@ -78,6 +78,8 @@ def test_day_change_carries_unfinished_tasks_and_ends_the_old_plan(db, user):
 def test_t10_library_attempt_completes_todays_task_once(db, user):
     _units(db)
     plan, slots = _plan(db, user)
+    ids = [s.unit_id for s in slots]
+    assert len(ids) == len(set(ids))  # a unit appears once in a day's plan
     unit = db.get(m.Unit, slots[0].unit_id)
     att = do_attempt(db, user, unit)  # from the library, no slot
     db.refresh(slots[0])

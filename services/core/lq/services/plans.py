@@ -256,6 +256,9 @@ def start_plan(session, user: m.User, now: datetime, kind: str = "quest", mode: 
     )
     carried = [*carried, *extra]
     carried_sec += extra_sec
+    checks = _short_check_slots(session, user, plan, mode, day, now, budget, budget - carried_sec, len(carried))  # L04
+    carried = [*carried, *checks]
+    carried_sec += sum(x.est_sec for x in checks)
     ps = _practice_slot(session, user, plan, budget, budget - carried_sec, len(carried))  # U02: one practice task
     if ps is not None:
         carried = [*carried, ps]
@@ -267,7 +270,7 @@ def start_plan(session, user: m.User, now: datetime, kind: str = "quest", mode: 
         budget - carried_sec,
         cfg,
         _seed(user, day, mode),
-        exclude={x.unit_id for x in carried if x.unit_id and x.kind == "unit"},
+        exclude={x.unit_id for x in carried if x.unit_id and x.kind in (None, "unit")},  # kind is unset until flush
     )
     if not draft.slots and not carried:
         session.delete(plan)
@@ -291,6 +294,62 @@ def start_plan(session, user: m.User, now: datetime, kind: str = "quest", mode: 
     plan.params = {**plan.params, "notes": notes, "held_reviews": held[:30]}
     session.flush()
     return plan
+
+
+def _short_check_slots(
+    session, user: m.User, plan: m.DailyPlan, mode: str, day: date, now: datetime, budget: int, room_sec: int, idx: int
+) -> list[m.PlanSlot]:
+    """L04: every N days, a short check on material the learner has never met (audio, family and lineage), in the
+    same mode, near the current band, official presentation and plays. It is part of the day's time, is never placed on
+    a day with a full mock, and is skipped with a note when unseen stock is short (no paid generation is started)."""
+    from lq.domain import progression as P
+
+    s = L.user_settings(user)
+    every, minutes = int(s.get("check_interval_days", 7)), int(s.get("check_minutes", 8))
+    if not every or budget <= P.load_progression()["transition_period"]["short_day_sec"]:
+        return []
+    last = session.execute(
+        select(func.max(m.DailyPlan.learning_day)).where(m.DailyPlan.user_id == user.id, m.DailyPlan.params["check"].is_not(None), m.DailyPlan.id != plan.id)
+    ).scalar_one_or_none()  # fmt: skip
+    if last is not None and (day - last).days < every:
+        return []
+    mock_today = session.execute(
+        select(m.LearningSession.id).where(m.LearningSession.user_id == user.id, m.LearningSession.session_type == "assessment",
+                                           m.LearningSession.started_at >= now - timedelta(hours=20))
+    ).first()  # fmt: skip
+    if mock_today:
+        return []
+    cands, state, units = learner_context(session, user, mode, day, now)
+    cap = min(minutes * 60, room_sec)
+    pool = sorted(
+        (c for c in cands if not c.touched and not c.family_touched and abs(c.band - state.band) <= 1
+         and (units[c.unit_id].presentation_profile or {}).get("kind") == "official"),
+        key=lambda c: (abs(c.band - state.band), c.est_sec, c.unit_id),
+    )  # fmt: skip
+    picked, used, fams = [], 0, set()
+    for c in pool:
+        if c.family_id in fams or used + c.est_sec > cap or len(picked) >= 4:  # a short check: a few items only
+            continue
+        picked.append(c)
+        used += c.est_sec
+        fams.add(c.family_id)
+    if len(picked) < 2:
+        plan.params = {
+            **plan.params,
+            "check_skipped": "短時間チェックに使える未見の教材が足りないため、今回は見送りました（追加の生成はしません）",
+        }
+        return []
+    check_id = f"chk-{plan.id[:8]}"
+    cond = {"mode": mode, "band": state.band, "bands": sorted({c.band for c in picked}), "presentation": "official", "plays": "official",
+            "units": [c.unit_id for c in picked], "minutes": minutes}  # fmt: skip
+    plan.params = {**plan.params, "check": {"id": check_id, "conditions": cond}}
+    cfg = rules.load_config()
+    return [
+        m.PlanSlot(plan_id=plan.id, idx=idx + i, category="check", mode=mode, unit_id=c.unit_id, est_sec=c.est_sec,
+                   time_cap_sec=rec.slot_cap(c.est_sec, cfg), kind="unit", reason_code="short_check",
+                   reason_text=f"短時間チェック（未見・{len(picked)}件・参考値）", reason_params={"check_id": check_id})
+        for i, c in enumerate(picked)
+    ]  # fmt: skip
 
 
 def _practice_slot(
@@ -388,7 +447,7 @@ def _inherited_and_bridge(
     used = 0
     for i, d in enumerate(picked):
         out.append(m.PlanSlot(plan_id=plan.id, idx=start_idx + i, category="review", mode=d.mode, unit_id=d.unit_id, est_sec=d.est_sec,
-                              time_cap_sec=rec.slot_cap(d.est_sec, cfg), reason_code="review_inherited",
+                              time_cap_sec=rec.slot_cap(d.est_sec, cfg), kind="unit", reason_code="review_inherited",
                               reason_text=f"{MODE_JA[d.mode]}の期限が来た復習（目標を変えても続きます）",
                               reason_params={"due_day": d.due_day.isoformat(), "from_mode": d.mode}))  # fmt: skip
         used += d.est_sec
@@ -401,7 +460,7 @@ def _inherited_and_bridge(
             if sl["est_sec"] > split["bridge"] * 1.5:
                 break
             out.append(m.PlanSlot(plan_id=plan.id, idx=start_idx + len(out), category="weak", mode=old, unit_id=sl["unit_id"], est_sec=sl["est_sec"],
-                                  time_cap_sec=sl["time_cap_sec"], reason_code="bridge",
+                                  time_cap_sec=sl["time_cap_sec"], kind="unit", reason_code="bridge",
                                   reason_text=f"移行期の橋渡し（{MODE_JA[old]}で{sl['reason_text']}）", reason_params=sl["reason_params"]))  # fmt: skip
             used += sl["est_sec"]
     return out, used, held
@@ -446,14 +505,21 @@ def after_unit(session, user: m.User, slot_id: str, now: datetime) -> None:
     if plan.kind != "quest":
         return
     slots = _plan_slots(session, plan.id, lock=True)
-    fixed = {s.unit_id for s in slots if s.unit_id and (s.state != "pending" or s.reserved)}
+    # units of started / reserved tasks and of check / practice / repair tasks are never handed to another slot
+    fixed = {
+        s.unit_id
+        for s in slots
+        if s.unit_id and (s.state != "pending" or s.reserved or s.kind != "unit" or s.category == "check")
+    }
     cfg = rules.load_config()
     today = L.user_day(user, now)
     ctx: dict[str, tuple] = {}
     first_pending = True
     used = set(fixed)
     for s in slots:
-        if s.state != "pending" or s.reserved or s.kind != "unit":  # repair / recall tasks keep their content
+        if (
+            s.state != "pending" or s.reserved or s.kind != "unit" or s.category == "check"
+        ):  # repair / recall / check keep theirs
             continue
         if s.mode not in ctx:
             ctx[s.mode] = learner_context(session, user, s.mode, today, now)

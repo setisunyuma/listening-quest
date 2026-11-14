@@ -183,16 +183,47 @@ def start_radio_plan(session, user: m.User, now: datetime, mode: str, budget_sec
     return plan
 
 
+def _withdrawn(session, prog: m.RadioProgram) -> set[str]:
+    """R11: units of an already rendered program that were withdrawn (invalidated) after it was built."""
+    ids = [t["unit_id"] for t in prog.timeline]
+    if not ids:
+        return set()
+    return set(
+        session.execute(select(m.Unit.id).where(m.Unit.id.in_(ids), m.Unit.invalidated_at.is_not(None))).scalars()
+    )
+
+
 def program_dto(session, prog: m.RadioProgram) -> dict:
     asset = session.get(m.Asset, prog.asset_id)
     cfg = rules.load_config()
+    gone = _withdrawn(session, prog)
     units = []
     for t in prog.timeline:
         cov = rules.coverage_ratio(prog.played_ranges, t["start_ms"], t["end_ms"])
-        units.append({**t, "coverage": round(cov, 3), "complete": cov >= cfg.radio_complete_ratio})
+        units.append(
+            {
+                **t,
+                "coverage": round(cov, 3),
+                "complete": cov >= cfg.radio_complete_ratio,
+                "withdrawn": t["unit_id"] in gone,
+            }
+        )
     return {"id": prog.id, "mode": prog.mode, "learning_day": prog.learning_day.isoformat(), "duration_ms": prog.duration_ms, "position_ms": prog.position_ms,
             "audio": {"url": L.audio_url(asset), "bytes": asset.bytes, "sha256": asset.sha256, "duration_ms": asset.duration_ms}, "units": units,
-            "played_ms": sum(b - a for a, b in prog.played_ranges)}  # fmt: skip
+            "played_ms": sum(b - a for a, b in prog.played_ranges),
+            # R11: withdrawn parts are skipped by the player and the program can be rebuilt from the remaining audio
+            "stale": bool(gone), "skip_ranges": [[t["start_ms"], t["end_ms"]] for t in prog.timeline if t["unit_id"] in gone]}  # fmt: skip
+
+
+def rebuild_program(session, user: m.User, program_id: str, now: datetime) -> m.RadioProgram:
+    """A new program from the remaining valid units, reusing their existing radio audio (nothing is regenerated).
+    The old program, its coverage and the learning history stay as they are."""
+    prog = get_program(session, user, program_id)
+    gone = _withdrawn(session, prog)
+    keep = [t["unit_id"] for t in prog.timeline if t["unit_id"] not in gone]
+    if not keep:
+        raise L.Invalid("every unit of this program was withdrawn")
+    return build_program(session, user, prog.mode, now, unit_ids=keep)
 
 
 def get_program(session, user: m.User, program_id: str, lock: bool = False) -> m.RadioProgram:
@@ -247,7 +278,7 @@ def report_progress(
                 meta={"program": prog.id, "coverage": round(cov, 3)},
                 at=now,
             )
-        if cov >= cfg.radio_complete_ratio:
+        if cov >= cfg.radio_complete_ratio and t["unit_id"] not in _withdrawn(session, prog):
             got = L.award_xp(
                 session,
                 user.id,

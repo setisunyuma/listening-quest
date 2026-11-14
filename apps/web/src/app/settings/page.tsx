@@ -36,6 +36,8 @@ export default function SettingsPage() {
       {msg && <Msg kind={msg.kind}>{msg.text}</Msg>}
       <section className="panel"><h2>日課</h2>
         <label className="field">1日の目標時間（5モード合計）<select value={s.daily_goal_minutes} onChange={(e) => save({ daily_goal_minutes: Number(e.target.value) })}>{[10, 15, 20, 30, 45, 60].map((m) => <option key={m} value={m}>{m}分</option>)}</select></label>
+        <label className="field">短時間チェック（未見の教材・日課の中）<select value={s.check_interval_days ?? 7} onChange={(e) => save({ check_interval_days: Number(e.target.value) })}>{[[0, "使わない"], [3, "3日ごと"], [7, "7日ごと（初期設定）"], [14, "14日ごと"]].map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></label>
+        <label className="field">短時間チェックの長さ<select value={s.check_minutes ?? 8} onChange={(e) => save({ check_minutes: Number(e.target.value) })}>{[5, 8, 10].map((m) => <option key={m} value={m}>{m}分</option>)}</select></label>
         <label className="field">タイムゾーン<select value={s.timezone} onChange={(e) => save({ timezone: e.target.value })}>{Array.from(new Set(["Asia/Tokyo", s.timezone, Intl.DateTimeFormat().resolvedOptions().timeZone, "UTC", "America/Los_Angeles", "America/New_York", "Europe/London", "Australia/Sydney"])).map((z) => <option key={z}>{z}</option>)}</select></label>
         <label className="field">学習日の切り替え時刻<select value={s.day_cutoff_hour} onChange={(e) => save({ day_cutoff_hour: Number(e.target.value) })}>{Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{String(h).padStart(2, "0")}:00</option>)}</select></label>
         <p className="faint">変更は次に作る計画から反映されます。進行中の計画の量は変わりません。日付はサーバーの時刻で判定します。</p>

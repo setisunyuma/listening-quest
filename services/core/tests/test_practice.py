@@ -205,6 +205,7 @@ def test_g01_evidence_opens_the_next_task_and_it_is_never_locked_again(db, user,
 
 
 def test_v10_v11_manual_start_with_no_history_joins_today_without_growing_the_day(db, user):
+    L.update_user_settings(user, {"check_interval_days": 0})  # keep this day free of the L04 check
     for i in range(4):
         ready_unit(db, content=make_content(part="1A", seed=f"m{i}"))
     unit(db, "pr-p3a-festival")

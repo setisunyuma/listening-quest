@@ -55,6 +55,15 @@ export default function GrowthPage() {
         <div className="panel"><h3 style={{ marginTop: 0 }}>{g.self_reported.label}</h3>
           <dl className="kv"><dt>自分では正解</dt><dd>{g.self_reported.counts.correct ?? 0}</dd><dt>自分では不正解</dt><dd>{g.self_reported.counts.incorrect ?? 0}</dd><dt>不明</dt><dd>{g.self_reported.counts.unknown ?? 0}</dd><dt>ラジオで接触したUnit</dt><dd>{g.self_reported.radio_units}</dd></dl></div>
       </div>
+      {g.short_checks?.checks?.length > 0 && (
+        <section className="panel" aria-labelledby="chk-h">
+          <h2 id="chk-h">{g.short_checks.label}</h2>
+          {g.short_checks.checks.map((c: Json) => (
+            <p key={c.id}>{c.day}: {c.questions > 0 ? `${c.correct} / ${c.questions} 問` : "未実施"} <small>（{c.units_done}/{c.units_planned} 件・難度帯 {c.conditions.bands.join("・")}{c.excluded_units ? `・補助付きなど ${c.excluded_units} 件は除外` : ""}）</small></p>
+          ))}
+          <p className="faint">{g.short_checks.note}</p>
+        </section>
+      )}
       <section className="panel" aria-labelledby="band-h">
         <h2 id="band-h">{g.band.label}: <span className={`chip b${g.band.current}`}>{g.band.current}</span></h2>
         <p className="note">現在の難度帯での適格な初見結果: {g.band.eligible_units_in_band} / {g.band.needed} Unit（異なる音声）。{g.band.needed}件そろうと、直近最大20件の平均が {Math.round(g.band.up_threshold * 100)}% 以上で1段階上げ、{Math.round(g.band.down_threshold * 100)}% 未満で1段階下げます（1学習日に最大1段階）。</p>

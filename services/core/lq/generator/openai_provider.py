@@ -135,6 +135,7 @@ class RealtimeTTS:
         chunks: list[bytes] = []
         usage: dict = {}
         sent = False
+        settled = False
         try:
             with connect(
                 f"{self.url}?model={self.model}",
@@ -176,10 +177,16 @@ class RealtimeTTS:
                         resp = ev.get("response") or {}
                         usage = resp.get("usage") or {}
                         if resp.get("status") != "completed":
+                            # R12: "did the material succeed" and "can the cost be derived from usage" are separate
+                            usd = budget.cost_realtime(self.model, usage) if usage else None
+                            if usd is not None:
+                                meter.settle(entry, usd, {**usage, "response_status": resp.get("status")})
+                                settled = True
                             raise ProviderError(f"realtime response {resp.get('status')}: {resp.get('status_details')}")
                         break
         except ProviderError:
-            meter.mark_unknown(entry, "realtime error after request")
+            if not settled:  # no usable usage: stays unknown at the estimate, never zero
+                meter.mark_unknown(entry, "realtime error after request")
             raise
         except (WebSocketException, TimeoutError, OSError) as e:
             if sent:

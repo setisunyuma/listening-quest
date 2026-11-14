@@ -21,6 +21,7 @@ def job_dto(session, job: m.GenerationJob) -> dict:
     unit = session.get(m.Unit, job.unit_id) if job.unit_id else None
     return {
         "id": job.id, "kind": job.kind, "status": job.status, "blocked_reason": job.blocked_reason, "blocked_label": BLOCK_LABELS.get(job.blocked_reason or "", None),
+        "skill_request": (job.state or {}).get("skill_request"),  # R09: requested vs the skill the questions test
         "stop_detail": job.stop_detail, "last_completed_step": job.last_completed_step, "attempts": job.attempts, "max_attempts": job.max_attempts,
         "params": {k: job.params.get(k) for k in ("mode", "part", "template_type", "primary_skill", "band", "pool", "origin")}, "unit_id": job.unit_id,
         "unit_status": unit.status if unit else None, "unit_title": unit.title if unit else None, "unit_status_reason": unit.status_reason if unit else None,

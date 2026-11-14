@@ -20,7 +20,7 @@ from lq.domain.content import UnitContent, canonical_json, reviewer_view, sha256
 from lq.domain.profiles import get_profile, part_spec
 from lq.generator import authoring
 from lq.generator.budget import BudgetBlocked
-from lq.generator.factory import assign_voices, get_providers, speaker_gender
+from lq.generator.factory import assign_voices, get_providers, speaker_gender, voice_config_problems
 from lq.generator.providers import GenSpec, ProviderError
 from lq.jobs.queue import Lease, StaleLease
 from lq.services import content as C
@@ -172,6 +172,27 @@ def step_content(lease: Lease, prov, meter, realm: str, params: dict) -> str:
         log.info("content draft failed format checks, asking for one rewrite: %s", "; ".join(lint_fixes))
     if content is None:
         raise ProviderError(f"generated content violated the schema 3 times: {last_err}", retryable=False)
+    # R09: the requested skill and the skill the questions actually need are kept apart. One rewrite inside the existing
+    # attempts; if the questions still test another skill, the material is kept as ordinary stock of that skill and the
+    # weak-skill request stays unfulfilled (never re-tagged to look fulfilled).
+    tags = {t for q in content.questions for t in q.skill_tags}
+    if spec.primary_skill not in tags and not content.legacy_radio_only and content.practice is None:
+        log.info("generated questions test %s, not the requested %s: one rewrite", sorted(tags), spec.primary_skill)
+        note = (f"The questions must require the skill '{spec.primary_skill}' to answer (not just mention it): "
+                f"the draft tested {sorted(tags)} instead.")  # fmt: skip
+        try:
+            again = UnitContent.model_validate(
+                prov.content.generate(dataclasses.replace(spec, extra={**spec.extra, "fix_notes": [*(spec.extra.get("fix_notes") or []), note]}), meter)
+            )  # fmt: skip
+            if spec.primary_skill in {t for q in again.questions for t in q.skill_tags} and not authoring.lint_unit(
+                again
+            ):
+                content = again
+        except (ValidationError, ProviderError):
+            pass
+    tags = {t for q in content.questions for t in q.skill_tags}
+    skill_request = {"requested": spec.primary_skill, "validated": content.primary_skill if spec.primary_skill not in tags else spec.primary_skill,
+                     "fulfilled": spec.primary_skill in tags or content.legacy_radio_only}  # fmt: skip
 
     def save(s, job):
         nonlocal content
@@ -181,6 +202,7 @@ def step_content(lease: Lease, prov, meter, realm: str, params: dict) -> str:
             content = content.model_copy(update={"content_id": f"{content.content_id}-{job.id[:6]}"})
             unit, _ = C.register_unit(s, realm, content, pool=spec.pool)
         job.unit_id = unit.id
+        job.state = {**(job.state or {}), "skill_request": skill_request}
         return unit.id
 
     return _commit_step(lease, save, "content")
@@ -231,7 +253,13 @@ def step_review(lease: Lease, prov, meter, unit_id: str) -> None:
         _commit_step(lease, record)
         if not verdict["ok"]:
             return
-    _commit_step(lease, lambda s, job: setattr(s.get(m.Unit, unit_id), "status", "AUDIO_PENDING"), "review")
+
+    def to_audio(s, job):
+        unit = s.get(m.Unit, unit_id)
+        C.check_notes(s, unit)  # R08: after the blind answer check, the free structure check of the notes
+        unit.status = "AUDIO_PENDING"
+
+    _commit_step(lease, to_audio, "review")
 
 
 # ---------------------------------------------------------------- audio
@@ -296,6 +324,14 @@ def step_audio(lease: Lease, prov, meter, unit_id: str) -> None:
 
     specs = R.plan_clips(content)
     voices = assign_voices(content)
+    if missing_tts := [c for c in specs if c not in imported and c.startswith("utt:")]:
+        # R10: a wrong voice setting is found for free before any speech is paid for
+        problems = voice_config_problems(content, voices) if prov.tts is not None and missing_tts else []
+        if problems:
+            _commit_step(
+                lease, lambda s, job: C.quarantine(s, s.get(m.Unit, unit_id), "voice settings: " + "; ".join(problems))
+            )
+            return
     clips: dict[str, bytes] = {}
     clip_keys: dict[str, str] = {}
     missing = [cid for cid in specs if cid not in imported]
@@ -514,12 +550,14 @@ def step_audio_qa(lease: Lease, prov, meter, unit_id: str) -> None:
                 ):
                     continue
                 f0 = pitch.median_f0(decode_to_pcm(st.get(clip_keys[cid])))
-                problem = pitch.gender_mismatch(genders[spec.speaker_id], f0)
+                chk = pitch.pitch_check(genders[spec.speaker_id], f0)
                 results_by = next((r for r in results if r["clip"] == cid), None)
                 if results_by is not None:
+                    # R10: borderline / unmeasurable are recorded as such, never as a pass of the voice check
                     results_by["pitch_hz"] = round(f0) if f0 else None
-                if problem:
-                    voice_bad.append({"clip": cid, "speaker": spec.speaker_id, "problems": [problem]})
+                    results_by["pitch_state"] = chk["state"]
+                if chk["state"] == "mismatch":
+                    voice_bad.append({"clip": cid, "speaker": spec.speaker_id, "problems": [chk["problem"]]})
 
         # A synthesised clip that does not match gets ONE fresh synthesis before the unit is quarantined:
         # speech models are not deterministic. Only that clip is re-made (one more speech request); all other

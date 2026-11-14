@@ -378,6 +378,10 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
         <p className="note">{result.counted_as_first ? "初見の成績（規定条件内）として記録しました。" : `記録の種類: ${{ review: "復習", assisted: "補助付き", repeat: "既出の練習", partial: "一部未回答", assessment: "実力チェック" }[result.category ?? ""] ?? "練習"}${result.not_first_reasons.length ? `（${result.not_first_reasons.map((r) => NOT_FIRST[r] ?? r).join("・")}）` : ""}`}</p>
         {result.schedule && <p className="note">次の復習: {result.schedule.due_day}（{result.schedule.reason_ja}）</p>}
         {result.band?.changed && <Msg kind="ok">このモードの難度帯が {result.band.band} になりました（直近の初見結果 {result.band.n} Unit の平均による調整）。</Msg>}
+        {result.notes_audit && ["unaudited", "structure_ok", "needs_check"].includes(result.notes_audit.state) && (
+          <p className="faint">{result.notes_audit.state === "needs_check" ? "和訳・語注に要確認の箇所があります（否定の対応など）。" : "和訳・語注は自動の構造確認のみで、意味の監査は未実施です。"}</p>
+        )}
+        {result.feedback_audio && result.ja_audio_state === "unverified" && <p className="faint">日本語の解説音声は自動照合していません（英語の音声は照合済み）。</p>}
         {result.feedback_audio && (
           <div className="row">
             {active === "fb" && player.state === "playing" ? <button onClick={player.pause}>❚❚ 解説音声を止める</button> : <button onClick={() => playSrc("fb", result.feedback_audio!.url)}>▶ 正答と解説を音声で聞く</button>}
@@ -514,7 +518,7 @@ function ReportBox({ unitId, attemptId }: { unitId: string; attemptId: string })
   const send = async () => {
     try {
       const r = await api<Json>(`/units/${unitId}/reports`, { body: { kind, note, attempt_id: attemptId } });
-      setDone(r.withdrawn ? "報告しました。この教材は出題とラジオから外しました（教材管理で元に戻せます）。" : "報告しました。教材管理の「報告」に記録されます。");
+      setDone(r.withdrawn ? "報告しました。この教材は新しい出題とラジオの候補から外しました。作成済みのラジオ番組では、この部分を飛ばして作り直しを案内します（保存済みの端末は次回の同期で反映。教材管理で元に戻せます）。" : "報告しました。教材管理の「報告」に記録されます。");
     } catch (e) { setErr((e as ApiError).detail); }
   };
   if (done) return <Msg kind="ok">{done}</Msg>;
@@ -524,7 +528,7 @@ function ReportBox({ unitId, attemptId }: { unitId: string; attemptId: string })
         {REPORT_KINDS.map(([id, label]) => <button key={id} className="small" aria-pressed={kind === id} onClick={() => setKind(kind === id ? "" : id)}>{kind === id ? "✓ " : ""}{label}</button>)}
       </div>
       <label className="field">メモ（任意）<textarea value={note} maxLength={1000} rows={2} onChange={(e) => setNote(e.target.value)} placeholder="例: seed exchange が何か分からない" /></label>
-      {(kind === "wrong" || kind === "audio") && <p className="faint">送ると、この教材はすぐに出題とラジオから外れます。</p>}
+      {(kind === "wrong" || kind === "audio") && <p className="faint">送ると、この教材は新しい出題とラジオの候補から外れ、作成済みのラジオ番組では飛ばされます。</p>}
       <button className="small primary" disabled={!kind} onClick={send}>報告を送る</button>
       {err && <Msg>{err}</Msg>}
     </details>

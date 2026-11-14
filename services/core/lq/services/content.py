@@ -8,12 +8,21 @@ from sqlalchemy import select
 
 from lq.audio.render import radio_supported
 from lq.db import models as m
-from lq.domain.content import UnitContent, content_hash, estimate_duration_sec, sha256_hex, stimulus_fingerprint
+from lq.domain.content import (
+    UnitContent,
+    content_hash,
+    estimate_duration_sec,
+    notes_hash,
+    sha256_hex,
+    stimulus_fingerprint,
+)
 from lq.storage import get_storage
 
 DEMO_ONLY_METHODS = ("demo_mock_reviewed", "audio_demo_mock_checked")
 CONTENT_METHODS = ("api_reviewed", "manual_reviewed", "author_reviewed", "demo_mock_reviewed")
 AUDIO_METHODS = ("audio_auto_checked", "audio_human_listened", "audio_demo_mock_checked")
+# R08: notes (translations, glossary) and explanations: a free structure check first; a meaning audit is separate
+NOTES_METHODS = ("notes_structure_checked", "notes_manual_audited", "notes_api_audited")
 
 
 class ContentConflict(Exception):
@@ -62,12 +71,20 @@ def add_review_record(
 ) -> m.ReviewRecord:
     if method in DEMO_ONLY_METHODS and unit.realm != "demo":
         raise ValueError("mock review records are only valid in the demo realm")
-    if target == "content" and method not in CONTENT_METHODS or target == "audio" and method not in AUDIO_METHODS:
+    if (
+        target == "content"
+        and method not in CONTENT_METHODS
+        or target == "audio"
+        and method not in AUDIO_METHODS
+        or target == "notes"
+        and method not in NOTES_METHODS
+    ):
         raise ValueError(f"method {method} is not valid for target {target}")
     rec = m.ReviewRecord(
         unit_id=unit.id,
         target=target,
-        content_hash=unit.content_hash,
+        # notes are audited against their own hash: a corrected translation never reuses an old pass
+        content_hash=notes_hash(load_content(unit)) if target == "notes" else unit.content_hash,
         method=method,
         reviewer=reviewer,
         result=result,
@@ -211,3 +228,57 @@ def gc_orphan_objects(session, min_age_sec: int = 3600) -> list[str]:
             st.delete(key)
             removed.append(key)
     return removed
+
+
+def check_notes(session, unit: m.Unit) -> m.ReviewRecord:
+    """R08: record the free structure check of the current notes once per notes hash."""
+    from lq.generator.authoring import notes_errors
+
+    content = load_content(unit)
+    h = notes_hash(content)
+    rec = session.execute(
+        select(m.ReviewRecord).where(m.ReviewRecord.unit_id == unit.id, m.ReviewRecord.target == "notes",
+                                     m.ReviewRecord.content_hash == h, m.ReviewRecord.method == "notes_structure_checked")
+    ).scalars().first()  # fmt: skip
+    if rec is not None:
+        return rec
+    errs, flags = notes_errors(content, require_coverage=content.source not in ("fixture", "legacy-radio", "import"))
+    return add_review_record(session, unit, target="notes", method="notes_structure_checked", reviewer="lq:structure",
+                             result="fail" if errs else "pass", details={"errors": errs, "flags": flags})  # fmt: skip
+
+
+def notes_audit_state(session, unit: m.Unit) -> dict:
+    content = load_content(unit)
+    h = notes_hash(content)
+    recs = session.execute(
+        select(m.ReviewRecord).where(m.ReviewRecord.unit_id == unit.id, m.ReviewRecord.target == "notes", m.ReviewRecord.content_hash == h)
+        .order_by(m.ReviewRecord.created_at.desc())
+    ).scalars().all()  # fmt: skip
+    meaning = next((r for r in recs if r.method != "notes_structure_checked" and r.result == "pass"), None)
+    struct = next((r for r in recs if r.method == "notes_structure_checked"), None)
+    has_notes = bool(content.study_notes.translations or content.study_notes.glossary)
+    if not has_notes:
+        state = "none"
+    elif meaning is not None:
+        state = "meaning_audited"
+    elif struct is None:
+        state = "unaudited"
+    else:
+        state = "structure_ok" if struct.result == "pass" and not struct.details.get("flags") else "needs_check"
+    return {"state": state, "notes_hash": h[:12], "flags": (struct.details.get("flags") if struct else []) or []}
+
+
+def update_notes(session, unit: m.Unit, notes: dict, actor: str) -> dict:
+    """R08: replace only the notes. The content hash, grading history and audio stay; the old notes audit stops
+    counting (it belongs to the old notes hash) and the previous notes are kept in the audit log."""
+    from lq.domain.content import StudyNotes
+
+    new = StudyNotes.model_validate(notes)
+    old = unit.content.get("study_notes")
+    unit.content = {**unit.content, "study_notes": new.model_dump(mode="json")}
+    session.add(
+        m.AuditLog(realm=unit.realm, actor=actor, action="notes_updated", target=unit.id, details={"previous": old})
+    )
+    session.flush()
+    check_notes(session, unit)
+    return notes_audit_state(session, unit)

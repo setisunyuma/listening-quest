@@ -117,3 +117,31 @@ def assign_voices(unit) -> dict[str, str]:
         used.add(voice)
     voices.setdefault("narrator", s.tts_narrator_voice)
     return voices
+
+
+def voice_config_problems(unit, voices: dict[str, str]) -> list[str]:
+    """R10: deterministic check of the voice settings before any speech is made (free). Each speaker's voice must
+    come from the pool of its gender, a voice must not sit in both gender pools, and speakers must not share a
+    voice while the pools allow distinct ones (or with the narrator)."""
+    s = get_settings()
+    reserved = {s.tts_narrator_voice, s.tts_ja_voice}
+    male, female = set(_pool(s.tts_male_voices, reserved)), set(_pool(s.tts_female_voices, reserved))
+    errs = []
+    both = male & female
+    if both:
+        errs.append(f"voice settings: {sorted(both)} are listed as both male and female voices")
+    speakers = [sp for sp in unit.speakers if sp.role != "narrator"]
+    for sp in speakers:
+        v, g = voices.get(sp.id), speaker_gender(sp)
+        if v is None:
+            errs.append(f"speaker {sp.id}: no voice assigned")
+        elif g == "male" and male and v in female - male:
+            errs.append(f"speaker {sp.id} is male but is assigned the female voice {v}")
+        elif g == "female" and female and v in male - female:
+            errs.append(f"speaker {sp.id} is female but is assigned the male voice {v}")
+        if v is not None and v == s.tts_narrator_voice:
+            errs.append(f"speaker {sp.id} shares the narrator's voice")
+    used = [voices.get(sp.id) for sp in speakers]
+    if len(set(used)) < len(used) and len(set(male | female | set(_pool(s.tts_speaker_voices, reserved)))) >= len(used):
+        errs.append("two speakers share one voice although distinct voices are available")
+    return errs

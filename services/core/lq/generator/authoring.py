@@ -287,7 +287,7 @@ def authored_to_unit(raw: dict, spec: GenSpec) -> dict:
             "id": q.id, "slot": q.slot, "segment_ids": q.segment_ids, "prompt_en": q.prompt_en,
             "prompt_medium": part["question_medium"], "prompt_timing": part["question_timing"], "type": q.type,
             "choices": [c.model_dump() for c in q.choices], "items": [c.model_dump() for c in q.items], "figure_ids": q.figure_ids,
-            "answer": answer, "skill_tags": [s for s in q.skill_tags if s in SKILLS] or [spec.primary_skill], "evidence": ev,
+            "answer": answer, "skill_tags": [s for s in q.skill_tags if s in SKILLS], "evidence": ev,
             "feedback": {"answer_en": q.answer_en, "explanation_ja": q.explanation_ja, "hint_ja": q.hint_ja, "distractors": [d.model_dump() for d in q.distractors]},
         })  # fmt: skip
     skills = sorted({s for q in questions for s in q["skill_tags"]})
@@ -490,3 +490,62 @@ def contract_errors(unit: UnitContent, part: dict) -> list[str]:
                             f"question {q.id} (slot {q.slot}): must compare both students' comments with the lecture"
                         )
     return errs
+
+
+_EN_NEG = re.compile(r"\b(not|no|never|none|nothing|nobody|neither|nor|cannot)\b|n't\b", re.I)
+_JA_NEG = re.compile(r"ない|ません|ず[、。に]?|ぬ|無|未|非|不|しな|できな|なかった|なし|いいえ")
+
+
+def notes_errors(unit: UnitContent, *, require_coverage: bool = False) -> tuple[list[str], list[str]]:
+    """R08: free structural checks of explanations, wrong-choice reasons, translations and glossary, before any paid
+    meaning audit. Returns (errors, flags): errors are structural faults; flags are cases a meaning audit must look at
+    (e.g. a translation whose negation does not match the English line). Old material without notes is accepted unless
+    `require_coverage` (new generated material) is set."""
+    errs: list[str] = []
+    flags: list[str] = []
+    utt = unit.utterance_map()
+    seg_of = {u.id: s.id for s in unit.segments for u in s.utterances}
+    seen: set[str] = set()
+    for t in unit.study_notes.translations:
+        if t.utterance_id in seen:
+            errs.append(f"translation for {t.utterance_id} appears twice")
+        seen.add(t.utterance_id)
+        if t.utterance_id not in utt:
+            errs.append(f"translation for unknown line {t.utterance_id}")
+            continue
+        en_neg, ja_neg = bool(_EN_NEG.search(utt[t.utterance_id].text)), bool(_JA_NEG.search(t.ja))
+        if en_neg != ja_neg:
+            flags.append(
+                f"translation of {t.utterance_id}: negation differs from the English line (meaning audit needed)"
+            )
+    if require_coverage and unit.study_notes.translations:
+        missing = sorted(set(utt) - seen)
+        if missing:
+            errs.append(f"translations missing for {missing[:8]}")
+    text = " ".join(u.text.lower() for u in utt.values())
+    terms: set[str] = set()
+    for g in unit.study_notes.glossary:
+        key = g.term.strip().lower()
+        if key in terms:
+            errs.append(f"glossary term {g.term!r} appears twice")
+        terms.add(key)
+        if key not in text:
+            errs.append(f"glossary term {g.term!r} does not occur in the audio script")
+    for q in unit.questions:
+        cids = {c.id for c in q.choices}
+        reasons = [d.choice_id for d in q.feedback.distractors]
+        if len(reasons) != len(set(reasons)):
+            errs.append(f"question {q.id}: two wrong-choice reasons for one choice")
+        if q.type == "single_choice" and q.answer.choice_id in reasons:
+            errs.append(f"question {q.id}: a wrong-choice reason explains the correct choice")
+        for cid in reasons:
+            if cid not in cids:
+                errs.append(f"question {q.id}: wrong-choice reason for unknown choice {cid}")
+        for e in q.evidence:
+            if e.utterance_id and e.utterance_id not in utt:
+                errs.append(f"question {q.id}: evidence names unknown line {e.utterance_id}")
+            elif e.utterance_id and q.segment_ids and seg_of.get(e.utterance_id) not in q.segment_ids:
+                errs.append(
+                    f"question {q.id}: evidence line {e.utterance_id} is outside the segments the question uses"
+                )
+    return errs, flags

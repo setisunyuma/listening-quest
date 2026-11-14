@@ -345,6 +345,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/units/{unit_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Admin Unit Notes
+         * @description R08: correct translations / glossary only; the content hash, history and audio stay, the notes audit restarts.
+         */
+        put: operations["admin_unit_notes_api_admin_units__unit_id__notes_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/units/{unit_id}/restore": {
         parameters: {
             query?: never;
@@ -1198,6 +1218,26 @@ export interface paths {
         put?: never;
         /** Radio Progress */
         post: operations["radio_progress_api_radio_programs__program_id__progress_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/radio/programs/{program_id}/rebuild": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Radio Rebuild
+         * @description R11: rebuild a program without its withdrawn units (existing audio reused).
+         */
+        post: operations["radio_rebuild_api_radio_programs__program_id__rebuild_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2243,6 +2283,8 @@ export interface components {
             glossary: {
                 [key: string]: unknown;
             }[];
+            /** Ja Audio State */
+            ja_audio_state?: string | null;
             /**
              * Missed
              * @default []
@@ -2250,6 +2292,10 @@ export interface components {
             missed: string[];
             /** Not First Reasons */
             not_first_reasons: string[];
+            /** Notes Audit */
+            notes_audit?: {
+                [key: string]: unknown;
+            } | null;
             /** Practice */
             practice?: {
                 [key: string]: unknown;
@@ -2348,6 +2394,10 @@ export interface components {
             active_mode?: string | null;
             /** Auto Offline */
             auto_offline?: boolean | null;
+            /** Check Interval Days */
+            check_interval_days?: number | null;
+            /** Check Minutes */
+            check_minutes?: number | null;
             /** Daily Goal Minutes */
             daily_goal_minutes?: number | null;
             /** Day Cutoff Hour */
@@ -3211,6 +3261,47 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["InvalidateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_unit_notes_api_admin_units__unit_id__notes_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
             };
         };
         responses: {
@@ -5013,6 +5104,41 @@ export interface operations {
                 "application/json": components["schemas"]["RadioProgressIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    radio_rebuild_api_radio_programs__program_id__rebuild_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                program_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
