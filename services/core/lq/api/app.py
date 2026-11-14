@@ -428,6 +428,13 @@ def unit_missed(
     return {"missed": out}
 
 
+@app.post("/api/units/{unit_id}/dictation")
+def unit_dictation(
+    unit_id: str, body: S.DictationIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    return feedback.check_dictation(session, user, unit_id, body.utterance_id, body.typed)
+
+
 @app.get("/api/missed")
 def missed_lines(
     mode: str | None = None, session: Session = Depends(db), user: m.User = Depends(current_user)

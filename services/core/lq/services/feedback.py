@@ -151,3 +151,39 @@ def missed_list(session, user: m.User, mode: str | None = None) -> list[dict]:
             "audio_url": L.audio_url(a) if a else None, "marked_at": ml.created_at.isoformat(),
         })  # fmt: skip
     return out
+
+
+# ---------------------------------------------------------------- dictation
+
+
+def check_dictation(session, user: m.User, unit_id: str, utterance_id: str, typed: str) -> dict:
+    """Compare what the learner typed with the line, word by word, after the same normalisation the audio
+    check uses (numbers, contractions, punctuation and case do not count as mistakes). Free: no API call."""
+    import difflib
+
+    from lq.audio.textnorm import normalize_tokens
+
+    unit = L.get_unit_for(session, user, unit_id)
+    answered = session.execute(
+        select(m.Attempt.id).where(m.Attempt.user_id == user.id, m.Attempt.unit_id == unit.id, m.Attempt.status == "submitted")
+    ).first()
+    if not answered:
+        raise L.Forbidden("dictation shows the script: answer this unit first")
+    line = load_content(unit).utterance_map().get(utterance_id)
+    if line is None:
+        raise L.Invalid("unknown line")
+    ref_words = line.text.split()
+    ref, hyp = normalize_tokens(line.text), normalize_tokens(typed or "")
+    sm = difflib.SequenceMatcher(a=ref, b=hyp, autojunk=False)
+    ops = []
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        ops.append({"op": tag, "expected": ref[i1:i2], "typed": hyp[j1:j2]})
+    correct = sum(i2 - i1 for tag, i1, i2, _, _ in sm.get_opcodes() if tag == "equal")
+    return {
+        "score": round(correct / len(ref), 3) if ref else 0.0,
+        "correct_words": correct,
+        "total_words": len(ref),
+        "ops": ops,
+        "text": line.text,
+        "word_count": len(ref_words),
+    }

@@ -337,6 +337,27 @@
     "title": "Body_cli_import_api_import_post",
     "type": "object"
    },
+   "DictationIn": {
+    "properties": {
+     "typed": {
+      "default": "",
+      "maxLength": 4000,
+      "title": "Typed",
+      "type": "string"
+     },
+     "utterance_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Utterance Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "utterance_id"
+    ],
+    "title": "DictationIn",
+    "type": "object"
+   },
    "ErrorReasonIn": {
     "properties": {
      "question_id": {
@@ -6569,6 +6590,73 @@
      }
     },
     "summary": "Sync Answers"
+   }
+  },
+  "/api/units/{unit_id}/dictation": {
+   "post": {
+    "operationId": "unit_dictation_api_units__unit_id__dictation_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "unit_id",
+      "required": true,
+      "schema": {
+       "title": "Unit Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DictationIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Unit Dictation Api Units  Unit Id  Dictation Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Unit Dictation"
    }
   },
   "/api/units/{unit_id}/missed": {

@@ -230,6 +230,10 @@ test("feedback: mark a line as missed, replay it from the list, and report a uni
   await page.getByRole("button", { name: "英文を表示" }).click();
   await expect(page.locator(".qbox p.en")).toBeVisible();
   await checkTouchLayout(page);
+  await page.getByRole("button", { name: "書き取る" }).click();
+  await page.getByLabel("聞こえたとおりに英語で入力").fill("the");
+  await page.getByRole("button", { name: "採点" }).click();
+  await expect(page.getByText(/\d+ \/ \d+ 語/)).toBeVisible();
   await page.getByRole("button", { name: "聞き取れた" }).click();
   await expect(page.getByText("まだありません。")).toBeVisible();
 

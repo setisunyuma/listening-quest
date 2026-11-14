@@ -401,6 +401,11 @@ class PushSubscribeIn(BaseModel):
     auth: str = Field(min_length=8, max_length=100)
 
 
+class DictationIn(BaseModel):
+    utterance_id: str = Field(min_length=1, max_length=64)
+    typed: str = Field(default="", max_length=4000)
+
+
 class MissedIn(BaseModel):
     utterance_id: str = Field(min_length=1, max_length=64)
     missed: bool

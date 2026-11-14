@@ -1198,6 +1198,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/units/{unit_id}/dictation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unit Dictation */
+        post: operations["unit_dictation_api_units__unit_id__dictation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/units/{unit_id}/missed": {
         parameters: {
             query?: never;
@@ -1372,6 +1389,16 @@ export interface components {
              * @default live
              */
             realm: string;
+        };
+        /** DictationIn */
+        DictationIn: {
+            /**
+             * Typed
+             * @default
+             */
+            typed: string;
+            /** Utterance Id */
+            utterance_id: string;
         };
         /** ErrorReasonIn */
         ErrorReasonIn: {
@@ -4629,6 +4656,45 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SyncIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unit_dictation_api_units__unit_id__dictation_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                unit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DictationIn"];
             };
         };
         responses: {

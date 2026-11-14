@@ -126,3 +126,22 @@ def test_growth_names_what_to_practise_next_and_counts_own_reasons(db, user):
     g = login().get(f"/api/stats/growth?mode={unit.mode}").json()
     assert 1 <= len(g["next_focus"]) <= 3 and all(f["reason_ja"] for f in g["next_focus"])
     assert g["error_reasons"] == {"vocabulary": 1} and g["missed_lines"] == 1
+
+
+def test_dictation_scores_words_after_normalisation_and_only_after_answering(db, user):
+    unit = ready_unit(db, seed="dict1")
+    db.commit()
+    line = C.load_content(unit).segments[0].utterances[0]
+    c = login()
+    r = c.post(f"/api/units/{unit.id}/dictation", json={"utterance_id": line.id, "typed": line.text})
+    assert r.status_code == 403  # would reveal the script before the first answer
+    do_attempt(db, user, unit)
+    r = c.post(
+        f"/api/units/{unit.id}/dictation", json={"utterance_id": line.id, "typed": line.text.upper().rstrip(".") + "!!"}
+    ).json()
+    assert r["score"] == 1.0 and r["correct_words"] == r["total_words"]  # case and punctuation are not mistakes
+    words = line.text.split()
+    partial = " ".join(words[: max(1, len(words) // 2)])
+    r = c.post(f"/api/units/{unit.id}/dictation", json={"utterance_id": line.id, "typed": partial}).json()
+    assert 0 < r["score"] < 1 and any(o["op"] == "delete" for o in r["ops"])
+    assert feedback.check_dictation.__doc__  # documented as free (no API)
