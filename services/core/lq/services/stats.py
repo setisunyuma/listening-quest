@@ -190,6 +190,41 @@ def repair_outcomes(session, user, mode):
     return outcomes(session, user, mode)
 
 
+def short_checks(session, user: m.User, mode: str, limit: int = 10) -> dict:
+    """L04: each short check with its conditions and counts. Only unaided first answers count; a few questions are a
+    reference value, never a change of ability by themselves."""
+    out = []
+    plans_ = session.execute(
+        select(m.DailyPlan).where(m.DailyPlan.user_id == user.id, m.DailyPlan.mode == mode, m.DailyPlan.params["check"].is_not(None))
+        .order_by(m.DailyPlan.learning_day.desc()).limit(limit)
+    ).scalars().all()  # fmt: skip
+    for p in plans_:
+        chk = p.params["check"]
+        slots = (
+            session.execute(select(m.PlanSlot).where(m.PlanSlot.plan_id == p.id, m.PlanSlot.category == "check"))
+            .scalars()
+            .all()
+        )
+        q = c = done = excluded = 0
+        for sl in slots:
+            att = session.get(m.Attempt, sl.attempt_id) if sl.attempt_id else None
+            if att is None or att.status != "submitted":
+                continue
+            done += 1
+            if not att.strict_first:
+                excluded += 1  # assisted / partial / already met: kept out of the check series
+                continue
+            q += att.result["total"]
+            c += att.result["correct_count"]
+        out.append({"id": chk["id"], "day": p.learning_day.isoformat(), "conditions": chk["conditions"], "units_done": done, "units_planned": len(slots),
+                    "questions": q, "correct": c, "excluded_units": excluded, "reference_only": True})  # fmt: skip
+    return {
+        "label": "短時間チェック（未見・本番形式の再生条件・参考値）",
+        "checks": out,
+        "note": "問題数が少ないため、1回の上下を実力の変化と断定しません。公式フル模試・予測得点・CEFR 認定ではありません。",
+    }
+
+
 def _practice_agg(atts: list[m.Attempt]) -> dict:
     res = [(a.result or {}).get("practice") or {} for a in atts]
     first = [r["first_understanding"] for r in res if r.get("first_understanding") is not None]
@@ -311,6 +346,7 @@ def growth(session, user: m.User, now: datetime, mode: str, days: int = 30) -> d
     return {
         "mode": mode, "mode_label": MODE_LABELS_JA[mode], "period_days": days, "period_from": since.date().isoformat(), "period_to": now.date().isoformat(),
         "practice": _practice_agg(practice_atts),
+        "short_checks": short_checks(session, user, mode),
         "volume": {"units": len({a.unit_id for a in every}), "answers": sum(a.result["total"] for a in every), "radio_listened_sec": radio_ms // 1000, "xp_all_modes": xp, "label": "学習量（能力の推定ではありません）"},
         "first_official": {**_agg(first_official), "label": "初見の成績（本番形式・規定回数・補助なし）"},
         "first_arranged": {**_agg(first_arranged), "label": "初見の成績（音声向けアレンジ条件）"},

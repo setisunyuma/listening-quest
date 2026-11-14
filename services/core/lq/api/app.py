@@ -457,6 +457,22 @@ def attempt_aid(
     return out
 
 
+@app.put("/api/admin/units/{unit_id}/notes")
+def admin_unit_notes(
+    unit_id: str, body: dict[str, Any], session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    """R08: correct translations / glossary only; the content hash, history and audio stay, the notes audit restarts."""
+    from lq.services import content as C
+
+    unit = L.get_unit_for(session, user, unit_id)
+    try:
+        out = C.update_notes(session, unit, body, actor=user.username)
+    except ValueError as e:
+        raise L.Invalid(str(e)[:300]) from e
+    session.commit()
+    return out
+
+
 @app.post("/api/attempts/{attempt_id}/clarify")
 def attempt_clarify(
     attempt_id: str, body: S.ClarifyIn, session: Session = Depends(db), user: m.User = Depends(current_user)
@@ -638,6 +654,16 @@ def radio_list(session: Session = Depends(db), user: m.User = Depends(current_us
 @app.get("/api/radio/programs/{program_id}")
 def radio_get(program_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
     return radio.program_dto(session, radio.get_program(session, user, program_id))
+
+
+@app.post("/api/radio/programs/{program_id}/rebuild")
+def radio_rebuild(
+    program_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    """R11: rebuild a program without its withdrawn units (existing audio reused)."""
+    prog = radio.rebuild_program(session, user, program_id, now_utc())
+    session.commit()
+    return radio.program_dto(session, prog)
 
 
 @app.post("/api/radio/programs/{program_id}/progress")

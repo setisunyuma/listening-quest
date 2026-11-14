@@ -492,6 +492,12 @@ def content_hash(unit: UnitContent) -> str:
     return sha256_hex(canonical_json(hashed))
 
 
+def notes_hash(unit: UnitContent) -> str:
+    """R08: the learning notes (translations, glossary) have their own hash and audit state. They are not part of
+    the content hash, so correcting a translation never re-grades history or re-makes audio."""
+    return sha256_hex(canonical_json(unit.model_dump(mode="json")["study_notes"]))
+
+
 def stimulus_fingerprint(unit: UnitContent) -> str:
     """Identifies the script/audio regardless of which questions are attached."""
     script = [[u.speaker_id, u.lang, u.text.lower()] for seg in unit.segments for u in seg.utterances]

@@ -1,5 +1,6 @@
-"""Speaking-pitch estimate for a synthesised clip, used to check that a male speaker is not read by a high voice
-and a female speaker is not read by a low one (speech recognition cannot hear that).
+"""Speaking-pitch estimate for a synthesised clip: a screen for *pitch anomalies against the speaker's specified
+gender* (R10). It does not verify who is speaking, how distinguishable the voices are, or the accent - a pass here
+is never shown as "the voices were checked".
 
 Plain Python (no numpy): the clip is averaged down to 8 kHz and at most `max_frames` voiced 40 ms frames are
 analysed with normalised autocorrelation, which takes well under a second for a typical line."""
@@ -76,3 +77,29 @@ def gender_mismatch(expected: str, f0: float | None) -> str | None:
     if expected == "female" and f0 < FEMALE_MIN_HZ:
         return f"a female speaker is read by a low voice (median pitch {f0:.0f} Hz)"
     return None
+
+
+BORDER_HZ = 15.0  # within this distance of a limit the estimate is a borderline case, not a verdict
+
+PITCH_STATE_JA = {
+    "ok": "指定に対して音高の異常なし（声の品質保証ではありません）",
+    "borderline": "境界例（判定を保留・要確認）",
+    "mismatch": "話者指定に対する音高の異常候補",
+    "unmeasurable": "推定不能（合格扱いにしません）",
+    "not_applicable": "対象外（性別の指定なし）",
+}
+
+
+def pitch_check(expected: str, f0: float | None) -> dict:
+    """R10: separate a clear anomaly, a borderline estimate, an unmeasurable clip and an ordinary one."""
+    if expected not in ("male", "female"):
+        return {"state": "not_applicable", "f0": f0}
+    if f0 is None:
+        return {"state": "unmeasurable", "f0": None}
+    problem = gender_mismatch(expected, f0)
+    if problem:
+        return {"state": "mismatch", "f0": f0, "problem": problem}
+    limit = MALE_MAX_HZ if expected == "male" else FEMALE_MIN_HZ
+    if abs(f0 - limit) <= BORDER_HZ:
+        return {"state": "borderline", "f0": f0}
+    return {"state": "ok", "f0": f0}

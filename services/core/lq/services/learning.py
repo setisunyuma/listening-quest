@@ -43,6 +43,10 @@ DEFAULT_USER_SETTINGS = {
     "notify_new_material": True,
     "notify_problems": True,
     "exam_dates": {},  # mode -> "YYYY-MM-DD" (the learner's own target date; shown as days left)
+    # L04: a short check on unseen material every N days inside the daily plan (0 = off). A starting value the
+    # learner can change, not a proven optimum.
+    "check_interval_days": 7,
+    "check_minutes": 8,
 }
 ANSWER_ACCESS_KINDS = ("answer_access", "radio_access", "assessment")
 ERROR_REASONS = ("sound", "vocabulary", "numbers_negation", "inference", "organizing", "focus", "other")
@@ -106,6 +110,10 @@ def update_user_settings(user: m.User, patch: dict) -> dict:
                 except ValueError as e:
                     raise Invalid("exam date must be YYYY-MM-DD") from e
             v = clean
+        if k == "check_interval_days" and not (0 <= int(v) <= 60):
+            raise Invalid("check_interval_days must be 0..60 (0 = off)")
+        if k == "check_minutes" and not (3 <= int(v) <= 20):
+            raise Invalid("check_minutes must be 3..20")
         if k == "primary_side" and v not in ("left", "right"):
             raise Invalid("primary_side must be left or right")
         cur[k] = v
@@ -881,7 +889,16 @@ def result_dto(session, att: m.Attempt) -> dict:
         "figures": [f.model_dump() for f in content.figures], "questions": questions, "feedback_viewed": att.feedback_viewed_at is not None,
         "slot_id": att.slot_id, "audio_kind": unit.audio_kind, "title": unit.title,
         "practice": _practice_view(content, att),
+        # R08: translations / glossary carry their own audit state; Japanese explanation audio is not cross-checked
+        "notes_audit": _notes_state(session, unit),
+        "ja_audio_state": "unverified",
     }  # fmt: skip
+
+
+def _notes_state(session, unit: m.Unit) -> dict:
+    from lq.services.content import notes_audit_state
+
+    return notes_audit_state(session, unit)
 
 
 def _practice_view(content, att: m.Attempt) -> dict | None:

@@ -213,7 +213,7 @@ def pick_for(category: str, cands, state, exclude, cap_sec, seed, cfg, skip_skil
         "review": ("review", "weak", "explore"),
         "weak": ("weak", "explore", "review"),
         "explore": ("explore", "weak", "review"),
-    }[category]
+    }.get(category, ("explore", "weak", "review"))
     for cat in order:
         if cat == "review":
             p = pick_review(cands, state, exclude, cap_sec, seed)

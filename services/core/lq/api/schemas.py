@@ -42,6 +42,8 @@ class GoalDecisionIn(BaseModel):
 
 class SettingsPatch(BaseModel):
     active_mode: str | None = None
+    check_interval_days: int | None = Field(default=None, ge=0, le=60)
+    check_minutes: int | None = Field(default=None, ge=3, le=20)
     daily_goal_minutes: int | None = None
     timezone: str | None = None
     day_cutoff_hour: int | None = None
@@ -210,6 +212,8 @@ class ResultOut(BaseModel):
     missed: list[str] = []
     glossary: list[dict[str, Any]] = []
     practice: dict[str, Any] | None = None  # practice tasks: per rubric item, first understanding vs after a check
+    notes_audit: dict[str, Any] | None = None  # R08: translations / glossary audit state
+    ja_audio_state: str | None = None
 
 
 class AckOut(BaseModel):

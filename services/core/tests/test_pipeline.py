@@ -73,7 +73,12 @@ def test_generate_job_reaches_ready_with_all_tracks(db, user):
     assert {"prompt", "choices", "utterance", "answer_wait", "answer", "evidence", "explanation"} <= kinds
     assert not {"answer", "explanation", "evidence"} & {e["kind"] for e in assets["stimulus:s1"].meta["timeline"]}
     recs = {(r.target, r.method) for r in db.execute(select(m.ReviewRecord)).scalars()}
-    assert recs == {("content", "demo_mock_reviewed"), ("audio", "audio_demo_mock_checked")}
+    # R08: the notes' free structure check is recorded on its own (no meaning audit is claimed)
+    assert recs == {
+        ("content", "demo_mock_reviewed"),
+        ("audio", "audio_demo_mock_checked"),
+        ("notes", "notes_structure_checked"),
+    }
     assert set(unit.session_types) == {"train", "review", "radio"}
 
 

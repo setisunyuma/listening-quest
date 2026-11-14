@@ -70,4 +70,4 @@ export const SKILL_LABEL: Record<string, string> = {
   main_idea: "主旨", explicit_detail: "明示的な細部", numbers_negation: "数字・日時・否定", condition_matching: "条件照合",
   speaker_attitude: "話者の意図・態度", inference: "推論", discourse_structure: "談話構造", integration: "複数情報の統合",
 };
-export const CATEGORY_LABEL: Record<string, string> = { review: "復習", weak: "弱点練習", explore: "範囲を広げる", radio: "ラジオ", practice: "実践課題" };
+export const CATEGORY_LABEL: Record<string, string> = { review: "復習", weak: "弱点練習", explore: "範囲を広げる", radio: "ラジオ", practice: "実践課題", check: "短時間チェック" };

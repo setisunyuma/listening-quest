@@ -92,8 +92,12 @@ function ProgramPlayer({ initial, onClose }: { initial: Json; onClose: () => voi
     await kvSet(user, `radio-pos:${prog.id}`, lastPos.current);
   }, [prog.id, user]);
 
+  const playerRef = useRef<{ pause: () => void; seek: (ms: number) => void } | null>(null);
   const player = usePlayer({
     onTime: (ms, playing) => {
+      // R11: parts withdrawn after the program was built are never played; jump to the end of the part
+      const skip = (prog.skip_ranges ?? []).find((r: number[]) => ms >= r[0] && ms < r[1] - 250);
+      if (playing && skip) { span.current = null; const p = playerRef.current; if (skip[1] >= prog.duration_ms - 500) p?.pause(); else p?.seek(skip[1]); return; }
       // coverage = union of ranges that really played. A jump (seek) closes the current range.
       if (playing && span.current && Math.abs(ms - span.current[1]) < 1500 && ms >= span.current[1]) span.current[1] = ms;
       else if (playing) { if (span.current && span.current[1] > span.current[0]) queue.current.push([Math.floor(span.current[0]), Math.ceil(span.current[1])]); span.current = [ms, ms]; }
@@ -102,6 +106,7 @@ function ProgramPlayer({ initial, onClose }: { initial: Json; onClose: () => voi
     },
     onEnded: () => flush(true),
   });
+  useEffect(() => { playerRef.current = player; });
 
   useEffect(() => {
     kvSet(user, `program:${prog.id}`, prog).catch(() => {});
@@ -177,6 +182,13 @@ function ProgramPlayer({ initial, onClose }: { initial: Json; onClose: () => voi
         <p className="note" aria-live="polite">{fmtClock(pos)} / {fmtClock(prog.duration_ms)}　{player.state === "playing" ? "再生中" : player.state === "paused" ? "一時停止中" : player.state === "ended" ? "再生終了" : player.state === "loading" ? "読み込み中" : "停止中"}{current ? `・${current.title}` : ""}</p>
         {player.state === "error" && <Msg>{player.error} <button className="small" onClick={start}>再試行</button></Msg>}
         {msg && <Msg kind={msg.kind}>{msg.text}</Msg>}
+        {prog.stale && (
+          <div className="msg warn" role="status">この番組には、作成後に撤回した教材が含まれています。その部分は再生時に飛ばします。
+            <button className="small" disabled={!app.online} onClick={async () => {
+              try { setProg(await api<Json>(`/radio/programs/${prog.id}/rebuild`, { body: {} })); setMsg({ kind: "ok", text: "撤回分を除いて作り直しました（既存の音声を再利用）。" }); }
+              catch (e) { setMsg({ kind: "err", text: (e as ApiError).detail }); }
+            }}>撤回分を除いて作り直す</button></div>
+        )}
         <div className="row">
           {dl === "ok" ? <><span className="chip">✓ 端末に保存済み（オフライン再生可）</span><button className="small" onClick={async () => { await removeAudio(user, prog.audio.url); setDl("none"); }}>保存を削除</button></>
             : dl === "broken" ? <><span className="chip demo">保存データが壊れています</span><button className="small" onClick={download}>再ダウンロード</button></>
@@ -188,7 +200,7 @@ function ProgramPlayer({ initial, onClose }: { initial: Json; onClose: () => voi
       <section className="panel" aria-label="番組の内容">
         {prog.units.map((u: Json, i: number) => (
           <div className="qbox" key={u.unit_id}>
-            <div className="row"><strong>{i + 1}. {u.title}</strong><DemoChip kind={u.audio_kind} /><span className="chip">{u.complete ? "✓ 聴取完了" : `再生 ${Math.round(u.coverage * 100)}%`}</span>
+            <div className="row"><strong>{i + 1}. {u.title}</strong>{u.withdrawn && <span className="chip demo">撤回済み（飛ばします）</span>}<DemoChip kind={u.audio_kind} /><span className="chip">{u.complete ? "✓ 聴取完了" : `再生 ${Math.round(u.coverage * 100)}%`}</span>
               <button className="small ghost" onClick={() => { lastPos.current = u.start_ms; setResumeAt(u.start_ms); player.seek(u.start_ms); }}>ここから</button></div>
             <div className="row" role="group" aria-label="自己申告（任意）"><small>自己申告（任意）:</small>
               {[["correct", "自分では正解"], ["incorrect", "不正解"], ["unknown", "不明"]].map(([v, l]) => <button key={v} className="small" aria-pressed={reports[u.unit_id] === v} disabled={!!reports[u.unit_id]} onClick={() => report(u.unit_id, v)}>{reports[u.unit_id] === v ? "✓ " : ""}{l}</button>)}
