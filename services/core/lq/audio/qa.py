@@ -24,16 +24,25 @@ def _wer(ref: list[str], hyp: list[str]) -> float:
 def compare_transcript(
     expected: str, heard: str, *, is_evidence: bool = False, max_wer: float = 0.2, max_wer_evidence: float = 0.1
 ) -> dict:
-    ref, hyp = normalize_tokens(expected), normalize_tokens(heard)
+    """Notation differences pass; any change at a key word (number with sign, negation, weekday, direction,
+    comparison, contrasting verb, a name swapped for another name) fails even when the error rate is low.
+    The key words are compared IN POSITION, so swapped values ("Anna 20, Ben 30" -> "Anna 30, Ben 20") fail.
+    The recogniser may itself mishear: a failure is a suspicion for one re-synthesis or human review."""
+    from lq.audio.align import compare
+
+    cmp = compare(expected, heard)
+    ref, hyp = cmp["ref"], cmp["hyp"]
     wer = _wer(ref, hyp)
-    crit_ref, crit_hyp = critical_tokens(ref), critical_tokens(hyp)
     limit = max_wer_evidence if is_evidence else max_wer
     problems = []
-    if crit_ref != crit_hyp:
-        problems.append({"type": "critical_token_mismatch", "expected": crit_ref, "heard": crit_hyp})
+    if cmp["findings"]:
+        problems.append({"type": "key_word_mismatch", "findings": cmp["findings"][:10]})
     if wer > limit:
         problems.append({"type": "wer_too_high", "wer": round(wer, 3), "limit": limit})
-    return {"ok": not problems, "wer": round(wer, 3), "problems": problems}
+    return {"ok": not problems, "wer": round(wer, 3), "problems": problems, "check_version": QA_VERSION}
+
+
+QA_VERSION = "qa-2"  # qa-1: sorted numbers/negations; qa-2: aligned key words with signs (R02)
 
 
 def check_encoded(data: bytes, expected_ms: int, *, expect_sound: bool = True) -> dict:

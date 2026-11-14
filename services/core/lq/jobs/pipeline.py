@@ -560,7 +560,12 @@ def step_audio_qa(lease: Lease, prov, meter, unit_id: str) -> None:
                 method=prov.asr.record_method,
                 reviewer=f"{prov.asr.name}:{prov.asr.model}",
                 result="fail" if bad or voice_bad else "pass",
-                details={"clips": results, "mismatches": bad, "voice_mismatches": voice_bad},
+                details={
+                    "clips": results,
+                    "mismatches": bad,
+                    "voice_mismatches": voice_bad,
+                    "check_version": qa.QA_VERSION,
+                },
             )
             if voice_bad:
                 C.quarantine(s, unit, "voice does not fit the speaker: " + canonical_json(voice_bad)[:1500])

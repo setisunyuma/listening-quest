@@ -128,6 +128,8 @@ def _pre(text: str) -> list[str]:
     t = text.lower().replace("’", "'").replace("‘", "'").replace("–", "-").replace("—", " ")
     for pat, rep in CONTRACTIONS:
         t = re.sub(pat, rep, t)
+    t = t.replace("\u2212", "-")  # unicode minus sign
+    t = re.sub(r"(?<![\w.])-(?=\d)", " minus ", t)  # -5 -> minus 5 (a hyphen between words is not a sign)
     t = re.sub(r"(?<=\d),(?=\d{3}\b)", "", t)  # 1,500 -> 1500
     t = re.sub(r"\$\s*(\d+(?:\.\d+)?)", r"\1 dollars", t)
     t = re.sub(r"£\s*(\d+(?:\.\d+)?)", r"\1 pounds", t)
@@ -213,6 +215,27 @@ def normalize_tokens(text: str) -> list[str]:
         out.append(tok)
         spoken.append(not ordinal and isinstance(value, int) and value < 100)
         i = j
+    return _signed(out)
+
+
+SIGN_WORDS = ("minus", "negative")
+
+
+def _signed(tokens: list[str]) -> list[str]:
+    """'minus #5' / 'negative #5' -> '#-5', so "-5 degrees" and "minus five degrees" match and "5" does not."""
+    out: list[str] = []
+    for t in tokens:
+        if (
+            out
+            and out[-1] in SIGN_WORDS
+            and t.startswith("#")
+            and not t.startswith("#-")
+            and t[1:2].isdigit()
+            and not t.endswith(("st", "nd", "rd", "th"))
+        ):
+            out[-1] = "#-" + t[1:]
+        else:
+            out.append(t)
     return out
 
 
