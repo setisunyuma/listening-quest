@@ -45,7 +45,8 @@ Railway は GitHub 連携でこの Dockerfile を自動で検出して起動し�
    - `LQ_VERIFY_BUDGET_PRIOR_USD` = `0.07`（開発環境での実 API 検証の使用済み額。検証予算 1 USD をリセットしないため。docs/VERIFICATION_LOG.md）
 7. アプリのサービス → **Settings**:
    - **Volumes**（またはサービスのメニューの **Attach Volume**）→ マウント先 `/data`
-   - **Region** → Singapore（日本から近い）
+   - **Region** → Singapore（日本から近い）。**PostgreSQL も同じ地域にする**（Postgres → Settings → Regions）。
+     別の地域だと DB との往復が 1 回約 0.17 秒かかり、ホーム画面（DB 問い合わせ約 40 回）の表示に 10 秒ほどかかる（2026-11-14 実測: US West → Southeast Asia へ移して解消）
    - **Networking** → **Generate Domain**。転送先のポートは、Deploy Logs の `Network: http://0.0.0.0:<番号>` と同じ番号にする。
      アプリは Railway が渡す `PORT`（2026-11-14 の実測では `8080`）で待ち受けるため、ドメインが `Port 3000` になっていたら鉛筆アイコンで `8080` に直す
      （不一致だとデプロイは Active でも全ページが 502「Application failed to respond」になる）
@@ -92,6 +93,7 @@ SSH できる場合は `docker compose -f infra/compose.prod.yaml exec api lq cr
 
 | 障害 | 復旧 |
 |---|---|
+| 画面の切り替えが数秒〜10秒かかる | アプリと PostgreSQL の地域が違う。Postgres → Settings → Regions をアプリと同じ地域にして Deploy（保存領域ごと移動、数分停止） |
 | Active なのに全ページが 502 | ドメインの転送先ポートと、アプリの待ち受けポート（Deploy Logs の `Network: http://0.0.0.0:<番号>`）が違う。Settings → Networking のドメインの鉛筆アイコンで番号を合わせる |
 | コンテナが落ちた | プラットフォームが自動で再起動します。worker は実行権の期限が切れたジョブを回収して続きから処理し、古い worker は結果を確定できません |
 | 生成が失敗・隔離された | 教材管理で理由を確認して「再試行」。内容の問題で隔離されたものは、修正版を新しい revision として取り込みます |
