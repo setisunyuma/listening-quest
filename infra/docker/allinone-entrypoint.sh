@@ -31,8 +31,16 @@ done
 cd /app/web
 HOSTNAME=0.0.0.0 node server.js &
 WEB=$!
-trap 'kill $CORE $WEB 2>/dev/null' TERM INT
-while kill -0 "$CORE" 2>/dev/null && kill -0 "$WEB" 2>/dev/null; do sleep 2; done
+# A platform stop (SIGTERM on redeploy) is a clean shutdown: exit 0 so it is not reported as a crash.
+# Only an unexpected exit of the API/worker or the web server ends with status 1 (the platform restarts us).
+stopping=0
+trap 'stopping=1; kill $CORE $WEB 2>/dev/null' TERM INT
+while [ "$stopping" = 0 ] && kill -0 "$CORE" 2>/dev/null && kill -0 "$WEB" 2>/dev/null; do sleep 2; done
 kill $CORE $WEB 2>/dev/null || true
 wait
+if [ "$stopping" = 1 ]; then
+  echo "lq: stopped on request"
+  exit 0
+fi
+echo "lq: a server process exited unexpectedly; stopping the container so the platform restarts it" >&2
 exit 1
