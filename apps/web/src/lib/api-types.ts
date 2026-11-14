@@ -1429,6 +1429,11 @@ export interface components {
             /** Primary Skill */
             primary_skill: string;
             /**
+             * Source Text
+             * @default
+             */
+            source_text: string;
+            /**
              * Topic Hint
              * @default
              */

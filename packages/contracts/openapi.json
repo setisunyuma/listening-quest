@@ -428,6 +428,12 @@
       "title": "Primary Skill",
       "type": "string"
      },
+     "source_text": {
+      "default": "",
+      "maxLength": 4000,
+      "title": "Source Text",
+      "type": "string"
+     },
      "topic_hint": {
       "default": "",
       "maxLength": 120,

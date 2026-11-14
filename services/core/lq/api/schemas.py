@@ -380,6 +380,7 @@ class GenerateIn(BaseModel):
     count: int = Field(default=1, ge=1, le=20)
     topic_hint: str = Field(default="", max_length=120)
     pool: Literal["practice", "assessment"] = "practice"
+    source_text: str = Field(default="", max_length=4000)  # optional English text to base the material on
 
 
 class ApproveIn(BaseModel):

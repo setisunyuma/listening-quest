@@ -864,6 +864,9 @@ def admin_generate(
     for i in range(body.count):
         params = {"mode": body.mode, "part": body.part, "template_type": part["template_type"], "primary_skill": body.primary_skill, "band": body.band, "topic_hint": body.topic_hint,
                   "seed": f"manual-{batch}-{i}", "source": "generated", "pool": body.pool}  # fmt: skip
+        if body.source_text.strip():
+            params["extra"] = {"source_text": body.source_text.strip()}
+            params["origin"] = "own_text"
         job, _ = queue.enqueue(session, user.realm, "generate", params)
         ids.append(job.id)
     session.commit()

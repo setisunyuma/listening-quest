@@ -17,7 +17,7 @@ export default function AdminPage() {
   const units = useData<{ units: Json[] }>(() => api("/admin/units"), [], 6000);
   const mock = useData<Json>(() => api(`/admin/mock?mode=${app.mode}`), [app.mode], 6000);
   const meta = useData<Json>(() => api("/meta"), []);
-  const [gen, setGen] = useState({ part: "", primary_skill: "explicit_detail", band: 3, count: 1, topic_hint: "" });
+  const [gen, setGen] = useState({ part: "", primary_skill: "explicit_detail", band: 3, count: 1, topic_hint: "", source_text: "" });
   const [budget, setBudget] = useState<Json | null>(null);
   const manifest = useRef<HTMLInputElement>(null);
   const files = useRef<HTMLInputElement>(null);
@@ -90,6 +90,8 @@ export default function AdminPage() {
           <label className="field">難度帯<select value={gen.band} onChange={(e) => setGen({ ...gen, band: Number(e.target.value) })}>{[1, 2, 3, 4, 5].map((x) => <option key={x}>{x}</option>)}</select></label>
           <label className="field">数量<input type="number" min={1} max={20} value={gen.count} onChange={(e) => setGen({ ...gen, count: Number(e.target.value) })} style={{ width: 90 }} /></label>
           <label className="field">話題（任意）<input value={gen.topic_hint} onChange={(e) => setGen({ ...gen, topic_hint: e.target.value })} maxLength={120} /></label>
+          <label className="field">元にする英文（任意・4000字まで）<textarea rows={3} value={gen.source_text} maxLength={4000} onChange={(e) => setGen({ ...gen, source_text: e.target.value })} placeholder="自分で書いた英文や、使ってよい英文を貼り付けると、その内容で教材を作ります" /></label>
+          {gen.source_text.trim() && <p className="faint">この英文は問題作成のために OpenAI に送られます。著作権のある記事などは、自分で使える範囲のものだけにしてください。台本は形式に合わせて言い換えます。</p>}
           <button className="primary" disabled={!gen.part} onClick={() => run(async () => { const r = await api<Json>("/admin/jobs", { body: { ...gen, mode: app.mode } }); return `${r.job_ids.length}件の生成を予約しました。画面を閉じても処理は続きます。`; })}>生成を予約</button>
         </div>
       </section>
