@@ -98,7 +98,9 @@ class OpenAIContent(_Structured):
         from lq.generator import authoring
 
         system, user = authoring.build_generation_prompt(spec)
-        raw = self._call("content", system, user, "listening_unit", authoring.authored_schema(), 6000, meter)
+        raw = self._call(
+            "content", system, user, "listening_unit", authoring.authored_schema(bool(spec.practice_kind)), 6000, meter
+        )
         return authoring.authored_to_unit(raw, spec)
 
 

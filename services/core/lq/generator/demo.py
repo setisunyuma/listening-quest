@@ -14,6 +14,7 @@ import hashlib
 import json
 import math
 import random
+import re
 
 from lq.audio.pcm import BYTES_PER_MS, RATE, silence
 from lq.domain.content import UnitContent, canonical_json, reviewer_view, sha256_hex
@@ -478,7 +479,7 @@ class DemoContent:
     model = "demo-procedural-v1"
 
     def generate(self, spec: GenSpec, meter) -> dict:
-        data = _Builder(spec).build()
+        data = _demo_practice(spec) if spec.practice_kind else _Builder(spec).build()
         register_demo_oracle(UnitContent.model_validate(data))
         return data
 
@@ -541,3 +542,33 @@ class DemoASR:
 
     def transcribe(self, pcm: bytes, lang: str, meter, expected_hint: str = "") -> str:
         return expected_hint
+
+
+def _demo_practice(spec: GenSpec) -> dict:
+    """Demo realm only: a practice task built from a bundled example of the same kind, made distinct by the seed
+    (a marked demo variation, never presented as new real material)."""
+    import hashlib
+
+    import yaml
+
+    from lq.config import get_settings
+    from lq.services.seed import expand_fixture
+
+    raws = [
+        r
+        for r in yaml.safe_load((get_settings().fixtures_dir / "units" / "practice.yaml").read_text(encoding="utf-8"))
+        if r["part"] == spec.practice_kind
+    ]
+    if not raws:
+        raise ValueError(f"no demo example for {spec.practice_kind}")
+    raw = dict(raws[int(hashlib.sha256(spec.seed.encode()).hexdigest(), 16) % len(raws)])
+    tag = re.sub(r"[^a-z0-9]+", "-", spec.seed.lower()).strip("-")[:24] or "x"
+    raw["id"] = f"{raw['id']}-demo-{tag}"
+    raw["family"] = f"{raw['family']}-demo-{tag}"
+    script = [list(seg) for seg in raw["script"]]
+    first = script[0][0]
+    script[0][0] = f"{first} (Demo variation {tag}.)" if not first.rstrip().endswith(".)") else first
+    raw["script"] = script
+    data = expand_fixture(raw)
+    data["source"] = spec.source
+    return data
