@@ -5,7 +5,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/Shell";
 import { BandChip, chime, DemoChip, Figure, Msg } from "@/components/ui";
 import { api, ApiError, SKILL_LABEL, uid, type Ack, type Answer, type Attempt, type Json, type LearnerUnit, type Plan, type Result } from "@/lib/api";
-import { getPack, playableUrl, putPending, type Pack } from "@/lib/offline";
+import { getPack, kvDel, kvGet, kvSet, playableUrl, putPending, type Pack, type PlayEvent } from "@/lib/offline";
 import { usePlayer } from "@/lib/usePlayer";
 
 const REASONS = [["sound", "音が取れない"], ["vocabulary", "語彙"], ["numbers_negation", "数字・否定"], ["inference", "推論"], ["organizing", "情報整理"], ["focus", "集中"], ["other", "その他"]];
@@ -79,6 +79,27 @@ function AnswerView({ unit, attempt, pack, onResult }: { unit: LearnerUnit; atte
   const started = useRef(new Date().toISOString());
   const pendingPlay = useRef<string | null>(null);
   const usedRates = useRef<Record<string, number>>({});
+  // R03: the answer draft and every playback event live on the device until the server confirms the submission
+  const draftKey = attempt ? `draft:${attempt.attempt_id}` : `draft:pack:${pack!.slot_id}`;
+  const playEvents = useRef<PlayEvent[]>([]);
+  const [draftReady, setDraftReady] = useState(false);
+  const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    kvGet<Json>(app.me.user_id, draftKey).then((d) => {
+      if (d) {
+        if (d.answers && Object.keys(d.answers).length) { setAnswers(d.answers); setRestored(true); }
+        playEvents.current = d.play_events ?? [];
+        if (d.started) started.current = d.started;
+        if (offline && d.plays) setPlays(d.plays);
+        if (d.rates) usedRates.current = d.rates;
+      }
+    }).catch(() => {}).finally(() => setDraftReady(true));
+  }, [draftKey, app.me.user_id, offline]);
+  const saveDraft = (patch: Json = {}) => {
+    if (!draftReady) return;
+    kvSet(app.me.user_id, draftKey, { answers, plays, rates: usedRates.current, play_events: playEvents.current, started: started.current, ...patch }).catch(() => {});
+  };
+  useEffect(() => { saveDraft(); }, [answers, plays, draftReady]);
 
   const player = usePlayer({
     onStarted: () => {
@@ -86,8 +107,14 @@ function AnswerView({ unit, attempt, pack, onResult }: { unit: LearnerUnit; atte
       if (!seg) return; // resume after pause is not a new play
       pendingPlay.current = null;
       if (rate !== 1) usedRates.current[seg] = rate;
+      // a play counts only once the audio really started (this callback); it is stored before it is sent
+      const ev = { event_id: uid(), segment_id: seg, rate };
+      playEvents.current = [...playEvents.current, ev];
       if (offline) setPlays((p) => ({ ...p, [seg]: (p[seg] ?? 0) + 1 }));
-      else api<Json>(`/attempts/${attempt!.attempt_id}/plays`, { body: { event_id: uid(), segment_id: seg, rate } }).then((r) => { setPlays(r.plays); setAids(r.aids); }).catch(() => setPlays((p) => ({ ...p, [seg]: (p[seg] ?? 0) + 1 })));
+      else {
+        saveDraft();
+        api<Json>(`/attempts/${attempt!.attempt_id}/plays`, { body: ev }).then((r) => { setPlays(r.plays); setAids(r.aids); }).catch(() => setPlays((p) => ({ ...p, [seg]: (p[seg] ?? 0) + 1 })));
+      }
     },
   });
 
@@ -114,18 +141,31 @@ function AnswerView({ unit, attempt, pack, onResult }: { unit: LearnerUnit; atte
     setBusy(true); setMsg(""); player.pause();
     const body = Object.fromEntries(u.questions.map((x) => [x.id, answers[x.id] ?? null]));
     if (offline) {
-      await putPending(app.me.user_id, { event_id: uid(), unit_id: pack!.unit_id, unit_revision: pack!.unit_revision, answers: body, plays, rates: usedRates.current, plan_id: pack!.plan_id, slot_id: pack!.slot_id,
-        assignment_version: pack!.assignment_version, client_started_at: started.current, client_answered_at: new Date().toISOString(), title: pack!.card.part_label });
+      try {
+        await putPending(app.me.user_id, { event_id: uid(), unit_id: pack!.unit_id, unit_revision: pack!.unit_revision, answers: body, plays, rates: usedRates.current, plan_id: pack!.plan_id, slot_id: pack!.slot_id,
+          assignment_version: pack!.assignment_version, client_started_at: started.current, client_answered_at: new Date().toISOString(), title: pack!.card.part_label });
+      } catch { setMsg("端末に保存できませんでした。回答はまだ保存されていません。"); setBusy(false); return; }
+      await kvDel(app.me.user_id, draftKey).catch(() => {});
       await app.refreshPending();
       setSaved(true); setBusy(false);
       app.syncNow();
       return;
     }
     try {
-      onResult(await api<Result>(`/attempts/${attempt!.attempt_id}/submit`, { body: { answers: body } }));
+      // every playback event goes with the answers: a replay or speed change that did not reach the server
+      // earlier is applied before grading, so an assisted attempt can never be graded as unassisted
+      onResult(await api<Result>(`/attempts/${attempt!.attempt_id}/submit`, { body: { answers: body, plays: playEvents.current } }));
+      kvDel(app.me.user_id, draftKey).catch(() => {});
     } catch (e) {
       const er = e as ApiError;
-      setMsg(er.offline ? "通信できませんでした。回答は画面に残っています。電波の良い場所でもう一度「解答する」を押してください。" : er.detail);
+      if (er.offline) {
+        try {
+          await putPending(app.me.user_id, { event_id: uid(), attempt_id: attempt!.attempt_id, play_events: playEvents.current, unit_id: attempt!.unit_id, unit_revision: attempt!.unit_revision,
+            answers: body, plays, rates: usedRates.current, client_started_at: started.current, client_answered_at: new Date().toISOString(), title: attempt!.unit.part });
+          await app.refreshPending();
+          setSaved(true);
+        } catch { setMsg("通信できず、端末への保存にも失敗しました。回答は画面に残っています。もう一度「解答する」を押してください。"); }
+      } else setMsg(er.detail);
     }
     setBusy(false);
   };
@@ -163,6 +203,7 @@ function AnswerView({ unit, attempt, pack, onResult }: { unit: LearnerUnit; atte
             );
           })}
         </div>
+        {restored && <Msg kind="ok">前回の途中の回答を端末から復元しました。</Msg>}
         {msg && <Msg>{msg}</Msg>}
         {!offline && (
           <details style={{ marginTop: 8 }}>

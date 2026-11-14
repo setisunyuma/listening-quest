@@ -244,6 +244,26 @@ test("feedback: mark a line as missed, replay it from the list, and report a uni
   await expect(page.getByRole("heading", { name: /報告 1 件/ })).toHaveCount(0);
 });
 
+test("R03: an online attempt survives a reload and a lost connection, and is graded once after reconnecting", async ({ page, context }) => {
+  await login(page);
+  await page.goto("/library");
+  await page.locator('a.card[href^="/play?unit="]').nth(1).click();
+  const groups = page.getByRole("group", { name: /問\d+の選択肢/ });
+  await expect(groups.first()).toBeVisible();
+  await groups.first().getByRole("button").first().click();
+  await page.waitForTimeout(400); // the draft is written to IndexedDB asynchronously
+  await page.reload();
+  await expect(page.getByText("前回の途中の回答を端末から復元しました。")).toBeVisible();
+  await expect(groups.first().getByRole("button").first()).toHaveAttribute("aria-pressed", "true");
+  await answerAll(page);
+  await context.setOffline(true);
+  await page.getByRole("button", { name: "解答する" }).click();
+  await expect(page.getByRole("heading", { name: "解答済み・採点待ち" })).toBeVisible();
+  await context.setOffline(false);
+  await page.goto("/settings");
+  await expect(page.getByText(/未同期の回答 0 件/)).toBeVisible({ timeout: 20000 });
+});
+
 test("settings: unsent answers are announced before logout clears the device", async ({ page, context }) => {
   await login(page);
   await page.goto("/settings");

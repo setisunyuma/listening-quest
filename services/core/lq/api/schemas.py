@@ -142,6 +142,8 @@ class AidIn(BaseModel):
 
 class SubmitIn(BaseModel):
     answers: dict[str, dict[str, Any] | None]
+    # R03: every playback event of this attempt, stored on the device; already received ones are skipped
+    plays: list[PlayIn] = Field(default_factory=list, max_length=200)
 
 
 class ResultQuestion(BaseModel):

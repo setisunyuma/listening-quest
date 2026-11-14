@@ -157,3 +157,63 @@ def test_exam_dates_are_validated_per_mode(db, user):
     assert r.status_code == 200 and r.json()["exam_dates"] == {"eiken_pre1": "2027-01-25"}
     assert c.patch("/api/settings", json={"exam_dates": {"toeic": "2027-01-01"}}).status_code == 422
     assert c.patch("/api/settings", json={"exam_dates": {"eiken_1": "next week"}}).status_code == 422
+
+
+def test_r03_lost_play_events_arrive_with_the_submission_and_are_not_counted_twice(db, user):
+    """R03: a 0.8x replay whose own request was lost must not let the attempt count as first / unassisted;
+    resending the same events and the same submission changes nothing."""
+    from helpers import answers
+
+    unit = ready_unit(db, seed="r03a")
+    db.commit()
+    seg = C.load_content(unit).segments[0]
+    c = login()
+    att = c.post("/api/attempts", json={"attempt_id": "b" * 32, "unit_id": unit.id}).json()
+    ok = {"event_id": "e" * 32, "segment_id": seg.id, "rate": 1.0}
+    assert c.post(f"/api/attempts/{att['attempt_id']}/plays", json=ok).status_code == 200  # this one got through
+    lost = {"event_id": "f" * 32, "segment_id": seg.id, "rate": 0.8}  # this one never reached the server
+    body = {"answers": answers(unit), "plays": [ok, lost]}
+    r = c.post(f"/api/attempts/{att['attempt_id']}/submit", json=body)
+    assert r.status_code == 200
+    res = r.json()
+    assert res["counted_as_first"] is False and res["assisted"] is True
+    a = db.get(m.Attempt, att["attempt_id"])
+    db.refresh(a)
+    assert a.plays[seg.id] == 2 and a.aids.get("speed") is True  # ok counted once, lost applied once
+    xp_before = db.query(m.XpEvent).filter(m.XpEvent.user_id == user.id).count()
+    again = c.post(f"/api/attempts/{att['attempt_id']}/submit", json=body)  # response was lost; the device resends
+    assert again.status_code == 200 and again.json()["attempt_id"] == att["attempt_id"]
+    db.refresh(a)
+    assert a.plays[seg.id] == 2 and db.query(m.XpEvent).filter(m.XpEvent.user_id == user.id).count() == xp_before
+
+
+def test_r04_assisted_review_is_not_retention_and_easy_material_does_not_promote(db, user):
+    from datetime import timedelta
+
+    from helpers import T0
+
+    from lq.services import stats
+
+    # an assisted due review: counted as assisted, not as unassisted retention
+    unit = ready_unit(db, seed="r04a")
+    db.commit()
+    do_attempt(db, user, unit)  # first attempt schedules a review
+    sched = (
+        db.query(m.ReviewSchedule)
+        .filter(m.ReviewSchedule.user_id == user.id, m.ReviewSchedule.unit_id == unit.id)
+        .one()
+    )
+    due_at = T0 + timedelta(days=(sched.due_day - L.user_day(user, T0)).days, hours=1)
+    do_attempt(db, user, unit, now=due_at, aid="transcript")
+    g = stats.growth(db, user, due_at + timedelta(minutes=5), unit.mode)
+    assert g["review"]["units"] == 0 and g["assisted"]["units"] >= 1
+
+    # band 3 learner, ten band-1 units all correct: not evidence for promotion
+    for i in range(10):
+        u = ready_unit(db, seed=f"easy{i}", band=1)
+        db.commit()
+        do_attempt(db, user, u, now=due_at + timedelta(minutes=10 + i))
+    st = L.get_mode_state(db, user.id, unit.mode)
+    assert st.difficulty_band == 3
+    obs = L.band_observations(db, user.id, unit.mode, st.band_since)
+    assert len(obs) == 1  # only the band-3 first attempt above is band evidence

@@ -2370,6 +2370,14 @@
       },
       "title": "Answers",
       "type": "object"
+     },
+     "plays": {
+      "items": {
+       "$ref": "#/components/schemas/PlayIn"
+      },
+      "maxItems": 200,
+      "title": "Plays",
+      "type": "array"
      }
     },
     "required": [

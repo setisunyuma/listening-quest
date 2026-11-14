@@ -65,7 +65,7 @@ def home(session, user: m.User, now: datetime) -> dict:
             u.invalidated_at is None
             and a.complete
             and a.result["correct_count"] == a.result["total"]
-            and a.category in ("first", "review")
+            and (a.category == "first" or L.is_unassisted_review(a))
         ):
             recent.append(
                 {
@@ -151,13 +151,7 @@ def library(session, user: m.User, now: datetime, mode: str | None = None) -> di
         badge = None
         if any(a.category == "first" and a.result["correct_count"] == a.result["total"] for a in al):
             badge = "perfect_first"  # rainbow: first attempt, official conditions, everything correct
-        elif any(
-            a.category == "review"
-            and a.complete
-            and a.result["correct_count"] == a.result["total"]
-            and not a.result.get("assisted")
-            for a in al
-        ):
+        elif any(L.is_unassisted_review(a) and a.result["correct_count"] == a.result["total"] for a in al):
             badge = "perfect_review"  # purple: all correct on a due review
         if sc and sc.due_day <= today:
             status = "review_due"
@@ -198,7 +192,7 @@ def growth(session, user: m.User, now: datetime, mode: str, days: int = 30) -> d
     answer = [a for a, _ in rows if a.session_type in ("train", "review")]
     first_official = [a for a in answer if a.category == "first" and a.presentation == "official"]
     first_arranged = [a for a in answer if a.category == "first" and a.presentation != "official"]
-    review = [a for a in answer if a.category == "review" and a.complete]
+    review = [a for a in answer if L.is_unassisted_review(a)]
     assisted = [a for a in answer if a.result.get("assisted") and a.complete]
     st = L.get_mode_state(session, user.id, mode)
     band_obs = L.band_observations(session, user.id, mode, st.band_since)
@@ -297,7 +291,7 @@ def growth(session, user: m.User, now: datetime, mode: str, days: int = 30) -> d
         "volume": {"units": len({a.unit_id for a in answer}), "answers": sum(a.result["total"] for a in answer), "radio_listened_sec": radio_ms // 1000, "xp_all_modes": xp, "label": "学習量（能力の推定ではありません）"},
         "first_official": {**_agg(first_official), "label": "初見の成績（本番形式・規定回数・補助なし）"},
         "first_arranged": {**_agg(first_arranged), "label": "初見の成績（音声向けアレンジ条件）"},
-        "review": {**_agg(review), "label": "既出問題の定着（期限が来た復習）"},
+        "review": {**_agg(review), "label": "既出問題の定着（期限が来た復習・補助なし）"},
         "assisted": {**_agg(assisted), "label": "補助付きの結果（追加再生・速度変更・英文表示・ヒント）"},
         "self_reported": {"counts": {v: int(n) for v, n in reports}, "radio_units": radio_units, "label": "自己申告とラジオ接触（客観採点とは別集計）"},
         "band": {"current": st.difficulty_band, "label": "モード内の暫定難度帯（1〜5）", "eligible_units_in_band": distinct, "needed": cfg.band_min_units,

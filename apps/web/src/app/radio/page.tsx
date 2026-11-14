@@ -80,11 +80,15 @@ function ProgramPlayer({ initial, onClose }: { initial: Json; onClose: () => voi
     if (!queue.current.length || (!force && Date.now() - lastSent.current < 10000)) return;
     lastSent.current = Date.now();
     const ranges = queue.current.splice(0);
+    // R03: unsent ranges are kept on the device first, so closing the app offline does not lose them.
+    // The server merges ranges as a union, so sending the same range twice cannot inflate coverage.
+    await kvSet(user, `radio-queue:${prog.id}`, ranges).catch(() => {});
     try {
       const r = await api<Json>(`/radio/programs/${prog.id}/progress`, { body: { event_id: uid(), ranges, position_ms: Math.floor(lastPos.current) } });
       setProg(r.program);
+      await kvSet(user, `radio-queue:${prog.id}`, queue.current.slice()).catch(() => {});
       if (r.awarded.length) setMsg({ kind: "ok", text: `+${r.awarded.reduce((a: number, b: Json) => a + b.amount, 0)} XP（実際に再生した範囲が90%以上の教材）` });
-    } catch { queue.current.unshift(...ranges); } // offline: keep and resend later
+    } catch { queue.current.unshift(...ranges); await kvSet(user, `radio-queue:${prog.id}`, queue.current.slice()).catch(() => {}); } // offline: keep and resend later
     await kvSet(user, `radio-pos:${prog.id}`, lastPos.current);
   }, [prog.id, user]);
 
@@ -103,6 +107,7 @@ function ProgramPlayer({ initial, onClose }: { initial: Json; onClose: () => voi
     kvSet(user, `program:${prog.id}`, prog).catch(() => {});
     audioState(user, prog.audio.url, prog.audio).then(setDl);
     kvGet<number>(user, `radio-pos:${prog.id}`).then((p) => { lastPos.current = Math.max(p ?? 0, prog.position_ms ?? 0); setResumeAt(lastPos.current); });
+    kvGet<[number, number][]>(user, `radio-queue:${prog.id}`).then((q) => { if (q?.length) { queue.current.unshift(...q); flush(true); } });
     const leave = () => { flush(true); };
     const vis = () => { if (document.visibilityState === "hidden") flush(true); };
     window.addEventListener("pagehide", leave); document.addEventListener("visibilitychange", vis); window.addEventListener("online", leave);

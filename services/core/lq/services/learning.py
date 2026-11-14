@@ -549,7 +549,16 @@ def apply_schedule(
     }
 
 
+def is_unassisted_review(att: m.Attempt) -> bool:
+    """R04: one definition of "retained without help", shared by growth, home and the library. An assisted
+    review stays in the learning record (and in the assisted figures) but never counts as retention."""
+    return att.category == "review" and bool(att.complete) and not (att.result or {}).get("assisted")
+
+
 def band_observations(session, user_id: str, mode: str, since: datetime) -> list[tuple[str, float]]:
+    """Evidence for moving the difficulty band (R04): first, unassisted, complete attempts on valid material
+    whose OWN band equals the learner's band at the start of the attempt, in the official presentation.
+    Easier or harder material can still be practised; it just does not move the band."""
     A, U = m.Attempt, m.Unit
     rows = session.execute(
         select(A.stimulus_fingerprint, A.unit_score)
@@ -562,6 +571,8 @@ def band_observations(session, user_id: str, mode: str, since: datetime) -> list
             A.status == "submitted",
             U.invalidated_at.is_(None),
             A.submitted_at > since,
+            U.difficulty_band == A.band_at_start,
+            A.presentation == "official",
         )
         .order_by(A.submitted_at)
     ).all()
@@ -601,11 +612,28 @@ def submit_attempt(
     *,
     now: datetime | None = None,
     client_meta: dict | None = None,
+    plays: list[dict] | None = None,
 ) -> m.Attempt:
     """Grade and commit every consequence exactly once. `answers` must contain every question id; the
-    value is an answer object or null for an explicit skip."""
+    value is an answer object or null for an explicit skip. `plays` are the playback events the device kept
+    (R03): any not yet received are applied BEFORE grading, so a replay or speed change whose own request was
+    lost still marks the attempt as assisted. Events already received are skipped by their ids."""
     now = now or datetime.now(UTC)
     att = _open_attempt(session, user, attempt_id)
+    if plays and att.status == "open":
+        for p in plays:
+            try:
+                record_play(
+                    session,
+                    user,
+                    attempt_id,
+                    event_id=p["event_id"],
+                    segment_id=p["segment_id"],
+                    rate=float(p.get("rate", 1.0)),
+                )
+            except Conflict:
+                pass  # the same id was used for something else: never let it change this attempt
+        att = _open_attempt(session, user, attempt_id)
     unit = session.get(m.Unit, att.unit_id)
     content = load_content(unit)
     qmap = content.question_map()

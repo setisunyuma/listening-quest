@@ -398,9 +398,13 @@ def attempt_aid(
 def attempt_submit(
     attempt_id: str, body: S.SubmitIn, session: Session = Depends(db), user: m.User = Depends(current_user)
 ):
-    att = L.submit_attempt(session, user, attempt_id, body.answers, now=now_utc())
+    att = L.submit_attempt(
+        session, user, attempt_id, body.answers, now=now_utc(), plays=[p.model_dump() for p in body.plays]
+    )
     session.commit()
-    return L.result_dto(session, att)
+    out = L.result_dto(session, att)
+    out["missed"] = feedback.missed_ids(session, user, out["unit_id"])
+    return out
 
 
 @app.get("/api/attempts/{attempt_id}/result", response_model=S.ResultOut)

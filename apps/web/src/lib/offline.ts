@@ -4,7 +4,10 @@
 // The Service Worker never touches these, so an app update cannot drop unsent answers.
 import { api, type Json } from "./api";
 
+export type PlayEvent = { event_id: string; segment_id: string; rate: number };
 export type PendingAnswer = {
+  // attempt_id set: an online attempt whose submission could not be sent (R03); sent to /attempts/{id}/submit
+  attempt_id?: string; play_events?: PlayEvent[];
   event_id: string; unit_id: string; unit_revision: number; answers: Record<string, { choice_id: string } | null>; plays: Record<string, number>;
   rates: Record<string, number>; plan_id?: string | null; slot_id?: string | null; assignment_version?: number | null; client_started_at: string; client_answered_at: string; title: string;
 };
@@ -42,6 +45,7 @@ export const getPack = (u: string, slotId: string) => tx<Pack | undefined>(u, "p
 export const removePack = (u: string, slotId: string) => tx<void>(u, "packs", "readwrite", (s) => s.delete(slotId));
 export const kvSet = (u: string, k: string, v: Json) => tx<void>(u, "kv", "readwrite", (s) => s.put(v, k));
 export const kvGet = <T,>(u: string, k: string) => tx<T | undefined>(u, "kv", "readonly", (s) => s.get(k));
+export const kvDel = (u: string, k: string) => tx<void>(u, "kv", "readwrite", (s) => s.delete(k));
 
 const cacheName = (u: string) => `lq-audio-${u}`;
 
@@ -95,9 +99,28 @@ export async function playableUrl(u: string, url: string): Promise<{ src: string
 }
 
 export async function syncPending(u: string): Promise<{ sent: number; results: Json[] }> {
-  const items = await listPending(u);
-  if (!items.length) return { sent: 0, results: [] };
-  const out = await api<{ results: Json[] }>("/sync/answers", { body: { items: items.map(({ title: _t, ...rest }) => rest) } });
+  const all = await listPending(u);
+  if (!all.length) return { sent: 0, results: [] };
+  // online attempts whose submit did not get through: submit them now, with every playback event (idempotent)
+  const direct: Json[] = [];
+  for (const it of all.filter((x) => x.attempt_id)) {
+    try {
+      await api(`/attempts/${it.attempt_id}/submit`, { body: { answers: it.answers, plays: it.play_events ?? [] } });
+      await removePending(u, it.event_id); await kvDel(u, `draft:${it.attempt_id}`);
+      direct.push({ event_id: it.event_id, status: "synced", title: it.title });
+    } catch (e) {
+      const st = (e as { status?: number; offline?: boolean });
+      if (st.offline) throw e;
+      if (st.status === 409 || st.status === 403 || st.status === 404) { await removePending(u, it.event_id); direct.push({ event_id: it.event_id, status: "rejected", title: it.title }); }
+    }
+  }
+  const items = all.filter((x) => !x.attempt_id);
+  if (!items.length) {
+    const done = (await kvGet<Json[]>(u, "synced")) || [];
+    await kvSet(u, "synced", [...direct.map((r) => ({ ...r, at: new Date().toISOString() })), ...done].slice(0, 30));
+    return { sent: direct.length, results: direct };
+  }
+  const out = await api<{ results: Json[] }>("/sync/answers", { body: { items: items.map(({ title: _t, attempt_id: _a, play_events: _p, ...rest }) => rest) } });
   for (const r of out.results) {
     if (r.status === "synced" || r.status === "already_synced" || r.status === "rejected") {
       const it = items.find((x) => x.event_id === r.event_id);

@@ -560,3 +560,34 @@ def test_radio_xp_needs_real_coverage(db, user):
     db.commit()
     assert [x.unit_id for x in xp_rows(db, user, "radio_unit")] == [u1.id]
     assert db.execute(select(func.count()).select_from(m.Attempt)).scalar_one() == 0  # listening is never graded
+
+
+def test_r07_repicks_cannot_push_the_day_over_its_budget():
+    """Instruction example: 6 slots x 300 s in a 30-minute plan; after one is done, replacing the other five
+    with 390 s units would make 37.5 min. Each re-pick is capped by what the budget leaves."""
+    from types import SimpleNamespace as NS
+
+    from lq.services.plans import _budget_cap, _sync_planned
+
+    plan = NS(budget_sec=1800, planned_sec=1800)
+    slots = [
+        NS(id=f"s{i}", state="completed" if i == 0 else "pending", est_sec=300, time_cap_sec=390) for i in range(6)
+    ]
+    for s in slots[1:]:
+        cap = _budget_cap(plan, slots, s)
+        assert cap == 300  # a 390 s unit no longer fits
+        s.est_sec = min(390, cap)  # what a pick under that cap can be at most
+    _sync_planned(plan, slots)
+    assert plan.planned_sec == sum(s.est_sec for s in slots) <= 1800
+    # room left in the budget can be used, up to the slot's own cap
+    slots[5].est_sec = 200
+    assert _budget_cap(plan, slots, slots[5]) == 300
+    plan.budget_sec = 2000
+    assert _budget_cap(plan, slots, slots[5]) == 390
+    # an over-budget day (explicit long-unit exception) is not made longer, nor forced shorter than the current unit
+    plan.budget_sec = 1000
+    assert _budget_cap(plan, slots, slots[1]) == 300
+    # removed slots do not count
+    slots[2].state = "removed"
+    _sync_planned(plan, slots)
+    assert plan.planned_sec == sum(s.est_sec for s in slots if s.state != "removed")
