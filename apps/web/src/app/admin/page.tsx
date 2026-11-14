@@ -43,6 +43,7 @@ export default function AdminPage() {
             <>
               <p className="note">APIキー: {over.data.api_key_present ? "サーバーに設定済み" : "未設定（取り込みと手動承認は利用できます）"}。キーがあるだけでは有料処理は始まりません。</p>
               <dl className="kv"><dt>本日の利用（UTC）</dt><dd>確定 ${over.data.spend_today.settled_usd.toFixed(4)}・実行中の予約 ${over.data.spend_today.reserved_usd.toFixed(4)}・確定できない分 ${over.data.spend_today.unknown_usd.toFixed(4)}</dd>
+                {over.data.spend_month && <><dt>今月の利用（{over.data.spend_month.month}）</dt><dd>計上 ${over.data.spend_month.counted_usd.toFixed(4)}{over.data.settings.monthly_budget_usd != null && <> / 月の予算 ${over.data.settings.monthly_budget_usd}</>}</dd></>}
                 <dt>モデル</dt><dd>{over.data.providers.content_model} / {over.data.providers.tts_model} / {over.data.providers.asr_model}</dd><dt>単価の出典</dt><dd>{over.data.prices.source}（確認日 {over.data.prices.checked_at}）</dd></dl>
             </>
           )}
@@ -50,15 +51,16 @@ export default function AdminPage() {
             <div className="row" style={{ alignItems: "flex-end" }}>
               {app.me.realm !== "demo" && <>
                 <label className="field">1日の予算（USD）<input type="number" min={0} step={0.1} value={b.daily_budget_usd} onChange={(e) => setBudget({ ...b, daily_budget_usd: Number(e.target.value) })} /></label>
+                <label className="field">月の予算（USD）<input type="number" min={0} step={1} value={b.monthly_budget_usd ?? ""} onChange={(e) => setBudget({ ...b, monthly_budget_usd: Number(e.target.value) })} /></label>
                 <label className="field">1ジョブの上限（USD）<input type="number" min={0} step={0.05} value={b.per_job_cap_usd} onChange={(e) => setBudget({ ...b, per_job_cap_usd: Number(e.target.value) })} /></label>
               </>}
               <label className="field">同時実行数<input type="number" min={1} max={8} value={b.max_concurrent_jobs} onChange={(e) => setBudget({ ...b, max_concurrent_jobs: Number(e.target.value) })} /></label>
-              <button onClick={() => run(async () => { await api("/admin/system", { method: "PATCH", body: { daily_budget_usd: b.daily_budget_usd, per_job_cap_usd: b.per_job_cap_usd, max_concurrent_jobs: b.max_concurrent_jobs } }); setBudget(null); return "上限を保存しました。"; })}>上限を保存</button>
+              <button onClick={() => run(async () => { await api("/admin/system", { method: "PATCH", body: { daily_budget_usd: b.daily_budget_usd, monthly_budget_usd: b.monthly_budget_usd, per_job_cap_usd: b.per_job_cap_usd, max_concurrent_jobs: b.max_concurrent_jobs } }); setBudget(null); return "上限を保存しました。"; })}>上限を保存</button>
             </div>
           )}
           {sys && (
             <div className="row">
-              {app.me.realm !== "demo" && <label className="check"><input type="checkbox" checked={sys.paid_enabled} onChange={(e) => run(async () => { await api("/admin/system", { method: "PATCH", body: { paid_enabled: e.target.checked } }); return e.target.checked ? `有料生成を有効にしました（1日 $${sys.daily_budget_usd} まで）。この範囲内の自動補充は毎回の承認なしで実行されます。` : "有料生成を止めました。既存の教材で学習を続けられます。"; })} />有料生成を有効にする（1日 ${sys.daily_budget_usd}・1ジョブ ${sys.per_job_cap_usd} まで）</label>}
+              {app.me.realm !== "demo" && <label className="check"><input type="checkbox" checked={sys.paid_enabled} onChange={(e) => run(async () => { await api("/admin/system", { method: "PATCH", body: { paid_enabled: e.target.checked } }); return e.target.checked ? `有料生成を有効にしました（1日 $${sys.daily_budget_usd} まで）。この範囲内の自動補充は毎回の承認なしで実行されます。` : "有料生成を止めました。既存の教材で学習を続けられます。"; })} />有料生成を有効にする（1日 ${sys.daily_budget_usd}・月 ${sys.monthly_budget_usd}・1ジョブ ${sys.per_job_cap_usd} まで）</label>}
               <label className="check"><input type="checkbox" checked={sys.auto_replenish} onChange={(e) => run(async () => { await api("/admin/system", { method: "PATCH", body: { auto_replenish: e.target.checked } }); })} />在庫の自動補充</label>
               <button className="small" onClick={() => run(async () => { const r = await api<Json>("/admin/replenish/run", { body: {} }); return r.queued ? `${r.queued}件の生成を予約しました。` : `補充は行いませんでした: ${r.reason}`; })}>今すぐ在庫を確認</button>
             </div>
@@ -69,6 +71,7 @@ export default function AdminPage() {
         </section>
       )}
 
+      {app.me.realm !== "demo" && <Costs />}
       <Reports />
       {app.me.realm === "live" && <VerifyLive />}
 
@@ -231,6 +234,32 @@ function Reports() {
             </div></td>
           </tr>
         ))}</tbody></table></div>
+    </section>
+  );
+}
+
+
+function Costs() {
+  const { data } = useData<Json>(() => api("/admin/costs"), [], 60000);
+  if (!data) return null;
+  const days = (data.days as Json[]).slice(-14).reverse();
+  return (
+    <section className="panel" aria-labelledby="cost-h">
+      <h2 id="cost-h">費用レポート</h2>
+      <dl className="kv">
+        <dt>直近7日</dt><dd>${data.last_7_days_usd.toFixed(4)}</dd>
+        <dt>今月（{data.month.month}）</dt><dd>${data.month.counted_usd.toFixed(4)}</dd>
+        <dt>使える教材1件あたり</dt><dd>{data.avg_per_ready_unit_usd == null ? "—" : `$${data.avg_per_ready_unit_usd.toFixed(4)}`}（直近31日に完成した {data.ready_units} 件の平均）</dd>
+        <dt>使えなかった教材の費用</dt><dd>${data.wasted_usd.toFixed(4)}（隔離・失敗 {data.wasted_jobs} 件）</dd>
+        {data.in_progress_usd > 0 && <><dt>処理中・待機中の費用</dt><dd>${data.in_progress_usd.toFixed(4)}</dd></>}
+      </dl>
+      <details><summary className="btn ghost small">日ごとの利用（直近14日）</summary>
+        <div className="table-wrap"><table className="list">
+          <thead><tr><th scope="col">日付（UTC）</th><th scope="col">計上</th></tr></thead>
+          <tbody>{days.map((d) => <tr key={d.day}><td>{d.day}</td><td>${d.counted_usd.toFixed(4)}</td></tr>)}</tbody>
+        </table></div>
+      </details>
+      <p className="faint">{data.note}</p>
     </section>
   );
 }

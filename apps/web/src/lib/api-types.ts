@@ -4,6 +4,23 @@
  */
 
 export interface paths {
+    "/api/admin/costs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Costs */
+        get: operations["admin_costs_api_admin_costs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/import": {
         parameters: {
             query?: never;
@@ -1881,6 +1898,8 @@ export interface components {
             daily_budget_usd?: number | null;
             /** Max Concurrent Jobs */
             max_concurrent_jobs?: number | null;
+            /** Monthly Budget Usd */
+            monthly_budget_usd?: number | null;
             /** Paid Enabled */
             paid_enabled?: boolean | null;
             /** Per Job Cap Usd */
@@ -1941,6 +1960,39 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    admin_costs_api_admin_costs_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     admin_import_api_admin_import_post: {
         parameters: {
             query?: never;

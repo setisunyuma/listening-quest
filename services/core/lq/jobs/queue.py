@@ -125,7 +125,7 @@ def enqueue(
     return job, True
 
 
-AUTO_RECHECK = ("budget", "job_cap", "concurrency")
+AUTO_RECHECK = ("budget", "monthly_budget", "job_cap", "concurrency")
 
 
 def claim(session, worker_id: str, now: datetime | None = None, job_id: str | None = None) -> Lease | None:

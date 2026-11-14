@@ -354,6 +354,7 @@ class AssessmentSubmitIn(BaseModel):
 class SystemPatch(BaseModel):
     paid_enabled: bool | None = None
     daily_budget_usd: float | None = None
+    monthly_budget_usd: float | None = None
     per_job_cap_usd: float | None = None
     max_concurrent_jobs: int | None = None
     auto_replenish: bool | None = None

@@ -693,6 +693,11 @@ def admin_overview(session: Session = Depends(db), user: m.User = Depends(curren
     return {**out, "inventory": inv}
 
 
+@app.get("/api/admin/costs")
+def admin_costs(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    return admin.cost_report(session, user.realm)
+
+
 @app.patch("/api/admin/system")
 def admin_system(
     body: S.SystemPatch, session: Session = Depends(db), user: m.User = Depends(current_user)
@@ -710,7 +715,7 @@ def admin_system(
         )
     )
     queue.release_blocked(
-        session, user.realm, ("paid_disabled", "budget", "job_cap", "no_provider", "missing_audio")
+        session, user.realm, ("paid_disabled", "budget", "monthly_budget", "job_cap", "no_provider", "missing_audio")
     )  # re-check with the new settings
     session.commit()
     return out

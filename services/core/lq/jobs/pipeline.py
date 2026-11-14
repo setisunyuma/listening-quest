@@ -472,7 +472,7 @@ def step_audio_qa(lease: Lease, prov, meter, unit_id: str) -> None:
         # gender (label or voice_hint). Demo tones are not speech, so they are skipped. A mismatch comes from the
         # voice choice, so synthesising again with the same voice would not help: it quarantines directly.
         voice_bad = []
-        if audio_kind != "demo_tone":
+        if audio_kind == "tts":  # synthesised speech only; imported recordings are approved by a person
             genders = {sp.id: speaker_gender(sp) for sp in content.speakers if sp.role != "narrator"}
             for cid, spec in specs.items():
                 if (

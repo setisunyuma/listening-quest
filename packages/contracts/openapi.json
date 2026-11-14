@@ -2298,6 +2298,17 @@
       ],
       "title": "Max Concurrent Jobs"
      },
+     "monthly_budget_usd": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Monthly Budget Usd"
+     },
      "paid_enabled": {
       "anyOf": [
        {
@@ -2474,6 +2485,54 @@
  },
  "openapi": "3.1.0",
  "paths": {
+  "/api/admin/costs": {
+   "get": {
+    "operationId": "admin_costs_api_admin_costs_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Costs Api Admin Costs Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Costs"
+   }
+  },
   "/api/admin/import": {
    "post": {
     "operationId": "admin_import_api_admin_import_post",

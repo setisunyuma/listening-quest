@@ -473,7 +473,8 @@ class PaidFake:
 
     def synthesize(self, text, voice, lang, instructions, meter):
         self._spend("tts", meter)
-        return DemoTTS().synthesize(text, voice, lang, instructions, meter)
+        # speech-like audio at a pitch that fits the voice, like a real provider (the voice check reads it)
+        return _voice_pcm(115 if voice in {"ash", "echo", "verse", "ballad", "cedar"} else 215, 600)
 
     def transcribe(self, pcm, lang, meter, expected_hint=""):
         self._spend("asr", meter)
@@ -1083,3 +1084,46 @@ def test_a_voice_that_contradicts_its_speaker_quarantines_without_paying_for_res
     job, unit = unit_of(db, jid)
     assert unit.status == "QUARANTINED" and "voice does not fit the speaker" in unit.status_reason
     assert "resynth" not in (job.state or {})  # the same voice would sound the same: no extra speech requests
+
+
+def test_monthly_budget_stops_new_requests_across_days(db, live_user):
+    """A second ceiling above the daily one: spend from earlier days of the same month counts."""
+    from datetime import timedelta
+
+    fake = paid(db, 0.10, paid_enabled=True, daily_budget_usd=5, monthly_budget_usd=0.35, per_job_cap_usd=5)
+    today = datetime.now(UTC).date()
+    earlier = today.replace(day=1) if today.day > 1 else today
+    db.add(m.CostEntry(realm="live", job_id=None, step="content", provider="x", model="m", state="settled",
+                       budget_day=earlier, estimated_usd=0.2, actual_usd=0.2, price_source="t", price_checked_at="t"))  # fmt: skip
+    if today.day > 1:  # last month's spend does not count
+        db.add(m.CostEntry(realm="live", job_id=None, step="content", provider="x", model="m", state="settled",
+                           budget_day=earlier - timedelta(days=1), estimated_usd=9, actual_usd=9, price_source="t", price_checked_at="t"))  # fmt: skip
+    db.commit()
+    jid = enqueue(db, realm="live")
+    assert worker.drain("w") == ["blocked:monthly_budget"]
+    assert fake.calls == ["content"]  # 0.20 + 0.10 fits, the next 0.10 would make 0.40 > 0.35
+    assert budget.spent_month(db, "live")["counted_usd"] == pytest.approx(0.30)
+    assert unit_of(db, jid)[0].blocked_reason == "monthly_budget"
+    with pytest.raises(ValueError):
+        budget.set_system(db, "live", {"monthly_budget_usd": -1})
+
+
+def test_cost_report_separates_usable_material_from_waste(db, live_user):
+    from lq.services import admin
+
+    paid(db, 0.01, paid_enabled=True, daily_budget_usd=5, per_job_cap_usd=5)
+    ok = enqueue(db, realm="live", seed="c1")
+    assert worker.drain("w") == ["succeeded"]
+    bad = enqueue(db, realm="live", seed="c2")
+    rep = admin.cost_report(db, "live")
+    assert rep["ready_units"] == 1 and rep["avg_per_ready_unit_usd"] == pytest.approx(
+        budget.job_cost(db, ok)["counted_usd"]
+    )
+    assert rep["days"][-1]["counted_usd"] == pytest.approx(rep["month"]["counted_usd"])
+    # a quarantined unit's spend is reported as waste
+    worker.drain("w")
+    job, unit = unit_of(db, bad)
+    C.quarantine(db, unit, "test")
+    db.commit()
+    rep = admin.cost_report(db, "live")
+    assert rep["wasted_jobs"] == 1 and rep["wasted_usd"] == pytest.approx(budget.job_cost(db, bad)["counted_usd"])
