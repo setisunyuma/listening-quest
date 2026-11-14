@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/Shell";
 import { Msg } from "@/components/ui";
-import { api, ApiError, type Json } from "@/lib/api";
+import { api, ApiError, MODE_LABEL, type Json } from "@/lib/api";
 import { clearDevice, listPending } from "@/lib/offline";
 
 export default function SettingsPage() {
@@ -39,6 +39,8 @@ export default function SettingsPage() {
         <label className="field">タイムゾーン<select value={s.timezone} onChange={(e) => save({ timezone: e.target.value })}>{Array.from(new Set(["Asia/Tokyo", s.timezone, Intl.DateTimeFormat().resolvedOptions().timeZone, "UTC", "America/Los_Angeles", "America/New_York", "Europe/London", "Australia/Sydney"])).map((z) => <option key={z}>{z}</option>)}</select></label>
         <label className="field">学習日の切り替え時刻<select value={s.day_cutoff_hour} onChange={(e) => save({ day_cutoff_hour: Number(e.target.value) })}>{Array.from({ length: 24 }, (_, h) => <option key={h} value={h}>{String(h).padStart(2, "0")}:00</option>)}</select></label>
         <p className="faint">変更は次に作る計画から反映されます。進行中の計画の量は変わりません。日付はサーバーの時刻で判定します。</p>
+        <label className="field">{MODE_LABEL[app.mode]}の試験日（任意）<input type="date" value={(s.exam_dates ?? {})[app.mode] ?? ""} onChange={(e) => save({ exam_dates: { ...(s.exam_dates ?? {}), [app.mode]: e.target.value } })} /></label>
+        <p className="faint">ホームに試験日までの日数を表示します。モードごとに設定できます（上のモード切替で選んでいるモードの日付です）。</p>
       </section>
       <section className="panel"><h2>再生と表示</h2>
         <label className="check"><input type="checkbox" checked={!!s.radio_include_new} onChange={(e) => save({ radio_include_new: e.target.checked })} />ラジオに未学習の教材も含める</label>

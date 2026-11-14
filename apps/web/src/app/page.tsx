@@ -85,6 +85,12 @@ export default function HomePage() {
       )}
       <section className="panel accent" aria-labelledby="quest-h">
         <h2 id="quest-h">今日のクエスト <small>{MODE_LABEL[plan?.mode ?? app.mode]}・学習日 {data.today}</small></h2>
+        {(() => {
+          const d = (app.settings.exam_dates as Record<string, string> | undefined)?.[app.mode];
+          if (!d) return null;
+          const left = Math.ceil((new Date(`${d}T00:00:00`).getTime() - new Date(`${data.today}T00:00:00`).getTime()) / 86400000);
+          return left >= 0 ? <p className="chip rainbow">{MODE_LABEL[app.mode]}の試験日まで あと {left} 日（{d}）</p> : null;
+        })()}
         {plan ? (
           <>
             <div className="quest">

@@ -145,3 +145,11 @@ def test_dictation_scores_words_after_normalisation_and_only_after_answering(db,
     r = c.post(f"/api/units/{unit.id}/dictation", json={"utterance_id": line.id, "typed": partial}).json()
     assert 0 < r["score"] < 1 and any(o["op"] == "delete" for o in r["ops"])
     assert feedback.check_dictation.__doc__  # documented as free (no API)
+
+
+def test_exam_dates_are_validated_per_mode(db, user):
+    c = login()
+    r = c.patch("/api/settings", json={"exam_dates": {"eiken_pre1": "2027-01-25", "common_test": ""}})
+    assert r.status_code == 200 and r.json()["exam_dates"] == {"eiken_pre1": "2027-01-25"}
+    assert c.patch("/api/settings", json={"exam_dates": {"toeic": "2027-01-01"}}).status_code == 422
+    assert c.patch("/api/settings", json={"exam_dates": {"eiken_1": "next week"}}).status_code == 422

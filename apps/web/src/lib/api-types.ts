@@ -2026,6 +2026,10 @@ export interface components {
             daily_goal_minutes?: number | null;
             /** Day Cutoff Hour */
             day_cutoff_hour?: number | null;
+            /** Exam Dates */
+            exam_dates?: {
+                [key: string]: string | null;
+            } | null;
             /** Font Scale */
             font_scale?: number | null;
             /** Notify New Material */
@@ -2093,6 +2097,8 @@ export interface components {
             per_job_cap_usd?: number | null;
             /** Replenish Modes */
             replenish_modes?: string[] | null;
+            /** Tts Accent */
+            tts_accent?: string | null;
         };
         /** UnitCard */
         UnitCard: {

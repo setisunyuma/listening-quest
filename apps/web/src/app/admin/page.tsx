@@ -65,6 +65,12 @@ export default function AdminPage() {
               <button className="small" onClick={() => run(async () => { const r = await api<Json>("/admin/replenish/run", { body: {} }); return r.queued ? `${r.queued}件の生成を予約しました。` : `補充は行いませんでした: ${r.reason}`; })}>今すぐ在庫を確認</button>
             </div>
           )}
+          {sys && app.me.realm !== "demo" && (
+            <label className="field">英語の発音（これから作る音声）
+              <select value={sys.tts_accent ?? ""} onChange={(e) => run(async () => { await api("/admin/system", { method: "PATCH", body: { tts_accent: e.target.value } }); return "発音の設定を保存しました。これから作る音声に反映されます（作成済みの音声は変わりません）。"; })}>
+                <option value="">声の標準のまま</option><option value="american">アメリカ英語</option><option value="british">イギリス英語</option><option value="australian">オーストラリア英語</option><option value="mixed">話者ごとに混ぜる</option>
+              </select></label>
+          )}
           <p className="note">未学習の在庫（{MODE_LABEL[app.mode]}）: {over.data.inventory.untouched_units} Unit・{fmtMin(over.data.inventory.untouched_sec)}（約 {over.data.inventory.days_of_stock} 日分）・生成中 {over.data.inventory.jobs_in_progress} 件</p>
           <p className="faint">{over.data.inventory.by_part.map((p: Json) => `${p.label_ja} ${p.units}`).join(" / ")}</p>
           {app.me.realm !== "demo" && <p className="faint">{over.data.disclaimer}</p>}

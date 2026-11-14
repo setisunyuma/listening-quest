@@ -257,6 +257,25 @@ def _put_asset(st, unit_id: str, kind: str, role: str, pcm: bytes, meta: dict) -
     }
 
 
+ACCENTS = {"american": "General American", "british": "Southern British (RP-like)", "australian": "General Australian"}
+
+
+def accent_instruction(accent: str, speaker_id: str, content) -> str:
+    """English accent requested for one speaker. "mixed" gives the speakers of a unit different accents (the
+    narrator stays General American, as in Japanese exams). Unknown or empty -> no instruction. The accent is part
+    of the clip's cache key, so changing it never reuses a clip made with another accent."""
+    if accent == "mixed":
+        talkers = [sp.id for sp in content.speakers if sp.role != "narrator"]
+        if speaker_id not in talkers:
+            return ""
+        name = list(ACCENTS.values())[talkers.index(speaker_id) % len(ACCENTS)]
+    elif accent in ACCENTS:
+        name = ACCENTS[accent]
+    else:
+        return ""
+    return f"Speak with a natural {name} English accent. Keep every word exactly as written."
+
+
 def step_audio(lease: Lease, prov, meter, unit_id: str) -> None:
     st = get_storage()
     with session_factory()() as s:
@@ -264,6 +283,9 @@ def step_audio(lease: Lease, prov, meter, unit_id: str) -> None:
         content = C.load_content(unit)
         job = s.get(m.GenerationJob, lease.job_id)
         imported: dict = dict((job.state or {}).get("import_audio") or {})
+        from lq.generator import budget as _budget
+
+        accent = (_budget.get_system(s, unit.realm).get("tts_accent") or "").strip()
     _commit_step(lease, lambda s, job: setattr(s.get(m.Unit, unit_id), "status", "AUDIO_GENERATING"))
 
     if "radio_complete" in imported:  # legacy answer-included MP3: radio only, never an answering candidate
@@ -289,7 +311,11 @@ def step_audio(lease: Lease, prov, meter, unit_id: str) -> None:
             clip_keys[cid] = imported[cid]
             continue
         voice = voices.get(spec.speaker_id, voices["narrator"])
-        instructions = "Short Japanese explanation, calm teacher voice." if spec.lang == "ja" else ""
+        instructions = (
+            "Short Japanese explanation, calm teacher voice."
+            if spec.lang == "ja"
+            else accent_instruction(accent, spec.speaker_id, content)
+        )
         key = cache_key(spec.text, prov.tts.name, prov.tts.model, voice, spec.speaker_id, spec.lang, instructions)
         with session_factory()() as s:
             pcm = cached_clip(s, key)

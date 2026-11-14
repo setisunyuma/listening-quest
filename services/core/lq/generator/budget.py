@@ -24,6 +24,7 @@ DEFAULT_SYSTEM = {
     "max_concurrent_jobs": 1,
     "auto_replenish": False,
     "replenish_modes": [],  # empty = the learner's active mode only
+    "tts_accent": "",  # "" (voice default) | american | british | australian | mixed
     # one-off live verification: exactly this job may spend up to cap_usd even while paid_enabled is off
     "verification": None,  # {"job_id": str, "cap_usd": float, "started_at": iso}
     "last_verification_job_id": None,
@@ -58,6 +59,8 @@ def set_system(session, realm: str, patch: dict) -> dict:
     for k in ("daily_budget_usd", "per_job_cap_usd", "monthly_budget_usd"):
         if k in allowed and not (0 <= float(allowed[k]) <= (10000 if k == "monthly_budget_usd" else 1000)):
             raise ValueError(f"{k} out of range")
+    if "tts_accent" in allowed and allowed["tts_accent"] not in ("", "american", "british", "australian", "mixed"):
+        raise ValueError("unknown accent")
     if "max_concurrent_jobs" in allowed and not (1 <= int(allowed["max_concurrent_jobs"]) <= 8):
         raise ValueError("max_concurrent_jobs out of range")
     cur.update(allowed)

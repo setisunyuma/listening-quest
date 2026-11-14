@@ -1149,3 +1149,30 @@ def test_a_quarantined_unit_can_be_rewritten_once_with_the_reason(db, user):
     assert any("rejected by quality checks" in n and "duplicate choice text" in n for n in notes)
     with pytest.raises(ValueError):
         admin.rewrite_quarantined(db, "demo", job2.id)  # READY material is not rewritten
+
+
+def test_accent_setting_reaches_the_speech_request_and_separates_the_cache(db, user):
+    from lq.jobs.pipeline import accent_instruction
+
+    seen = []
+
+    class Rec(DemoTTS):
+        def synthesize(self, text, voice, lang, instructions, meter):
+            seen.append((lang, instructions))
+            return super().synthesize(text, voice, lang, instructions, meter)
+
+    budget.set_system(db, "demo", {"tts_accent": "british"})
+    db.commit()
+    factory.set_provider_override("demo", demo_providers(tts=Rec()))
+    enqueue(db)
+    assert worker.drain("w") == ["succeeded"]
+    en = {i for lang, i in seen if lang == "en"}
+    assert en == {"Speak with a natural Southern British (RP-like) English accent. Keep every word exactly as written."}
+    assert all("British" not in i for lang, i in seen if lang == "ja")  # Japanese explanations keep their own voice
+    content = make_content(seed="acc")
+    talkers = [sp.id for sp in content.speakers if sp.role != "narrator"]
+    mixed = {accent_instruction("mixed", t, content) for t in talkers}
+    assert len(mixed) == min(len(talkers), 3) and accent_instruction("mixed", "narrator", content) == ""
+    assert accent_instruction("klingon", talkers[0], content) == ""
+    with pytest.raises(ValueError):
+        budget.set_system(db, "demo", {"tts_accent": "klingon"})

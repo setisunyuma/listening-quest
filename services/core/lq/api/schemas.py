@@ -49,6 +49,7 @@ class SettingsPatch(BaseModel):
     notify_reminder_hour: int | None = Field(default=None, ge=-1, le=23)  # -1 turns the reminder off
     notify_new_material: bool | None = None
     notify_problems: bool | None = None
+    exam_dates: dict[str, str | None] | None = None
 
 
 class AudioRef(BaseModel):
@@ -364,6 +365,7 @@ class SystemPatch(BaseModel):
     max_concurrent_jobs: int | None = None
     auto_replenish: bool | None = None
     replenish_modes: list[str] | None = None
+    tts_accent: str | None = None
 
 
 class VerifyLiveIn(BaseModel):

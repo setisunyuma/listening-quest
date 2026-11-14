@@ -165,7 +165,9 @@ def check_dictation(session, user: m.User, unit_id: str, utterance_id: str, type
 
     unit = L.get_unit_for(session, user, unit_id)
     answered = session.execute(
-        select(m.Attempt.id).where(m.Attempt.user_id == user.id, m.Attempt.unit_id == unit.id, m.Attempt.status == "submitted")
+        select(m.Attempt.id).where(
+            m.Attempt.user_id == user.id, m.Attempt.unit_id == unit.id, m.Attempt.status == "submitted"
+        )
     ).first()
     if not answered:
         raise L.Forbidden("dictation shows the script: answer this unit first")

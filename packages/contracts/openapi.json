@@ -2159,6 +2159,27 @@
       ],
       "title": "Day Cutoff Hour"
      },
+     "exam_dates": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "anyOf": [
+          {
+           "type": "string"
+          },
+          {
+           "type": "null"
+          }
+         ]
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Exam Dates"
+     },
      "font_scale": {
       "anyOf": [
        {
@@ -2449,6 +2470,17 @@
        }
       ],
       "title": "Replenish Modes"
+     },
+     "tts_accent": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tts Accent"
      }
     },
     "title": "SystemPatch",

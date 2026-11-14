@@ -42,6 +42,7 @@ DEFAULT_USER_SETTINGS = {
     "notify_reminder_hour": None,  # local hour for the daily reminder; None = no reminder
     "notify_new_material": True,
     "notify_problems": True,
+    "exam_dates": {},  # mode -> "YYYY-MM-DD" (the learner's own target date; shown as days left)
 }
 ANSWER_ACCESS_KINDS = ("answer_access", "radio_access", "assessment")
 ERROR_REASONS = ("sound", "vocabulary", "numbers_negation", "inference", "organizing", "focus", "other")
@@ -91,6 +92,20 @@ def update_user_settings(user: m.User, patch: dict) -> dict:
             v = None  # the settings API cannot send null, so -1 switches the reminder off
         if k == "notify_reminder_hour" and v is not None and not (0 <= int(v) <= 23):
             raise Invalid("notify_reminder_hour must be 0..23 or null")
+        if k == "exam_dates":
+            from datetime import date as _date
+
+            if not isinstance(v, dict) or not set(v) <= set(MODES):
+                raise Invalid("exam_dates must map modes to dates")
+            clean = {}
+            for mode_key, d in v.items():
+                if d in (None, ""):
+                    continue
+                try:
+                    clean[mode_key] = _date.fromisoformat(str(d)).isoformat()
+                except ValueError as e:
+                    raise Invalid("exam date must be YYYY-MM-DD") from e
+            v = clean
         if k == "primary_side" and v not in ("left", "right"):
             raise Invalid("primary_side must be left or right")
         cur[k] = v
