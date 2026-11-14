@@ -29,6 +29,7 @@ from lq.services import (
     backup,
     diagnostics,
     feedback,
+    goals,
     importer,
     notify,
     plans,
@@ -281,7 +282,31 @@ def push_test(session: Session = Depends(db), user: m.User = Depends(current_use
 def patch_settings(
     body: S.SettingsPatch, session: Session = Depends(db), user: m.User = Depends(current_user)
 ) -> dict[str, Any]:
-    out = L.update_user_settings(user, body.model_dump(exclude_none=True))
+    patch = body.model_dump(exclude_none=True)
+    new_mode = patch.get("active_mode")
+    if new_mode and new_mode != L.user_settings(user)["active_mode"]:
+        # the manual mode switch stays; it is recorded as the learner's own goal decision (history is kept)
+        goals.decide(session, user, m.new_id(), "manual_switch", new_mode, now_utc(), replan=False)
+    out = L.update_user_settings(user, patch)
+    session.commit()
+    return out
+
+
+# ---------------------------------------------------------------- main goal and transition (統合指示書 P01)
+
+
+@app.get("/api/goals")
+def goals_overview(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    out = goals.overview(session, user, now_utc())
+    session.commit()
+    return out
+
+
+@app.post("/api/goals/decision")
+def goals_decision(
+    body: S.GoalDecisionIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    out = goals.decide(session, user, body.event_id, body.decision, body.to_mode, now_utc())
     session.commit()
     return out
 

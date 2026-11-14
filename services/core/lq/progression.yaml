@@ -1,0 +1,43 @@
+# A01 / G01 / P01 (統合実装指示書 2026-11-14): goal transition, practice unlock and review inheritance.
+# Every number here is a provisional, adjustable starting value chosen for this app - NOT a calibrated CEFR /
+# Eiken pass standard. Decisions store the version below so later changes never rewrite past judgements.
+version: progression/2026-11-v1
+
+# learning order of the app (an introduction order, not a strict ranking of the qualifications: Eiken 1 and C1 overlap)
+stages: [common_test, eiken_pre1, eiken_1, cefr_c1, cefr_c2]
+
+# P01: when to propose making the next stage the main goal (never applied automatically)
+transition:
+  window_days: 21              # observations considered (recent first)
+  min_days: 3                  # distinct learning days
+  min_scenes: 2                # distinct formats / scenes (part or template)
+  min_obs_per_skill: 2         # valid observations per main skill
+  stable_score: 0.8            # mean of recent unaided first-exposure observations per main skill
+  min_delayed_checks: 1        # a correct answer on a later (spaced) check
+  min_next_stage_trials: 2     # short unseen tries of the next stage, any support level (recorded as such)
+  critical_lookback_days: 14   # recent critical misunderstandings block the proposal
+  reevaluate_days: 7           # a deferred proposal is shown again at most weekly
+  # main skills per goal (the skills the stage's format depends on); unknown history stays "未確認"
+  main_skills:
+    common_test: [explicit_detail, numbers_negation, inference, main_idea]
+    eiken_pre1: [condition_matching, numbers_negation, speaker_attitude, main_idea]
+    eiken_1: [speaker_attitude, main_idea, inference, discourse_structure]
+    cefr_c1: [main_idea, discourse_structure, integration, speaker_attitude]
+    cefr_c2: [integration, speaker_attitude, inference, discourse_structure]
+
+# P01: the first learning days after the person chooses a new main goal
+transition_period:
+  learning_days: 10
+  split: {new: 0.60, review: 0.25, bridge: 0.15}   # a starting example, not a quota or a proven optimum
+  short_day_sec: 600           # on shorter days only the single most important task is chosen
+
+# after the transition period: old stages keep their due reviews, only as much as needed
+maintenance:
+  review_share: 0.20
+
+# G01: practice tasks become part of the daily plan (unlock = usable, never a certification)
+unlock:
+  min_tasks: 6                 # valid tasks on the prerequisite skills, from different material families
+  min_days: 3                  # spread over learning days (not consecutive days)
+  min_scenes: 2                # scenes / speaker set-ups (a different voice alone does not count)
+  min_mean: 0.8                # mean of the task kind's main rubric items, per kind (never averaged across scales)

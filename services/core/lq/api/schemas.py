@@ -34,6 +34,12 @@ class MeOut(BaseModel):
     settings: dict[str, Any]
 
 
+class GoalDecisionIn(BaseModel):
+    event_id: str = Field(min_length=8, max_length=64)  # client id: a re-sent decision is recorded once
+    decision: Literal["adopt", "defer", "keep", "manual_switch", "return", "trial"]
+    to_mode: str | None = None
+
+
 class SettingsPatch(BaseModel):
     active_mode: str | None = None
     daily_goal_minutes: int | None = None

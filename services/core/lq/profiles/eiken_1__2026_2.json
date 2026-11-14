@@ -17,6 +17,12 @@
    "note": "2026年度第2回 一次試験 問題冊子",
    "checked_at": "2026-11-12",
    "verified": "冊子との逐語照合は未実施（docs/DECISIONS.md 参照）"
+  },
+  {
+   "url": "https://www.eiken.or.jp/eiken/exam/grade_1/",
+   "note": "1級の試験内容・2026年度第2回の放送台本と問題冊子（実装指示書 2026-11-14 の S03〜S08）",
+   "checked_at": "2026-11-14",
+   "verified": "実装指示書に記載された照合結果を反映: Part 1 10会話×1問、Part 2 5文章×2問、Part 3 5場面×1問、Part 4 1インタビュー×2問（計27問）。全Part本文1回、各設問の解答時間10秒（Part 4は設問1→10秒→設問2→10秒）。Part 3は先読み10秒。Part 1 No.10は3話者。 冊子表紙は約38分（打ち切り時刻にしない）。本作業では原本PDFの逐語再照合は未実施。"
   }
  ],
  "exam": {
@@ -25,7 +31,8 @@
   "answer_time_min": null,
   "venue_note_ja": "所要時間は完成音声のタイムラインから算出して開始前に表示します（案内上の概数では打ち切りません）。",
   "score": "count",
-  "total_questions": 27
+  "total_questions": 27,
+  "booklet_minutes_note_ja": "問題冊子の表示は約38分。所要時間は音声のタイムラインで決め、案内上の分数で途中終了しません。"
  },
  "timing": {
   "between_plays_sec": 0,

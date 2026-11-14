@@ -11,11 +11,15 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from lq.db import models as m
 from lq.domain.content import MODES, canonical_json, sha256_hex
 
-EXPORT_VERSION = 1
+EXPORT_VERSION = 2
+READABLE_VERSIONS = (1, 2)
 TABLES = [  # (key, model, parent-first order)
     ("mode_states", m.ModeState), ("learning_sessions", m.LearningSession), ("daily_plans", m.DailyPlan), ("plan_slots", m.PlanSlot), ("attempts", m.Attempt),
     ("exposure_events", m.ExposureEvent), ("skill_observations", m.SkillObservation), ("review_schedules", m.ReviewSchedule), ("self_reports", m.SelfReport), ("xp_events", m.XpEvent),
+    # export v2 (統合指示書 P01 / G01): goals, the learner's decisions and practice task states
+    ("learning_goals", m.LearningGoal), ("goal_decisions", m.GoalDecision), ("practice_states", m.PracticeState),
 ]  # fmt: skip
+OPTIONAL_V1 = {"learning_goals", "goal_decisions", "practice_states"}  # absent from version-1 files
 UNIT_FK = {"attempts", "exposure_events", "skill_observations", "review_schedules", "self_reports", "plan_slots"}
 
 
@@ -59,7 +63,7 @@ def export_user(session, user: m.User) -> dict:
 
 def validate_export(body: dict) -> list[str]:
     errs = []
-    if not isinstance(body, dict) or body.get("export_version") != EXPORT_VERSION:
+    if not isinstance(body, dict) or body.get("export_version") not in READABLE_VERSIONS:
         return ["unsupported or missing export_version"]
     if body.get("checksum") != sha256_hex(
         canonical_json({k: v for k, v in body.items() if k not in ("exported_at", "checksum")})
@@ -70,6 +74,8 @@ def validate_export(body: dict) -> list[str]:
         return [*errs, "data section missing"]
     for key, model in TABLES:
         rows = data.get(key)
+        if rows is None and key in OPTIONAL_V1 and body.get("export_version") == 1:
+            continue
         if not isinstance(rows, list):
             errs.append(f"{key}: missing")
             continue
@@ -108,7 +114,7 @@ def restore_user(session, user: m.User, body: dict, *, apply_settings: bool = Fa
     kept_plans: set[str] = set()
     for key, model in TABLES:
         ins = skip = miss = 0
-        for raw in body["data"][key]:
+        for raw in body["data"].get(key) or []:
             row = {k: _de(v) for k, v in raw.items()}
             if "user_id" in row:
                 row["user_id"] = user.id
@@ -137,7 +143,22 @@ def restore_user(session, user: m.User, body: dict, *, apply_settings: bool = Fa
         user.settings = body.get("settings") or {}
         report["settings_applied"] = True
     session.flush()
+    _one_current_goal(session, user)
     from lq.services import stats
 
     report["recomputed"] = [stats.recompute_mode_state(session, user, mode) for mode in MODES]
     return report
+
+
+def _one_current_goal(session, user: m.User) -> None:
+    """After a restore exactly one goal is current: the learner's active mode. Others keep their history as
+    maintained / trial goals (nothing is deleted)."""
+    from lq.services import learning as L
+
+    active = L.user_settings(user)["active_mode"]
+    for g in session.execute(select(m.LearningGoal).where(m.LearningGoal.user_id == user.id)).scalars():
+        if g.role == "current" and g.mode != active:
+            g.role = "maintained"
+        elif g.mode == active and g.role != "current":
+            g.role = "current"
+    session.flush()

@@ -598,3 +598,66 @@ class RepairItem(Base):
     results: Mapped[list] = mapped_column(JSONB, default=list)  # [{at, step, ok, aided}]
     created_at: Mapped[datetime] = ts()
     __table_args__ = (UniqueConstraint("user_id", "unit_id", "utterance_id", "kind", "term", name="uq_repair_item"),)
+
+
+# ---------------------------------------------------------------- goals and progression (統合指示書 A01 / G01 / P01)
+
+
+class LearningGoal(Base):
+    """The learner's goals, kept apart from per-mode history: changing the main goal never touches reviews."""
+
+    __tablename__ = "learning_goals"
+    __table_args__ = (UniqueConstraint("user_id", "mode", name="uq_learning_goal"),)
+    id: Mapped[str] = pk()
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    mode: Mapped[str] = mapped_column(String(32))
+    role: Mapped[str] = mapped_column(String(16))  # current | trial | maintained
+    target_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+    transition_from: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    transition_started_day: Mapped[date | None] = mapped_column(Date, nullable=True)
+    since: Mapped[datetime] = ts()
+    updated_at: Mapped[datetime] = ts()
+
+
+class GoalDecision(Base):
+    __tablename__ = "goal_decisions"
+    id: Mapped[str] = mapped_column(ID, primary_key=True)  # client event id (idempotent)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    decision: Mapped[str] = mapped_column(String(16))  # adopt | defer | keep | manual_switch | return | trial
+    from_mode: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    to_mode: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    readiness: Mapped[dict] = mapped_column(JSONB, default=dict)
+    version: Mapped[str] = mapped_column(String(48))
+    learning_day: Mapped[date] = mapped_column(Date)
+    created_at: Mapped[datetime] = ts()
+
+
+class ReadinessSnapshot(Base):
+    __tablename__ = "readiness_snapshots"
+    __table_args__ = (UniqueConstraint("user_id", "mode", "computed_day", "version", name="uq_readiness_snapshot"),)
+    id: Mapped[str] = pk()
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    mode: Mapped[str] = mapped_column(String(32))
+    computed_day: Mapped[date] = mapped_column(Date)
+    version: Mapped[str] = mapped_column(String(48))
+    result: Mapped[dict] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = ts()
+
+
+class PracticeState(Base):
+    """G01: whether a practice task kind is part of the daily plan for this learner (never a certification)."""
+
+    __tablename__ = "practice_states"
+    __table_args__ = (UniqueConstraint("user_id", "practice_kind", "curriculum_version", name="uq_practice_state"),)
+    id: Mapped[str] = pk()
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    practice_kind: Mapped[str] = mapped_column(String(16))
+    curriculum_version: Mapped[str] = mapped_column(String(48))
+    status: Mapped[str] = mapped_column(String(16))  # preview | unlocked | consolidating
+    unlocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    unlock_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)  # recommended | manual
+    evidence: Mapped[list] = mapped_column(JSONB, default=list)
+    rule_version: Mapped[str] = mapped_column(String(48))
+    manual_started: Mapped[bool] = mapped_column(Boolean, default=False)
+    recommendation: Mapped[dict] = mapped_column(JSONB, default=dict)
+    updated_at: Mapped[datetime] = ts()

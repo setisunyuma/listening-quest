@@ -250,6 +250,11 @@ def start_plan(session, user: m.User, now: datetime, kind: str = "quest", mode: 
         recall.idx = len(carried)
         carried = [*carried, recall]
         carried_sec += recall.est_sec
+    extra, extra_sec, held = _inherited_and_bridge(
+        session, user, plan, mode, day, now, budget - carried_sec, len(carried)
+    )
+    carried = [*carried, *extra]
+    carried_sec += extra_sec
     cands, state, _ = learner_context(session, user, mode, day, now)
     draft = rec.build_plan(
         cands,
@@ -274,11 +279,66 @@ def start_plan(session, user: m.User, now: datetime, kind: str = "quest", mode: 
         notes.insert(0, f"前回から持ち越した課題が {n_carried} 件あります（先に行います）")
     if any((x.payload or {}).get("carry_count", 0) >= 3 for x in carried):
         notes.insert(0, "同じ課題が3回以上持ち越されています。新しい問題を減らして、先に取り組めるようにしました")
+    if held:
+        notes.append(f"期限が来た他の段階の復習 {len(held)} 件は保留にしました（予定は消えず、次の日課で再選定します）")
     plan.total_slots = len(carried) + len(draft.slots)
     plan.planned_sec = carried_sec + draft.planned_sec
-    plan.params = {**plan.params, "notes": notes}
+    plan.params = {**plan.params, "notes": notes, "held_reviews": held[:30]}
     session.flush()
     return plan
+
+
+def _inherited_and_bridge(
+    session, user: m.User, plan: m.DailyPlan, mode: str, day: date, now: datetime, room_sec: int, start_idx: int
+) -> tuple[list[m.PlanSlot], int, list[dict]]:
+    """P01: due reviews of every other stage stay in the daily plan after a goal change (nothing is reset, postponed
+    or auto-completed), within their share of the time; in the transition period a bridge task of the previous stage
+    is added. What does not fit is held with its reason. Short days get no extra task kinds."""
+    from lq.domain import progression as P
+    from lq.services import goals
+    from lq.services.goals import MODE_JA
+
+    if room_sec <= 0:
+        return [], 0, []
+    tr = goals.transition_state(session, user, day)
+    split = P.plan_split(room_sec, tr["active"])
+    R, U = m.ReviewSchedule, m.Unit
+    rows = session.execute(
+        select(R, U).join(U, U.id == R.unit_id).where(R.user_id == user.id, R.kind == "recall", R.due_day <= day, U.mode != mode)
+    ).all()  # fmt: skip
+    due = []
+    for r, u in rows:
+        ok = (u.status == "READY" and u.invalidated_at is None and u.superseded_by is None and u.pool == "practice"
+              and bool({"review", "train"} & set(u.session_types or [])))  # fmt: skip
+        why = "" if ok else ("教材が無効化・差し替え・準備中のため保留（能力の低下ではありません）")
+        due.append(P.DueReview(unit_id=u.id, mode=u.mode, due_day=r.due_day, est_sec=int(u.estimated_duration_sec or 60), skill=u.primary_skill,
+                               family=u.family_id, last_result=r.last_result, available=ok, unavailable_reason=why))  # fmt: skip
+    cap = 0 if split["short_day"] else split["review"]
+    picked, held = P.select_inherited_reviews(due, cap, day)
+    if split["short_day"]:
+        held = [{**h, "reason_ja": "短い日のため、最優先の1種類だけにしました（期限は残ります）"} for h in held]
+    cfg = rules.load_config()
+    out: list[m.PlanSlot] = []
+    used = 0
+    for i, d in enumerate(picked):
+        out.append(m.PlanSlot(plan_id=plan.id, idx=start_idx + i, category="review", mode=d.mode, unit_id=d.unit_id, est_sec=d.est_sec,
+                              time_cap_sec=rec.slot_cap(d.est_sec, cfg), reason_code="review_inherited",
+                              reason_text=f"{MODE_JA[d.mode]}の期限が来た復習（目標を変えても続きます）",
+                              reason_params={"due_day": d.due_day.isoformat(), "from_mode": d.mode}))  # fmt: skip
+        used += d.est_sec
+    if tr["active"] and tr.get("from_mode") and not split["short_day"] and split["bridge"] > 0:
+        old = tr["from_mode"]
+        cands, state, _ = learner_context(session, user, old, day, now)
+        b = rec.build_plan(cands, state, split["bridge"], cfg, _seed(user, day, old, "bridge"),
+                           exclude={x.unit_id for x in out})  # fmt: skip
+        for sl in [x for x in b.slots if x["category"] != "review"][:1]:
+            if sl["est_sec"] > split["bridge"] * 1.5:
+                break
+            out.append(m.PlanSlot(plan_id=plan.id, idx=start_idx + len(out), category="weak", mode=old, unit_id=sl["unit_id"], est_sec=sl["est_sec"],
+                                  time_cap_sec=sl["time_cap_sec"], reason_code="bridge",
+                                  reason_text=f"移行期の橋渡し（{MODE_JA[old]}で{sl['reason_text']}）", reason_params=sl["reason_params"]))  # fmt: skip
+            used += sl["est_sec"]
+    return out, used, held
 
 
 def _plan_slots(session, plan_id: str, lock: bool = False) -> list[m.PlanSlot]:
@@ -465,11 +525,13 @@ def rebuild_remaining(session, user: m.User, plan_id: str, new_mode: str, now: d
     slots = _plan_slots(session, plan.id, lock=True)
     if any(s.state == "pending" and s.reserved for s in slots):
         raise L.Conflict("some slots are reserved for offline use; sync and release them first")
-    kept = [s for s in slots if s.state != "pending"]
+    # repair / recall tasks and due reviews of other stages are not discarded by a mode or goal change
+    keep_pending = lambda s: s.kind in ("repair", "recall") or s.reason_code == "review_inherited"  # noqa: E731
+    kept = [s for s in slots if s.state != "pending" or keep_pending(s)]
     spent = sum(s.est_sec for s in kept)
     remaining = max(0, plan.budget_sec - spent)
     for s in slots:
-        if s.state == "pending":
+        if s.state == "pending" and not keep_pending(s):
             s.state = "removed"
     session.flush()
     today = L.user_day(user, now)
