@@ -260,6 +260,28 @@ def growth(session, user: m.User, now: datetime, mode: str, days: int = 30) -> d
             )
         ).scalar_one()
     )
+    # what to practise next: weak skills first (lowest mean), then skills with too few observations to judge
+    rank = {"weak": 0, "reference": 1, "unmeasured": 2, "developing": 3, "strong": 4}
+    focus = []
+    for sk in sorted(skills, key=lambda x: (rank[x["status"]], x["mean"] if x["mean"] is not None else 1.0, x["n"])):
+        if sk["status"] in ("developing", "strong") or len(focus) >= 3:
+            continue
+        reason = {
+            "weak": f"直近の初見の平均が {round((sk['mean'] or 0) * 100)}%（{sk['n']}件）",
+            "reference": f"まだ {sk['n']} 件で判定できないため、もう少し解いて確かめます",
+            "unmeasured": "まだ解いていない技能です",
+        }[sk["status"]]
+        focus.append({"skill": sk["skill"], "label": sk["label"], "reason_ja": reason})
+    # the learner's own reasons for wrong answers (self-reported, per question) in the period
+    reason_counts: dict[str, int] = {}
+    for a in answer:
+        for r in (a.error_reasons or {}).values():
+            if r:
+                reason_counts[r] = reason_counts.get(r, 0) + 1
+    missed_lines = session.execute(
+        select(func.count()).select_from(m.MissedLine).join(m.Unit, m.Unit.id == m.MissedLine.unit_id)
+        .where(m.MissedLine.user_id == user.id, m.Unit.mode == mode)
+    ).scalar_one()  # fmt: skip
     daily: dict[str, dict] = {}
     for a in answer:
         d = daily.setdefault(
@@ -281,7 +303,7 @@ def growth(session, user: m.User, now: datetime, mode: str, days: int = 30) -> d
         "band": {"current": st.difficulty_band, "label": "モード内の暫定難度帯（1〜5）", "eligible_units_in_band": distinct, "needed": cfg.band_min_units,
                  "up_threshold": cfg.band_up_threshold, "down_threshold": cfg.band_down_threshold, "history": st.band_history[-10:],
                  "note": "設定値による調整です。研究で確定した最適値ではありません。"},
-        "skills": skills, "daily": [{"day": d["day"], "units": d["units"], "first_units": d["first_units"], "first_mean": round(d["first_sum"] / d["first_units"], 3) if d["first_units"] else None} for d in sorted(daily.values(), key=lambda x: x["day"])],
+        "skills": skills, "next_focus": focus, "error_reasons": reason_counts, "missed_lines": int(missed_lines), "daily": [{"day": d["day"], "units": d["units"], "first_units": d["first_units"], "first_mean": round(d["first_sum"] / d["first_units"], 3) if d["first_units"] else None} for d in sorted(daily.values(), key=lambda x: x["day"])],
         "assessments": [{"session_id": s.id, "at": s.ended_at.isoformat(), **{k: s.result.get(k) for k in ("score_kind", "points", "max_points", "correct_count", "slot_count", "by_section", "label")}} for s in assess],
         "excluded_invalidated": excluded,
         "disclaimer": "アプリ内の正答率・XPは、英検CSE・合否・CEFR認定・共通テスト得点に換算できません。",

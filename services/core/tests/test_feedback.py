@@ -113,3 +113,16 @@ def test_authored_notes_keep_only_real_lines():
         "glossary": [{"term": "seed exchange", "meaning_ja": "種の交換"}],
         "translations": [{"utterance_id": "u1", "ja": "訳"}],
     }
+
+
+def test_growth_names_what_to_practise_next_and_counts_own_reasons(db, user):
+    unit = ready_unit(db, seed="grow1")
+    db.commit()
+    att = do_attempt(db, user, unit, correct=False)
+    q = C.load_content(unit).sorted_questions()[0]
+    L.set_error_reason(db, user, att.id, q.id, "vocabulary")
+    feedback.set_missed(db, user, unit.id, C.load_content(unit).segments[0].utterances[0].id, True)
+    db.commit()
+    g = login().get(f"/api/stats/growth?mode={unit.mode}").json()
+    assert 1 <= len(g["next_focus"]) <= 3 and all(f["reason_ja"] for f in g["next_focus"])
+    assert g["error_reasons"] == {"vocabulary": 1} and g["missed_lines"] == 1
