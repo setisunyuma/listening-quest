@@ -11,7 +11,7 @@ import logging
 from pydantic import ValidationError
 from sqlalchemy import delete, select
 
-from lq.audio import qa
+from lq.audio import pitch, qa
 from lq.audio import render as R
 from lq.audio.pcm import AudioError, decode_to_pcm, duration_ms, encode_mp3, wav_bytes
 from lq.db import models as m
@@ -20,7 +20,7 @@ from lq.domain.content import UnitContent, canonical_json, reviewer_view, sha256
 from lq.domain.profiles import get_profile, part_spec
 from lq.generator import authoring
 from lq.generator.budget import BudgetBlocked
-from lq.generator.factory import assign_voices, get_providers
+from lq.generator.factory import assign_voices, get_providers, speaker_gender
 from lq.generator.providers import GenSpec, ProviderError
 from lq.jobs.queue import Lease, StaleLease
 from lq.services import content as C
@@ -428,6 +428,7 @@ def step_audio_qa(lease: Lease, prov, meter, unit_id: str) -> None:
         approved = C.passing_review(s, unit, "audio")
         approved_method = approved.method if approved else None
         asset_info = [(a.role, a.storage_key, a.duration_ms) for a in assets]
+        audio_kind = unit.audio_kind
     problems = []
     for role, key, ms in asset_info:
         if not st.exists(key):
@@ -467,11 +468,32 @@ def step_audio_qa(lease: Lease, prov, meter, unit_id: str) -> None:
             if not cmp["ok"]:
                 bad.append({"clip": cid, "problems": cmp["problems"], "heard": heard[:300]})
 
+        # Speech recognition cannot hear WHO speaks: check that each speaker's voice pitch fits the speaker's
+        # gender (label or voice_hint). Demo tones are not speech, so they are skipped. A mismatch comes from the
+        # voice choice, so synthesising again with the same voice would not help: it quarantines directly.
+        voice_bad = []
+        if audio_kind != "demo_tone":
+            genders = {sp.id: speaker_gender(sp) for sp in content.speakers if sp.role != "narrator"}
+            for cid, spec in specs.items():
+                if (
+                    not cid.startswith("utt:")
+                    or cid not in clip_keys
+                    or genders.get(spec.speaker_id, "neutral") == "neutral"
+                ):
+                    continue
+                f0 = pitch.median_f0(decode_to_pcm(st.get(clip_keys[cid])))
+                problem = pitch.gender_mismatch(genders[spec.speaker_id], f0)
+                results_by = next((r for r in results if r["clip"] == cid), None)
+                if results_by is not None:
+                    results_by["pitch_hz"] = round(f0) if f0 else None
+                if problem:
+                    voice_bad.append({"clip": cid, "speaker": spec.speaker_id, "problems": [problem]})
+
         # A synthesised clip that does not match gets ONE fresh synthesis before the unit is quarantined:
         # speech models are not deterministic. Only that clip is re-made (one more speech request); all other
         # clips and their recognition results come from the cache, so nothing else is paid again.
         retry = [b["clip"] for b in bad if clip_keys.get(b["clip"], "").startswith("cache/tts/")]
-        if bad and retry and len(retry) == len(bad):
+        if bad and retry and len(retry) == len(bad) and not voice_bad:
 
             def resynth(s, job):
                 st_job = dict(job.state or {})
@@ -505,14 +527,16 @@ def step_audio_qa(lease: Lease, prov, meter, unit_id: str) -> None:
                 target="audio",
                 method=prov.asr.record_method,
                 reviewer=f"{prov.asr.name}:{prov.asr.model}",
-                result="fail" if bad else "pass",
-                details={"clips": results, "mismatches": bad},
+                result="fail" if bad or voice_bad else "pass",
+                details={"clips": results, "mismatches": bad, "voice_mismatches": voice_bad},
             )
-            if bad:
+            if voice_bad:
+                C.quarantine(s, unit, "voice does not fit the speaker: " + canonical_json(voice_bad)[:1500])
+            elif bad:
                 C.quarantine(s, unit, "speech recognition did not match the script: " + canonical_json(bad)[:1500])
 
         _commit_step(lease, record)
-        if bad:
+        if bad or voice_bad:
             return
         approved_method = prov.asr.record_method
 

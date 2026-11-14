@@ -1015,3 +1015,71 @@ def test_generation_prompt_asks_to_gloss_unfamiliar_customs():
     explanation only translated the line. Unfamiliar customs/terms must be glossed in explanation_ja."""
     system, _ = authoring.build_generation_prompt(GenSpec(**{k: v for k, v in SPEC.items()}))
     assert "unfamiliar in Japan" in system and "seed exchange" in system
+
+
+def _voice_pcm(f0: float, ms: int = 1200) -> bytes:
+    import math
+
+    rate, out, ph = 24000, bytearray(), 0.0
+    for i in range(rate * ms // 1000):
+        ph += 2 * math.pi * f0 * (1 + 0.03 * math.sin(2 * math.pi * 3 * i / rate)) / rate
+        v = sum(math.sin(k * ph) / k for k in range(1, 8)) * 0.2
+        out += int(max(-1, min(1, v)) * 32767).to_bytes(2, "little", signed=True)
+    return bytes(out)
+
+
+def test_pitch_estimate_and_gender_limits():
+    """Calibrated on real speech from the HTTP verification (2026-11-14): ash ~115 Hz, cedar ~145 Hz (male),
+    marin ~220 Hz (female), alloy ~150 Hz (in between - the voice that sounded female for "Man")."""
+    from lq.audio import pitch
+
+    for f in (110, 145, 215):
+        assert abs(pitch.median_f0(_voice_pcm(f)) - f) / f < 0.06
+    assert pitch.median_f0(b"\x00\x00" * 24000) is None  # silence: no estimate, no verdict
+    assert pitch.gender_mismatch("male", 120) is None and pitch.gender_mismatch("female", 215) is None
+    assert pitch.gender_mismatch("male", 220) and pitch.gender_mismatch("female", 115)
+    assert pitch.gender_mismatch("neutral", 300) is None and pitch.gender_mismatch("male", None) is None
+
+
+class PitchTTS(DemoTTS):
+    """Speech-like audio whose pitch depends on the voice, like a real provider (audio_kind "tts")."""
+
+    audio_kind = "tts"
+
+    def __init__(self, swap=False):
+        self.swap = swap
+
+    def synthesize(self, text, voice, lang, instructions, meter):
+        male = voice in {"ash", "echo", "verse", "ballad", "cedar"}
+        if self.swap:
+            male = not male
+        return _voice_pcm(115 if male else 215, 900)
+
+
+def test_voices_matching_their_speakers_pass_the_pitch_check(db, user):
+    factory.set_provider_override("demo", demo_providers(tts=PitchTTS()))
+    jid = enqueue(db)
+    assert worker.drain("w") == ["succeeded"]
+    _, unit = unit_of(db, jid)
+    assert unit.status == "READY"
+    rec = db.execute(select(m.ReviewRecord).where(m.ReviewRecord.target == "audio")).scalars().one()
+    assert any(c.get("pitch_hz") for c in rec.details["clips"])  # the check really ran
+
+
+def test_a_voice_that_contradicts_its_speaker_quarantines_without_paying_for_resynthesis(db, user):
+    """Regression (Railway, 2026-11-14): "Man" was read by a female-sounding voice and nothing caught it."""
+    tts = PitchTTS(swap=True)
+    calls = {"n": 0}
+    orig = tts.synthesize
+
+    def counting(*a, **k):
+        calls["n"] += 1
+        return orig(*a, **k)
+
+    tts.synthesize = counting
+    factory.set_provider_override("demo", demo_providers(tts=tts))
+    jid = enqueue(db)
+    worker.drain("w")
+    job, unit = unit_of(db, jid)
+    assert unit.status == "QUARANTINED" and "voice does not fit the speaker" in unit.status_reason
+    assert "resynth" not in (job.state or {})  # the same voice would sound the same: no extra speech requests
