@@ -243,6 +243,13 @@ def start_plan(session, user: m.User, now: datetime, kind: str = "quest", mode: 
     session.add(plan)
     session.flush()
     carried, carried_sec = carry_over(session, user, plan, day, budget)
+    from lq.services import repair
+
+    recall = repair.recall_slot_for_plan(session, user, plan, day, budget - carried_sec)  # L01: unaided later checks
+    if recall is not None:
+        recall.idx = len(carried)
+        carried = [*carried, recall]
+        carried_sec += recall.est_sec
     cands, state, _ = learner_context(session, user, mode, day, now)
     draft = rec.build_plan(
         cands,
@@ -250,7 +257,7 @@ def start_plan(session, user: m.User, now: datetime, kind: str = "quest", mode: 
         budget - carried_sec,
         cfg,
         _seed(user, day, mode),
-        exclude={x.unit_id for x in carried if x.unit_id},
+        exclude={x.unit_id for x in carried if x.unit_id and x.kind == "unit"},
     )
     if not draft.slots and not carried:
         session.delete(plan)
@@ -262,8 +269,9 @@ def start_plan(session, user: m.User, now: datetime, kind: str = "quest", mode: 
         session.add(m.PlanSlot(plan_id=plan.id, idx=i, category=sl["category"], mode=mode, unit_id=sl["unit_id"], time_cap_sec=sl["time_cap_sec"], est_sec=sl["est_sec"],
                                reason_code=sl["reason_code"], reason_text=sl["reason_text"], reason_params=sl["reason_params"]))  # fmt: skip
     notes = list(draft.notes)
-    if carried:
-        notes.insert(0, f"前回から持ち越した課題が {len(carried)} 件あります（先に行います）")
+    n_carried = sum(1 for x in carried if x.carried_from)
+    if n_carried:
+        notes.insert(0, f"前回から持ち越した課題が {n_carried} 件あります（先に行います）")
     if any((x.payload or {}).get("carry_count", 0) >= 3 for x in carried):
         notes.insert(0, "同じ課題が3回以上持ち越されています。新しい問題を減らして、先に取り組めるようにしました")
     plan.total_slots = len(carried) + len(draft.slots)
@@ -279,7 +287,8 @@ def _plan_slots(session, plan_id: str, lock: bool = False) -> list[m.PlanSlot]:
 
 
 def _live(slots) -> list[m.PlanSlot]:
-    return [s for s in slots if s.state != "removed"]
+    """Tasks that use today's time: not removed, not skipped, not carried to a later day."""
+    return [s for s in slots if s.state not in ("removed", "skipped", "carried")]
 
 
 def _budget_cap(plan: m.DailyPlan, slots, slot: m.PlanSlot) -> int:
@@ -318,7 +327,7 @@ def after_unit(session, user: m.User, slot_id: str, now: datetime) -> None:
     first_pending = True
     used = set(fixed)
     for s in slots:
-        if s.state != "pending" or s.reserved:
+        if s.state != "pending" or s.reserved or s.kind != "unit":  # repair / recall tasks keep their content
             continue
         if s.mode not in ctx:
             ctx[s.mode] = learner_context(session, user, s.mode, today, now)
@@ -413,6 +422,8 @@ def replace_slot(session, user: m.User, slot_id: str, now: datetime, reason: str
         raise L.NotFound("slot not found")
     if slot.state in ("completed", "removed"):
         raise L.Conflict("slot already finished")
+    if slot.kind != "unit":
+        raise L.Conflict("only problem tasks can be swapped for another unit")
     if slot.reserved:
         raise L.Conflict("slot is reserved for offline use; sync and release it first")
     if slot.attempt_id:
@@ -509,7 +520,7 @@ def reserve_slots(session, user: m.User, plan_id: str) -> list[dict]:
         raise L.NotFound("plan not found")
     out = []
     for s in _plan_slots(session, plan.id, lock=True):
-        if s.state != "pending" or not s.unit_id:
+        if s.state != "pending" or not s.unit_id or s.kind != "unit":  # only problems are answered offline
             continue
         s.reserved = True
         unit = session.get(m.Unit, s.unit_id)
@@ -639,10 +650,19 @@ def next_task(session, plan: m.DailyPlan, on_the_move: bool = False) -> m.PlanSl
     """The task "続ける" opens: a started task first, then the next pending one in order. On the move, tasks
     that need the screen wait for the desk (they stay in the plan; nothing is marked done)."""
     slots = _plan_slots(session, plan.id)
-    for st in ("started", "pending"):
-        for x in slots:
-            if x.state == st and (not on_the_move or task_context(session, x) != "desk"):
-                return x
+
+    def ok(x):
+        return not on_the_move or task_context(session, x) != "desk"
+
+    for x in slots:
+        if x.state == "started" and ok(x):
+            return x
+    for x in slots:  # a waiting repair comes right after the problem it repairs (L01)
+        if x.state == "pending" and x.kind == "repair" and ok(x):
+            return x
+    for x in slots:
+        if x.state == "pending" and ok(x):
+            return x
     return None
 
 
@@ -673,6 +693,7 @@ def end_day(session, user: m.User, plan_id: str, now: datetime) -> dict:
     if plan is None or plan.user_id != user.id:
         raise L.NotFound("plan not found")
     moved = 0
+    plan.params = {**(plan.params or {}), "ended_by_user": True}  # nothing new is added to today afterwards
     for x in _plan_slots(session, plan.id, lock=True):
         if x.state in ("pending", "started") and not x.reserved:
             x.state, x.carry_reason = "carried", "今日は終了"
@@ -745,7 +766,7 @@ def bind_free_attempt(session, user: m.User, att: m.Attempt, now: datetime) -> d
     slot = session.execute(
         select(m.PlanSlot).join(m.DailyPlan, m.DailyPlan.id == m.PlanSlot.plan_id)
         .where(m.DailyPlan.user_id == user.id, m.DailyPlan.learning_day == day, m.PlanSlot.unit_id == att.unit_id,
-               m.PlanSlot.state.in_(("pending", "started")), m.PlanSlot.reserved.is_(False))
+               m.PlanSlot.state.in_(("pending", "started")), m.PlanSlot.reserved.is_(False), m.PlanSlot.kind == "unit")
         .with_for_update()
     ).scalars().first()  # fmt: skip
     if slot is None:

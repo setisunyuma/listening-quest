@@ -436,7 +436,13 @@ def attempt_submit(
     attempt_id: str, body: S.SubmitIn, session: Session = Depends(db), user: m.User = Depends(current_user)
 ):
     att = L.submit_attempt(
-        session, user, attempt_id, body.answers, now=now_utc(), plays=[p.model_dump() for p in body.plays]
+        session,
+        user,
+        attempt_id,
+        body.answers,
+        now=now_utc(),
+        plays=[p.model_dump() for p in body.plays],
+        confidence=body.confidence,
     )
     session.commit()
     out = L.result_dto(session, att)
@@ -474,6 +480,35 @@ def unit_dictation(
     unit_id: str, body: S.DictationIn, session: Session = Depends(db), user: m.User = Depends(current_user)
 ) -> dict[str, Any]:
     return feedback.check_dictation(session, user, unit_id, body.utterance_id, body.typed)
+
+
+@app.get("/api/tasks/{slot_id}")
+def task_get(slot_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    from lq.services import repair
+
+    return repair.task_view(session, user, slot_id)
+
+
+@app.post("/api/tasks/{slot_id}/complete")
+def task_complete(
+    slot_id: str, body: S.TaskResultIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    from lq.services import repair
+
+    out = repair.complete_task(session, user, slot_id, body.results, now_utc())
+    session.commit()
+    return out
+
+
+@app.post("/api/units/{unit_id}/phrases")
+def unit_phrase(
+    unit_id: str, body: S.PhraseIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    from lq.services import repair
+
+    out = repair.choose_phrase(session, user, unit_id, body.utterance_id, body.term, body.on, now_utc())
+    session.commit()
+    return out
 
 
 @app.get("/api/missed")

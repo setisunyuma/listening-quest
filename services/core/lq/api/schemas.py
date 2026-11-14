@@ -144,6 +144,8 @@ class SubmitIn(BaseModel):
     answers: dict[str, dict[str, Any] | None]
     # R03: every playback event of this attempt, stored on the device; already received ones are skipped
     plays: list[PlayIn] = Field(default_factory=list, max_length=200)
+    # L02: optional, per question, given before the answers are shown
+    confidence: dict[str, Literal["sure", "unsure", "guess"]] = Field(default_factory=dict)
 
 
 class ResultQuestion(BaseModel):
@@ -202,6 +204,7 @@ class AckOut(BaseModel):
     slot_completed: bool
     plan_completed: bool
     plan_ended: bool = False
+    repair_slot_id: str | None = None
     needs_all_answers: bool
 
 
@@ -420,6 +423,16 @@ class PushSubscribeIn(BaseModel):
 class DictationIn(BaseModel):
     utterance_id: str = Field(min_length=1, max_length=64)
     typed: str = Field(default="", max_length=4000)
+
+
+class TaskResultIn(BaseModel):
+    results: list[dict[str, Any]] = Field(default_factory=list, max_length=20)
+
+
+class PhraseIn(BaseModel):
+    utterance_id: str = Field(min_length=1, max_length=64)
+    term: str = Field(min_length=1, max_length=80)
+    on: bool = True
 
 
 class MissedIn(BaseModel):

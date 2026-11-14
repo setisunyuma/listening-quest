@@ -176,7 +176,12 @@ def test_full_flow_and_answer_locks(db, user):
     assert c.post(f"/api/attempts/{aid}/ack").json()["awarded"] == []
 
     after = c.get(f"/api/plans/{plan['id']}").json()
-    assert after["total_slots"] == plan["total_slots"] and after["completed_slots"] == 1
+    # L01: a wrong answer adds one short repair task; the day's time budget, not the slot count, is the limit
+    added = [s for s in after["slots"] if s["kind"] == "repair"]
+    assert (
+        after["total_slots"] == plan["total_slots"] + len(added) and len(added) <= 1 and after["completed_slots"] == 1
+    )
+    assert after["planned_sec"] <= max(after["budget_sec"], plan["planned_sec"])
     missed = unit.primary_skill
     nxt = after["slots"][1]
     if any(u["primary_skill"] == missed and u["id"] != unit.id for u in lib["units"]):

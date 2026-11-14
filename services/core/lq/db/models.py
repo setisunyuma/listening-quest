@@ -569,3 +569,30 @@ class NotificationState(Base):
     __tablename__ = "notification_state"
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     data: Mapped[dict] = mapped_column(JSONB, default=dict)
+
+
+class RepairItem(Base):
+    """L01/L03: one line (or one chosen phrase) the learner is repairing, and what happened at each stage.
+
+    stage: repair (short practice due today) -> delayed (same line, unaided, on a later day) -> done; paused.
+    The three outcomes are kept apart and never merged into one score: right after practice ("immediate"),
+    the same line on a later day without help ("delayed"), and the same skill on unseen audio ("transfer",
+    derived from first attempts, see services/repair.py)."""
+
+    __tablename__ = "repair_items"
+    id: Mapped[str] = pk()
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    unit_id: Mapped[str] = mapped_column(ForeignKey("units.id", ondelete="CASCADE"))
+    utterance_id: Mapped[str] = mapped_column(String(64))
+    kind: Mapped[str] = mapped_column(String(8), default="line")  # line | phrase
+    term: Mapped[str | None] = mapped_column(String(80), nullable=True)  # phrase items
+    cause: Mapped[str] = mapped_column(
+        String(24), default="unknown"
+    )  # sound | vocabulary | numbers_negation | inference | guess | unknown ...
+    skill: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    source_attempt_id: Mapped[str | None] = mapped_column(ID, nullable=True)
+    stage: Mapped[str] = mapped_column(String(12), default="repair")
+    due_day: Mapped[date | None] = mapped_column(Date, nullable=True)
+    results: Mapped[list] = mapped_column(JSONB, default=list)  # [{at, step, ok, aided}]
+    created_at: Mapped[datetime] = ts()
+    __table_args__ = (UniqueConstraint("user_id", "unit_id", "utterance_id", "kind", "term", name="uq_repair_item"),)

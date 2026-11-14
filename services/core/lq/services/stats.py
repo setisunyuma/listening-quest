@@ -184,6 +184,12 @@ def _agg(rows: list[m.Attempt]) -> dict:
     }
 
 
+def repair_outcomes(session, user, mode):
+    from lq.services.repair import outcomes
+
+    return outcomes(session, user, mode)
+
+
 def growth(session, user: m.User, now: datetime, mode: str, days: int = 30) -> dict:
     cfg = rules.load_config()
     since = now - timedelta(days=days)
@@ -297,7 +303,7 @@ def growth(session, user: m.User, now: datetime, mode: str, days: int = 30) -> d
         "band": {"current": st.difficulty_band, "label": "モード内の暫定難度帯（1〜5）", "eligible_units_in_band": distinct, "needed": cfg.band_min_units,
                  "up_threshold": cfg.band_up_threshold, "down_threshold": cfg.band_down_threshold, "history": st.band_history[-10:],
                  "note": "設定値による調整です。研究で確定した最適値ではありません。"},
-        "skills": skills, "next_focus": focus, "error_reasons": reason_counts, "missed_lines": int(missed_lines), "daily": [{"day": d["day"], "units": d["units"], "first_units": d["first_units"], "first_mean": round(d["first_sum"] / d["first_units"], 3) if d["first_units"] else None} for d in sorted(daily.values(), key=lambda x: x["day"])],
+        "skills": skills, "repair": repair_outcomes(session, user, mode), "next_focus": focus, "error_reasons": reason_counts, "missed_lines": int(missed_lines), "daily": [{"day": d["day"], "units": d["units"], "first_units": d["first_units"], "first_mean": round(d["first_sum"] / d["first_units"], 3) if d["first_units"] else None} for d in sorted(daily.values(), key=lambda x: x["day"])],
         "assessments": [{"session_id": s.id, "at": s.ended_at.isoformat(), **{k: s.result.get(k) for k in ("score_kind", "points", "max_points", "correct_count", "slot_count", "by_section", "label")}} for s in assess],
         "excluded_invalidated": excluded,
         "disclaimer": "アプリ内の正答率・XPは、英検CSE・合否・CEFR認定・共通テスト得点に換算できません。",
