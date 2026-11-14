@@ -1793,7 +1793,7 @@ export interface components {
         /** VerifyLiveIn */
         VerifyLiveIn: {
             /** Cap Usd */
-            cap_usd: number;
+            cap_usd?: number | null;
         };
     };
     responses: never;

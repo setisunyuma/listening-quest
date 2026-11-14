@@ -2368,15 +2368,19 @@
    "VerifyLiveIn": {
     "properties": {
      "cap_usd": {
-      "exclusiveMinimum": 0.0,
-      "maximum": 20.0,
-      "title": "Cap Usd",
-      "type": "number"
+      "anyOf": [
+       {
+        "exclusiveMinimum": 0.0,
+        "maximum": 20.0,
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Cap Usd"
      }
     },
-    "required": [
-     "cap_usd"
-    ],
     "title": "VerifyLiveIn",
     "type": "object"
    }

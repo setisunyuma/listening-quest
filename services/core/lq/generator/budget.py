@@ -67,7 +67,7 @@ def set_system(session, realm: str, patch: dict) -> dict:
 
 
 def _counted(e: m.CostEntry) -> float:
-    if e.state == "settled" and e.actual_usd is not None:
+    if e.state in ("settled", "computed") and e.actual_usd is not None:
         return e.actual_usd
     if e.state == "released":
         return 0.0
@@ -84,7 +84,7 @@ def spent_today(session, realm: str, day=None) -> dict:
     out = {"settled_usd": 0.0, "reserved_usd": 0.0, "unknown_usd": 0.0, "counted_usd": 0.0, "day": day.isoformat()}
     for e in rows:
         out["counted_usd"] += _counted(e)
-        if e.state == "settled":
+        if e.state in ("settled", "computed"):
             out["settled_usd"] += e.actual_usd or 0.0
         elif e.state == "reserved":
             out["reserved_usd"] += e.estimated_usd
@@ -157,6 +157,11 @@ class BudgetMeter:
         else:
             self._update(entry_id, state="settled", actual_usd=float(actual_usd), usage=usage)
 
+    def computed(self, entry_id: str, usd: float, basis: dict) -> None:
+        """The API answered but returned no billable usage: cost computed here from list prices and what we
+        measured (audio length, characters). An estimate, not the provider's figure."""
+        self._update(entry_id, state="computed", actual_usd=float(usd), usage=basis)
+
     def mark_unknown(self, entry_id: str, why: str) -> None:
         """Timeout / dropped connection: we cannot know whether we were billed. Keep the estimate counted."""
         self._update(entry_id, state="unknown", usage={"unknown_reason": why})
@@ -173,19 +178,28 @@ class FreeMeter:
         return ""
 
     def settle(self, *a, **k) -> None: ...
+    def computed(self, *a, **k) -> None: ...
     def mark_unknown(self, *a, **k) -> None: ...
     def release(self, *a, **k) -> None: ...
 
 
-def job_cost(session, job_id: str) -> dict:
-    rows = session.execute(select(m.CostEntry).where(m.CostEntry.job_id == job_id)).scalars().all()
+def cost_summary(rows) -> dict:
+    """settled = from usage the API returned; computed = API answered without usage, priced here from
+    measurements; unknown = no answer (timeout, dropped connection), counted at the pre-request estimate;
+    reserved = in flight. counted = what the budget charges (all of the above)."""
     return {
-        "estimated_usd": round(sum(e.estimated_usd for e in rows), 6),
         "settled_usd": round(sum(e.actual_usd or 0 for e in rows if e.state == "settled"), 6),
+        "computed_usd": round(sum(e.actual_usd or 0 for e in rows if e.state == "computed"), 6),
         "unknown_usd": round(sum(e.estimated_usd for e in rows if e.state == "unknown"), 6),
         "reserved_usd": round(sum(e.estimated_usd for e in rows if e.state == "reserved"), 6),
+        "counted_usd": round(sum(_counted(e) for e in rows), 6),
+        "pre_estimates_usd": round(sum(e.estimated_usd for e in rows), 6),
         "requests": len(rows),
     }
+
+
+def job_cost(session, job_id: str) -> dict:
+    return cost_summary(session.execute(select(m.CostEntry).where(m.CostEntry.job_id == job_id)).scalars().all())
 
 
 def running_jobs(session, realm: str, now) -> int:
@@ -246,3 +260,53 @@ def cost_realtime(model: str, usage: dict) -> float | None:
 def est_asr(model: str, seconds: float) -> float | None:
     p = price_table()["transcription"].get(model)
     return None if p is None else max(seconds, 1.0) / 60.0 * p
+
+
+def cost_tts_measured(kind: str, model: str, text: str, seconds: float) -> float | None:
+    """Price a speech request from the text sent and the audio length actually received (no usage returned)."""
+    t = price_table()
+    p = t["realtime" if kind == "realtime" else "speech"].get(model)
+    if not p:
+        return None
+    a = t["assumptions"]
+    return (
+        len(text) / a["chars_per_text_token"] * p["text_input"]
+        + seconds * a["audio_output_tokens_per_second"] * p["audio_output"]
+    ) / 1e6
+
+
+def estimate_unit(mode: str, part: str, settings) -> dict:
+    """Pre-run estimate (upper side) for one unit with the configured models. None = unknown price."""
+    import json as _json
+
+    from lq.audio.render import plan_clips
+    from lq.generator import authoring
+    from lq.generator.providers import GenSpec
+    from lq.services.seed import load_fixture_units
+
+    prof = __import__("lq.domain.profiles", fromlist=["x"])
+    part_spec = prof.part_spec(prof.current_profile(mode), part)
+    system, user = authoring.build_generation_prompt(
+        GenSpec(mode=mode, part=part, template_type=part_spec["template_type"], primary_skill="explicit_detail", band=3)
+    )
+    words = authoring.templates()["modes"][mode][part]["words"][1]
+    sample = next((u for u in load_fixture_units() if u.mode == mode and u.part == part), None)
+    clips = len(plan_clips(sample)) if sample else 10
+    chars = words * 6 + clips * 60
+    speech = settings.tts_provider == "openai_speech"
+    est = {
+        "content": est_text(
+            settings.content_model, len(system) + len(user) + len(_json.dumps(authoring.authored_schema())), 6000
+        ),
+        "review": est_text(settings.review_model, words * 8 + 1500, 2500),
+        "tts": est_tts(
+            "speech" if speech else "realtime", settings.tts_speech_model if speech else settings.tts_model, "x" * chars
+        ),
+        "asr": est_asr(settings.asr_model, chars / 14),
+    }
+    total = None if any(v is None for v in est.values()) else sum(est.values())
+    return {
+        "by_step": {k: (round(v, 4) if v is not None else None) for k, v in est.items()},
+        "total_usd": None if total is None else round(total, 4),
+        "clips": clips,
+    }

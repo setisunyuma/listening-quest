@@ -699,9 +699,12 @@ def admin_verify_status(session: Session = Depends(db), user: m.User = Depends(c
         "realm": user.realm,
         "running": bool(cfg.get("verification")),
         "cap_usd": (cfg.get("verification") or {}).get("cap_usd"),
-        "problems": V.preflight(session, user.realm, 1.0)
+        "problems": V.preflight(session, user.realm, max(V.budget_status(session, user.realm)["remaining_usd"], 1e-6))
         if user.realm == "live"
         else ["デモ領域では実APIを使いません"],
+        "budget": V.budget_status(session, user.realm),
+        "expected": V.expected_cost(),
+        "tts_provider": get_settings().tts_provider,
         "report": V.report(session, jid) if jid and session.get(m.GenerationJob, jid) else None,
         "spec": {"mode": "common_test", "part": "3", "label_ja": "共通テスト 第3問（短い対話・1問）"},
     }
@@ -717,14 +720,16 @@ def admin_verify_start(
 
     if user.realm != "live":
         raise L.Invalid("live verification runs only in the live data area")
-    problems = V.preflight(session, user.realm, body.cap_usd, probe=True)
+    remaining = V.budget_status(session, user.realm)["remaining_usd"]
+    cap = remaining if body.cap_usd is None else min(body.cap_usd, remaining)
+    problems = V.preflight(session, user.realm, cap, probe=True) if cap > 0 else ["the verification budget is used up"]
     if problems:
         raise L.Invalid(" / ".join(problems))
     p = current_profile("common_test")
     part = next(x for x in p["parts"] if x["part"] == "3")
     spec = {"mode": "common_test", "part": "3", "template_type": part["template_type"], "primary_skill": "numbers_negation", "band": 3, "topic_hint": "",
             "seed": f"verify-{new_id()[:10]}", "source": "generated", "pool": "practice"}  # fmt: skip
-    jid = V.start(session, user.realm, body.cap_usd, spec, actor=user.username)
+    jid = V.start(session, user.realm, cap, spec, actor=user.username)
     session.commit()
     return {"job_id": jid}
 

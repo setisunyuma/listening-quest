@@ -357,7 +357,9 @@ def generate(mode: str, part: str, skill: str = "explicit_detail", band: int = 3
 @app.command("verify-live")
 def verify_live(
     cost_cap_usd: float = typer.Option(
-        ..., help="hard cap for the whole verification (content + review + speech + ASR + retries), in USD"
+        None,
+        help="cap for this run (content + review + speech + ASR + retries), in USD. Default and maximum: what is "
+        "left of the shared verification budget (LQ_VERIFY_BUDGET_TOTAL_USD - LQ_VERIFY_BUDGET_PRIOR_USD - spent here)",
     ),
     mode: str = "common_test",
     part: str = typer.Option(
@@ -390,10 +392,28 @@ def verify_live(
     realm = "demo" if rehearsal else "live"
     spec = _specs(mode, part, skill, 3, 1, "", "practice", "demo-generated" if rehearsal else "generated")[0]
     with session_scope() as db:
-        problems = V.preflight(db, realm, cost_cap_usd, rehearsal=rehearsal, probe=not rehearsal)
+        bs = V.budget_status(db, realm)
+        cap = bs["remaining_usd"] if cost_cap_usd is None else min(cost_cap_usd, bs["remaining_usd"])
+        if rehearsal:
+            cap = cost_cap_usd or 1.0
+        problems = (
+            V.preflight(db, realm, cap, rehearsal=rehearsal, probe=not rehearsal)
+            if cap > 0
+            else ["the verification budget is used up"]
+        )
         if problems or dry_run:
-            _echo({"would_run": spec, "cost_cap_usd": cost_cap_usd, "problems": problems, "dry_run": dry_run})
+            _echo(
+                {
+                    "would_run": spec,
+                    "cost_cap_usd": cap,
+                    "budget": bs,
+                    "expected": V.expected_cost(mode, part),
+                    "problems": problems,
+                    "dry_run": dry_run,
+                }
+            )
             raise typer.Exit(1 if problems else 0)
+        cost_cap_usd = cap
         jid = V.start(db, realm, cost_cap_usd, spec, actor="cli")
     typer.echo(f"verification job {jid} queued (cap {cost_cap_usd} USD); running it here...")
     deadline = time.time() + max_minutes * 60
@@ -686,6 +706,17 @@ def serve(
     role = role or s.role
     if role not in ("api", "worker", "all"):
         raise typer.BadParameter("role must be api, worker or all")
+    if s.storage_backend == "local":
+        try:
+            from lq.storage import get_storage
+
+            st = get_storage()
+            st.put("health/.write-check", b"ok")
+            assert st.get("health/.write-check") == b"ok"
+            st.delete("health/.write-check")
+        except Exception as e:  # noqa: BLE001
+            typer.echo(f"FATAL: audio storage {s.storage_local_dir} is not writable: {e}", err=True)
+            raise typer.Exit(1) from e
     if migrate_first and role in ("api", "all"):
         migrate()
     api_cmd = [

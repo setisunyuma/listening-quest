@@ -360,7 +360,7 @@ class SystemPatch(BaseModel):
 
 
 class VerifyLiveIn(BaseModel):
-    cap_usd: float = Field(gt=0, le=20)
+    cap_usd: float | None = Field(default=None, gt=0, le=20)  # default: what is left of the shared budget
 
 
 class GenerateIn(BaseModel):

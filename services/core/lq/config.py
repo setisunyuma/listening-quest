@@ -57,6 +57,10 @@ class Settings(BaseSettings):
     # one-time owner setup from the browser (phone): the owner picks this phrase in the hosting dashboard,
     # then opens /setup. Ignored as soon as a live account exists. 12+ characters.
     setup_code: str | None = None
+    # live verification budget, shared across environments: total for all verification runs, and what was
+    # already spent elsewhere (e.g. in a development environment before moving to the server)
+    verify_budget_total_usd: float = 1.0
+    verify_budget_prior_usd: float = 0.0
     # process role inside the core image: api | worker | all (api + worker in one container, for PaaS)
     role: str = "api"
     port: int = 8000

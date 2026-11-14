@@ -27,7 +27,8 @@ COPY infra/docker/allinone-entrypoint.sh /usr/local/bin/lq-allinone
 ENV PATH="/app/services/core/.venv/bin:$PATH" LQ_FIXTURES_DIR=/app/fixtures LQ_ENV=prod LQ_ENV_FILE=none \
     LQ_STORAGE_BACKEND=local LQ_STORAGE_LOCAL_DIR=/data/storage LQ_WORK_DIR=/data/work LQ_OUTBOX_DIR=/data/outbox \
     LQ_COOKIE_SECURE=true LQ_PORT=8000 API_INTERNAL_URL=http://127.0.0.1:8000 PORT=3000
-RUN useradd --system --uid 10001 lq && mkdir -p /data && chown lq /data && chmod +x /usr/local/bin/lq-allinone
-USER lq
+RUN useradd --system --uid 10001 lq && mkdir -p /data && chown lq /data && chmod +x /usr/local/bin/lq-allinone \
+    && command -v setpriv
+# Starts as root only to take ownership of a root-owned mounted volume, then drops to uid 10001 (setpriv).
 EXPOSE 3000
 CMD ["lq-allinone"]

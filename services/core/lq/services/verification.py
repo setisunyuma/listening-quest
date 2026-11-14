@@ -17,11 +17,45 @@ from lq.jobs import queue
 TERMINAL = ("SUCCEEDED", "FAILED", "BLOCKED")
 
 
+def budget_status(session, realm: str) -> dict:
+    """The verification budget does not reset when moving environments: total minus what was spent in other
+    environments (LQ_VERIFY_BUDGET_PRIOR_USD) minus what every verification job here has been charged."""
+    s = get_settings()
+    jobs = [
+        j.id
+        for j in session.execute(select(m.GenerationJob).where(m.GenerationJob.realm == realm)).scalars()
+        if j.params.get("verification")
+    ]
+    rows = session.execute(select(m.CostEntry).where(m.CostEntry.job_id.in_(jobs))).scalars().all() if jobs else []
+    here = budget.cost_summary(rows)
+    remaining = round(s.verify_budget_total_usd - s.verify_budget_prior_usd - here["counted_usd"], 6)
+    return {
+        "total_usd": s.verify_budget_total_usd,
+        "prior_environments_usd": s.verify_budget_prior_usd,
+        "this_environment": here,
+        "remaining_usd": max(0.0, remaining),
+        "runs_here": len(jobs),
+    }
+
+
+def expected_cost(mode: str = "common_test", part: str = "3") -> dict:
+    return budget.estimate_unit(mode, part, get_settings())
+
+
 def preflight(session, realm: str, cap_usd: float, *, rehearsal: bool = False, probe: bool = False) -> list[str]:
     s = get_settings()
     problems = []
     if not (0 < cap_usd <= 20):
         problems.append("the cost cap must be more than 0 and at most 20 USD")
+    if not rehearsal:
+        bs = budget_status(session, realm)
+        est = expected_cost()
+        if est["total_usd"] is None:
+            problems.append("the expected cost cannot be computed (unknown price)")
+        elif est["total_usd"] > min(cap_usd, bs["remaining_usd"]):
+            problems.append(
+                f"not enough verification budget left to finish one unit: remaining {bs['remaining_usd']:.4f} USD (cap {cap_usd:.4f}), expected up to {est['total_usd']:.4f} USD; nothing was started"
+            )
     if not rehearsal:
         if not s.openai_api_key:
             problems.append("OPENAI_API_KEY is not set on the server")
@@ -134,7 +168,9 @@ def report(db, job_id: str) -> dict:
         "audio_check": {"method": audio_review.method, "result": audio_review.result, "clips": audio_review.details.get("clips"), "mismatches": audio_review.details.get("mismatches")} if audio_review else None,
         "assets": [{"role": a.role, "duration_ms": a.duration_ms, "bytes": a.bytes} for a in assets if a.kind != "utterance"],
         "cost": budget.job_cost(db, job_id),
-        "cost_entries": [{"step": e.step, "model": e.model, "state": e.state, "estimated_usd": round(e.estimated_usd, 6), "actual_usd": e.actual_usd, "usage": e.usage} for e in entries],
+        "budget_after": budget_status(db, job.realm),
+        "cap_usd": next((a.details.get("cap_usd") for a in db.execute(select(m.AuditLog).where(m.AuditLog.target == job_id, m.AuditLog.action == "live_verification_started")).scalars()), None),
+        "cost_entries": [{"step": e.step, "model": e.model, "state": e.state, "pre_estimate_usd": round(e.estimated_usd, 6), "charged_usd": e.actual_usd, "usage": e.usage} for e in entries],
         "price_source": budget.price_table()["source"], "price_checked_at": budget.price_table()["checked_at"],
         "open_in_app": f"/play?unit={unit.id}" if unit and unit.status == "READY" else None,
         "job": admin.job_dto(db, job),

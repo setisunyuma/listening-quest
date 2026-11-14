@@ -805,3 +805,51 @@ def test_probe_skips_realtime_when_the_speech_endpoint_is_used(monkeypatch):
 
     monkeypatch.setattr(httpx, "get", lambda *a, **k: Ok())
     assert openai_provider.probe_auth("k", "https://api.openai.com/v1", None, "gpt-4o-mini-tts") == []
+
+
+# ---- shared verification budget across environments
+
+
+def test_verification_budget_carries_over_and_refuses_when_one_unit_cannot_finish(db, live_user, monkeypatch):
+    from typer.testing import CliRunner
+
+    from lq import cli
+    from lq.config import get_settings
+    from lq.services import verification as V
+
+    s = get_settings()
+    monkeypatch.setattr(s, "openai_api_key", "sk-test")
+    monkeypatch.setattr("lq.generator.openai_provider.probe_auth", lambda *a, **k: [])
+    monkeypatch.setattr(s, "verify_budget_total_usd", 1.0)
+    monkeypatch.setattr(s, "verify_budget_prior_usd", 0.95)  # spent in another environment: does not reset here
+    st = V.budget_status(db, "live")
+    assert st["remaining_usd"] == pytest.approx(0.05)
+    fake = paid_set(0.01)
+    r = CliRunner().invoke(cli.app, ["verify-live"])
+    assert r.exit_code == 1 and "not enough verification budget left" in r.output
+    assert fake.calls == [] and db.execute(select(func.count()).select_from(m.GenerationJob)).scalar_one() == 0
+
+    monkeypatch.setattr(s, "verify_budget_prior_usd", 0.30)
+    r = CliRunner().invoke(cli.app, ["verify-live"])
+    assert r.exit_code == 0, r.output
+    st = V.budget_status(db, "live")
+    spent = st["this_environment"]["counted_usd"]
+    assert spent > 0 and st["remaining_usd"] == pytest.approx(0.70 - spent)
+    monkeypatch.setattr(s, "verify_budget_prior_usd", 0.95)  # the run here still counts after "moving"
+    assert V.budget_status(db, "live")["remaining_usd"] == pytest.approx(max(0.0, 0.05 - spent))
+
+
+def test_cost_states_are_reported_separately(db, live_user):
+    from lq.generator.budget import BudgetMeter, cost_summary
+
+    budget.set_system(db, "live", {"paid_enabled": True, "daily_budget_usd": 5, "per_job_cap_usd": 5})
+    db.commit()
+    meter = BudgetMeter("live", None)
+    a, b, c, d = (meter.reserve("tts", "x", "m", 0.1) for _ in range(4))
+    meter.settle(a, 0.05, {"input_tokens": 1})
+    meter.computed(b, 0.07, {"basis": "measured audio"})
+    meter.mark_unknown(c, "timeout")
+    out = cost_summary(db.execute(select(m.CostEntry)).scalars().all())
+    assert (out["settled_usd"], out["computed_usd"], out["unknown_usd"], out["reserved_usd"]) == (0.05, 0.07, 0.1, 0.1)
+    assert out["counted_usd"] == pytest.approx(0.32)
+    del d
