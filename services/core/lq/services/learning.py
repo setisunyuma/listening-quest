@@ -38,6 +38,11 @@ DEFAULT_USER_SETTINGS = {
     "primary_side": "right",
     "font_scale": 1.0,
     "radio_include_new": True,
+    "auto_offline": False,  # save the day's not-started units to the device whenever the app opens online
+    "notify_reminder_hour": None,  # local hour for the daily reminder; None = no reminder
+    "notify_new_material": True,
+    "notify_problems": True,
+    "exam_dates": {},  # mode -> "YYYY-MM-DD" (the learner's own target date; shown as days left)
 }
 ANSWER_ACCESS_KINDS = ("answer_access", "radio_access", "assessment")
 ERROR_REASONS = ("sound", "vocabulary", "numbers_negation", "inference", "organizing", "focus", "other")
@@ -83,6 +88,24 @@ def update_user_settings(user: m.User, patch: dict) -> dict:
                 raise Invalid("unknown timezone") from e
         if k == "playback_rate" and not (0.5 <= float(v) <= 1.5):
             raise Invalid("playback_rate must be 0.5..1.5")
+        if k == "notify_reminder_hour" and v is not None and int(v) == -1:
+            v = None  # the settings API cannot send null, so -1 switches the reminder off
+        if k == "notify_reminder_hour" and v is not None and not (0 <= int(v) <= 23):
+            raise Invalid("notify_reminder_hour must be 0..23 or null")
+        if k == "exam_dates":
+            from datetime import date as _date
+
+            if not isinstance(v, dict) or not set(v) <= set(MODES):
+                raise Invalid("exam_dates must map modes to dates")
+            clean = {}
+            for mode_key, d in v.items():
+                if d in (None, ""):
+                    continue
+                try:
+                    clean[mode_key] = _date.fromisoformat(str(d)).isoformat()
+                except ValueError as e:
+                    raise Invalid("exam date must be YYYY-MM-DD") from e
+            v = clean
         if k == "primary_side" and v not in ("left", "right"):
             raise Invalid("primary_side must be left or right")
         cur[k] = v
@@ -753,13 +776,17 @@ def result_dto(session, att: m.Attempt) -> dict:
             "self_reason": (att.error_reasons or {}).get(q.id),
         })  # fmt: skip
     fb = assets.get("feedback")
+    ja = {t.utterance_id: t.ja for t in content.study_notes.translations}
     return {
         "attempt_id": att.id, "unit_id": unit.id, "status": att.status, "session_type": att.session_type, "category": att.category,
         "complete": att.complete, "correct_count": att.result["correct_count"], "total": att.result["total"],
         "counted_as_first": att.strict_first, "not_first_reasons": att.not_first_reasons, "assisted": att.result.get("assisted", False),
         "presentation": att.presentation, "schedule": att.result.get("schedule"), "band": att.result.get("band"),
         "feedback_audio": {"url": audio_url(fb), "duration_ms": fb.duration_ms} if fb else None,
-        "transcript": [{"id": seg.id, "lines": [{"utterance_id": u.id, "speaker": labels.get(u.speaker_id, u.speaker_id), "text": u.text} for u in seg.utterances]} for seg in content.segments],
+        "transcript": [{"id": seg.id, "lines": [{"utterance_id": u.id, "speaker": labels.get(u.speaker_id, u.speaker_id), "text": u.text,
+                                                "audio_url": audio_url(assets[f"utt:{u.id}"]) if f"utt:{u.id}" in assets else None,
+                                                "ja": ja.get(u.id)} for u in seg.utterances]} for seg in content.segments],
+        "glossary": [g.model_dump() for g in content.study_notes.glossary],
         "figures": [f.model_dump() for f in content.figures], "questions": questions, "feedback_viewed": att.feedback_viewed_at is not None,
         "slot_id": att.slot_id, "audio_kind": unit.audio_kind, "title": unit.title,
     }  # fmt: skip

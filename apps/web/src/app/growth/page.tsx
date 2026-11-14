@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { useApp } from "@/components/Shell";
 import { Msg, useData } from "@/components/ui";
@@ -17,6 +18,8 @@ function Stat({ s }: { s: Json }) {
     </div>
   );
 }
+
+const REASON_JA: Record<string, string> = { sound: "音が取れない", vocabulary: "語彙", numbers_negation: "数字・否定", inference: "推論", organizing: "情報整理", focus: "集中", other: "その他" };
 
 export default function GrowthPage() {
   const app = useApp();
@@ -47,6 +50,15 @@ export default function GrowthPage() {
         <p className="faint">{g.band.note} 自己申告・ラジオ・補助付きの正解・同じ問題の解き直しは難度の変更に使いません。他のモードの難度は引き継ぎません。</p>
         {g.band.history.map((h: Json, i: number) => <p key={i} className="note">{h.day}: {h.from} → {h.to}（{h.n} Unit・平均 {Math.round(h.mean * 100)}%）</p>)}
       </section>
+      {(g.next_focus?.length > 0 || Object.keys(g.error_reasons ?? {}).length > 0 || g.missed_lines > 0) && (
+        <section className="panel accent" aria-labelledby="focus-h">
+          <h2 id="focus-h">次に練習すること</h2>
+          {g.next_focus.map((f: Json) => <p key={f.skill}><strong>{f.label}</strong><br /><small>{f.reason_ja}</small></p>)}
+          {Object.keys(g.error_reasons).length > 0 && <p className="note">誤答の理由（自己申告）: {Object.entries(g.error_reasons as Record<string, number>).sort((a, b) => b[1] - a[1]).map(([r, n]) => `${REASON_JA[r] ?? r} ${n}`).join("・")}</p>}
+          {g.missed_lines > 0 && <p><Link className="btn small" href="/missed">聞き取れなかった文 {g.missed_lines} 文を聞き直す</Link></p>}
+          <p className="faint">今日のクエストは、直近に間違えた技能と、平均が低い技能を優先して教材を選びます。</p>
+        </section>
+      )}
       <section className="panel" aria-labelledby="skill-h">
         <h2 id="skill-h">技能別（初見・直近最大{g.skills[0]?.window}件）</h2>
         <div className="table-wrap"><table className="list">

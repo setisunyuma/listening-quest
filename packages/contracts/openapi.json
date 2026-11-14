@@ -337,6 +337,27 @@
     "title": "Body_cli_import_api_import_post",
     "type": "object"
    },
+   "DictationIn": {
+    "properties": {
+     "typed": {
+      "default": "",
+      "maxLength": 4000,
+      "title": "Typed",
+      "type": "string"
+     },
+     "utterance_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Utterance Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "utterance_id"
+    ],
+    "title": "DictationIn",
+    "type": "object"
+   },
    "ErrorReasonIn": {
     "properties": {
      "question_id": {
@@ -405,6 +426,12 @@
      },
      "primary_skill": {
       "title": "Primary Skill",
+      "type": "string"
+     },
+     "source_text": {
+      "default": "",
+      "maxLength": 4000,
+      "title": "Source Text",
       "type": "string"
      },
      "topic_hint": {
@@ -1059,6 +1086,26 @@
     "title": "MeOut",
     "type": "object"
    },
+   "MissedIn": {
+    "properties": {
+     "missed": {
+      "title": "Missed",
+      "type": "boolean"
+     },
+     "utterance_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Utterance Id",
+      "type": "string"
+     }
+    },
+    "required": [
+     "utterance_id",
+     "missed"
+    ],
+    "title": "MissedIn",
+    "type": "object"
+   },
    "ModeIn": {
     "properties": {
      "mode": {
@@ -1483,6 +1530,35 @@
     "title": "PlayOut",
     "type": "object"
    },
+   "PushSubscribeIn": {
+    "properties": {
+     "auth": {
+      "maxLength": 100,
+      "minLength": 8,
+      "title": "Auth",
+      "type": "string"
+     },
+     "endpoint": {
+      "maxLength": 2000,
+      "minLength": 10,
+      "title": "Endpoint",
+      "type": "string"
+     },
+     "p256dh": {
+      "maxLength": 200,
+      "minLength": 20,
+      "title": "P256Dh",
+      "type": "string"
+     }
+    },
+    "required": [
+     "endpoint",
+     "p256dh",
+     "auth"
+    ],
+    "title": "PushSubscribeIn",
+    "type": "object"
+   },
    "RadioProgramIn": {
     "properties": {
      "include_new": {
@@ -1588,6 +1664,60 @@
     "title": "RebuildIn",
     "type": "object"
    },
+   "ReportIn": {
+    "properties": {
+     "attempt_id": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Attempt Id"
+     },
+     "kind": {
+      "enum": [
+       "unclear",
+       "wrong",
+       "audio",
+       "other"
+      ],
+      "title": "Kind",
+      "type": "string"
+     },
+     "note": {
+      "default": "",
+      "maxLength": 1000,
+      "title": "Note",
+      "type": "string"
+     }
+    },
+    "required": [
+     "kind"
+    ],
+    "title": "ReportIn",
+    "type": "object"
+   },
+   "ResolveReportIn": {
+    "properties": {
+     "action": {
+      "enum": [
+       "dismiss",
+       "withdraw",
+       "restore"
+      ],
+      "title": "Action",
+      "type": "string"
+     }
+    },
+    "required": [
+     "action"
+    ],
+    "title": "ResolveReportIn",
+    "type": "object"
+   },
    "RestoreIn": {
     "properties": {
      "apply_settings": {
@@ -1676,6 +1806,23 @@
        "type": "object"
       },
       "title": "Figures",
+      "type": "array"
+     },
+     "glossary": {
+      "default": [],
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "title": "Glossary",
+      "type": "array"
+     },
+     "missed": {
+      "default": [],
+      "items": {
+       "type": "string"
+      },
+      "title": "Missed",
       "type": "array"
      },
      "not_first_reasons": {
@@ -1985,6 +2132,17 @@
       ],
       "title": "Active Mode"
      },
+     "auto_offline": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Auto Offline"
+     },
      "daily_goal_minutes": {
       "anyOf": [
        {
@@ -2007,6 +2165,27 @@
       ],
       "title": "Day Cutoff Hour"
      },
+     "exam_dates": {
+      "anyOf": [
+       {
+        "additionalProperties": {
+         "anyOf": [
+          {
+           "type": "string"
+          },
+          {
+           "type": "null"
+          }
+         ]
+        },
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Exam Dates"
+     },
      "font_scale": {
       "anyOf": [
        {
@@ -2017,6 +2196,41 @@
        }
       ],
       "title": "Font Scale"
+     },
+     "notify_new_material": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notify New Material"
+     },
+     "notify_problems": {
+      "anyOf": [
+       {
+        "type": "boolean"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notify Problems"
+     },
+     "notify_reminder_hour": {
+      "anyOf": [
+       {
+        "maximum": 23.0,
+        "minimum": -1.0,
+        "type": "integer"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Notify Reminder Hour"
      },
      "playback_rate": {
       "anyOf": [
@@ -2216,6 +2430,17 @@
       ],
       "title": "Max Concurrent Jobs"
      },
+     "monthly_budget_usd": {
+      "anyOf": [
+       {
+        "type": "number"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Monthly Budget Usd"
+     },
      "paid_enabled": {
       "anyOf": [
        {
@@ -2251,6 +2476,17 @@
        }
       ],
       "title": "Replenish Modes"
+     },
+     "tts_accent": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Tts Accent"
      }
     },
     "title": "SystemPatch",
@@ -2392,6 +2628,102 @@
  },
  "openapi": "3.1.0",
  "paths": {
+  "/api/admin/costs": {
+   "get": {
+    "operationId": "admin_costs_api_admin_costs_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Costs Api Admin Costs Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Costs"
+   }
+  },
+  "/api/admin/diagnostics": {
+   "get": {
+    "operationId": "admin_diagnostics_api_admin_diagnostics_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Diagnostics Api Admin Diagnostics Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Diagnostics"
+   }
+  },
   "/api/admin/import": {
    "post": {
     "operationId": "admin_import_api_admin_import_post",
@@ -2609,6 +2941,63 @@
      }
     },
     "summary": "Admin Retry"
+   }
+  },
+  "/api/admin/jobs/{job_id}/rewrite": {
+   "post": {
+    "operationId": "admin_rewrite_api_admin_jobs__job_id__rewrite_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "job_id",
+      "required": true,
+      "schema": {
+       "title": "Job Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Rewrite Api Admin Jobs  Job Id  Rewrite Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Rewrite"
    }
   },
   "/api/admin/mock": {
@@ -2928,6 +3317,227 @@
     "summary": "Admin Replenish"
    }
   },
+  "/api/admin/reports": {
+   "get": {
+    "operationId": "admin_reports_api_admin_reports_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "all",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "All",
+       "type": "boolean"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Reports Api Admin Reports Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Reports"
+   }
+  },
+  "/api/admin/reports/{report_id}/resolve": {
+   "post": {
+    "operationId": "admin_resolve_report_api_admin_reports__report_id__resolve_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "report_id",
+      "required": true,
+      "schema": {
+       "title": "Report Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ResolveReportIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Resolve Report Api Admin Reports  Report Id  Resolve Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Resolve Report"
+   }
+  },
+  "/api/admin/storage": {
+   "get": {
+    "operationId": "admin_storage_api_admin_storage_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Storage Api Admin Storage Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Storage"
+   }
+  },
+  "/api/admin/storage/cleanup": {
+   "post": {
+    "operationId": "admin_storage_cleanup_api_admin_storage_cleanup_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Storage Cleanup Api Admin Storage Cleanup Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Storage Cleanup"
+   }
+  },
   "/api/admin/system": {
    "patch": {
     "operationId": "admin_system_api_admin_system_patch",
@@ -3166,6 +3776,63 @@
      }
     },
     "summary": "Admin Invalidate"
+   }
+  },
+  "/api/admin/units/{unit_id}/restore": {
+   "post": {
+    "operationId": "admin_restore_api_admin_units__unit_id__restore_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "unit_id",
+      "required": true,
+      "schema": {
+       "title": "Unit Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Restore Api Admin Units  Unit Id  Restore Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Restore"
    }
   },
   "/api/admin/verify-live": {
@@ -4658,6 +5325,70 @@
     "summary": "Meta"
    }
   },
+  "/api/missed": {
+   "get": {
+    "operationId": "missed_lines_api_missed_get",
+    "parameters": [
+     {
+      "in": "query",
+      "name": "mode",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "Mode"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Missed Lines Api Missed Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Missed Lines"
+   }
+  },
   "/api/plans/today": {
    "post": {
     "operationId": "plan_start_api_plans_today_post",
@@ -4946,6 +5677,218 @@
      }
     },
     "summary": "Plan Reserve"
+   }
+  },
+  "/api/push/key": {
+   "get": {
+    "operationId": "push_key_api_push_key_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Push Key Api Push Key Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Push Key"
+   }
+  },
+  "/api/push/subscriptions": {
+   "post": {
+    "operationId": "push_subscribe_api_push_subscriptions_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PushSubscribeIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Push Subscribe Api Push Subscriptions Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Push Subscribe"
+   }
+  },
+  "/api/push/test": {
+   "post": {
+    "operationId": "push_test_api_push_test_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Push Test Api Push Test Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Push Test"
+   }
+  },
+  "/api/push/unsubscribe": {
+   "post": {
+    "operationId": "push_unsubscribe_api_push_unsubscribe_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/PushSubscribeIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Push Unsubscribe Api Push Unsubscribe Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Push Unsubscribe"
    }
   },
   "/api/radio/programs": {
@@ -5685,6 +6628,207 @@
      }
     },
     "summary": "Sync Answers"
+   }
+  },
+  "/api/units/{unit_id}/dictation": {
+   "post": {
+    "operationId": "unit_dictation_api_units__unit_id__dictation_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "unit_id",
+      "required": true,
+      "schema": {
+       "title": "Unit Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/DictationIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Unit Dictation Api Units  Unit Id  Dictation Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Unit Dictation"
+   }
+  },
+  "/api/units/{unit_id}/missed": {
+   "post": {
+    "operationId": "unit_missed_api_units__unit_id__missed_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "unit_id",
+      "required": true,
+      "schema": {
+       "title": "Unit Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/MissedIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Unit Missed Api Units  Unit Id  Missed Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Unit Missed"
+   }
+  },
+  "/api/units/{unit_id}/reports": {
+   "post": {
+    "operationId": "unit_report_api_units__unit_id__reports_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "unit_id",
+      "required": true,
+      "schema": {
+       "title": "Unit Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ReportIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Unit Report Api Units  Unit Id  Reports Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Unit Report"
    }
   }
  }

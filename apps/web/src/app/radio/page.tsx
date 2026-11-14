@@ -125,6 +125,13 @@ function ProgramPlayer({ initial, onClose }: { initial: Json; onClose: () => voi
         set("seekbackward", (d) => player.seek(Math.max(0, lastPos.current - (d.seekOffset ?? 10) * 1000)));
         set("seekforward", (d) => player.seek(Math.min(prog.duration_ms, lastPos.current + (d.seekOffset ?? 10) * 1000)));
         set("seekto", (d) => { if (d.seekTime != null) player.seek(d.seekTime * 1000); });
+        // earphone / lock-screen "next" and "previous" jump between units inside the program
+        set("nexttrack", () => { const n = prog.units.find((u: Json) => u.start_ms > lastPos.current + 500); if (n) player.seek(n.start_ms); });
+        set("previoustrack", () => {
+          const cur = [...prog.units].reverse().find((u: Json) => u.start_ms <= lastPos.current);
+          const prev = cur && lastPos.current - cur.start_ms < 3000 ? [...prog.units].reverse().find((u: Json) => u.start_ms < cur.start_ms) : cur;
+          player.seek(prev ? prev.start_ms : 0);
+        });
       } catch {}
     }
   };
@@ -146,6 +153,12 @@ function ProgramPlayer({ initial, onClose }: { initial: Json; onClose: () => voi
   };
   const pos = player.pos || resumeAt;
   const current = prog.units.find((u: Json) => pos >= u.start_ms && pos < u.end_ms);
+  const currentTitle = current?.title as string | undefined;
+  useEffect(() => {
+    // the lock screen shows which unit is playing now
+    if (!currentTitle || !("mediaSession" in navigator) || !navigator.mediaSession.metadata) return;
+    try { navigator.mediaSession.metadata = new MediaMetadata({ title: currentTitle, artist: `Listening Quest ラジオ（${MODE_LABEL[prog.mode]}）`, album: "Listening Quest", artwork: [{ src: "/icon-512.png", sizes: "512x512", type: "image/png" }] }); } catch {}
+  }, [currentTitle, prog.mode]);
   return (
     <>
       <section className="panel accent" aria-labelledby="pp-h">

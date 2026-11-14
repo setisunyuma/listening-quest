@@ -53,6 +53,7 @@ export function usePlayer(opts: { onEnded?: () => void; onStarted?: () => void; 
   }, []);
   const pause = useCallback(() => ref.current?.pause(), []);
   const seek = useCallback((ms: number) => { if (ref.current) { try { ref.current.currentTime = ms / 1000; } catch {} } }, []);
+  const setLoop = useCallback((on: boolean) => { if (ref.current) ref.current.loop = on; }, []);
   const stop = useCallback(() => { const a = ref.current; if (a) { a.pause(); try { a.currentTime = 0; } catch {} setState("idle"); } }, []);
-  return { state, error, pos, dur, play, pause, seek, stop, el: ref };
+  return { state, error, pos, dur, play, pause, seek, stop, setLoop, el: ref };
 }

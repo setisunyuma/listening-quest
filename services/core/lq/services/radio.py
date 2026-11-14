@@ -39,10 +39,14 @@ def select_radio_units(
         else {}
     )
 
+    from lq.services.feedback import units_with_missed
+
+    missed = units_with_missed(session, user)  # lines the learner could not catch come back on the radio first
+
     def key(u: m.Unit):
         c = info[u.id]
         due = c.due_day is not None and c.due_day <= today
-        return (0 if due else (1 if c.touched else 2), rules_tiebreak(user.id, today, u.id))
+        return (0 if due else (1 if u.id in missed else (2 if c.touched else 3)), rules_tiebreak(user.id, today, u.id))
 
     out, total = [], 0
     for u in sorted(units, key=key):

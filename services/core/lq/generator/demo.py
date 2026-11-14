@@ -347,6 +347,11 @@ class _Builder:
             "speakers": self.speakers, "pre_info": pre, "figures": self.figures, "segments": segments, "questions": questions,
             "scoring_groups": unit_scoring_groups(self.profile, spec.part, [q["id"] for q in questions]),
             "radio": {"supported": True, "reason": "", "figure_description_en": self.radio_desc},
+            "study_notes": {
+                "glossary": [{"term": self.event, "meaning_ja": "（デモ用の語注）この教材の話題になっている行事"}],
+                "translations": [{"utterance_id": u["id"], "ja": "（デモ用の仮訳）" + u["text"][:60]}
+                                 for seg in segments for u in seg["utterances"]][:20],
+            },
         }  # fmt: skip
 
 

@@ -11,7 +11,7 @@ from typing import Any
 
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, Response, UploadFile
 from fastapi.responses import JSONResponse
-from sqlalchemy import func, select, text
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.orm import Session
 
 from lq.api import schemas as S
@@ -22,7 +22,20 @@ from lq.domain.content import MODE_LABELS_JA, MODES, SKILL_LABELS_JA, SKILLS, un
 from lq.domain.profiles import current_profile, load_profiles
 from lq.generator import budget
 from lq.jobs import queue
-from lq.services import admin, assessment, auth, backup, importer, plans, radio, replenish, stats
+from lq.services import (
+    admin,
+    assessment,
+    auth,
+    backup,
+    diagnostics,
+    feedback,
+    importer,
+    notify,
+    plans,
+    radio,
+    replenish,
+    stats,
+)
 from lq.services import learning as L
 from lq.storage import get_storage
 
@@ -210,6 +223,60 @@ def me(request: Request, user: m.User = Depends(current_user)):
     }
 
 
+@app.get("/api/push/key")
+def push_key(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    from lq import push
+
+    key = push.public_key_b64(session)
+    session.commit()  # the key pair is created on first use
+    n = session.execute(
+        select(func.count()).select_from(m.PushSubscription).where(m.PushSubscription.user_id == user.id)
+    ).scalar_one()
+    return {"public_key": key, "devices": int(n)}
+
+
+@app.post("/api/push/subscriptions")
+def push_subscribe(
+    body: S.PushSubscribeIn, request: Request, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    if not body.endpoint.startswith("https://"):
+        raise L.Invalid("push endpoint must be https")
+    sub = session.execute(
+        select(m.PushSubscription).where(m.PushSubscription.endpoint == body.endpoint)
+    ).scalar_one_or_none()
+    if sub is None:
+        sub = m.PushSubscription(endpoint=body.endpoint, user_id=user.id, p256dh=body.p256dh, auth=body.auth)
+        session.add(sub)
+    sub.user_id, sub.p256dh, sub.auth = user.id, body.p256dh, body.auth
+    sub.user_agent = (request.headers.get("user-agent") or "")[:300]
+    session.commit()
+    return {"subscribed": True}
+
+
+@app.post("/api/push/unsubscribe")
+def push_unsubscribe(
+    body: S.PushSubscribeIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    session.execute(
+        delete(m.PushSubscription).where(
+            m.PushSubscription.endpoint == body.endpoint, m.PushSubscription.user_id == user.id
+        )
+    )
+    session.commit()
+    return {"subscribed": False}
+
+
+@app.post("/api/push/test")
+def push_test(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    out = notify.send_all(
+        session,
+        user,
+        {"title": "Listening Quest", "body": "通知のテストです。届いていれば設定は完了です。", "url": "/settings"},
+    )
+    session.commit()
+    return out
+
+
 @app.patch("/api/settings")
 def patch_settings(
     body: S.SettingsPatch, session: Session = Depends(db), user: m.User = Depends(current_user)
@@ -338,7 +405,41 @@ def attempt_submit(
 
 @app.get("/api/attempts/{attempt_id}/result", response_model=S.ResultOut)
 def attempt_result(attempt_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)):
-    return L.result_dto(session, L._open_attempt(session, user, attempt_id, lock=False))
+    out = L.result_dto(session, L._open_attempt(session, user, attempt_id, lock=False))
+    out["missed"] = feedback.missed_ids(session, user, out["unit_id"])
+    return out
+
+
+@app.post("/api/units/{unit_id}/reports")
+def unit_report(
+    unit_id: str, body: S.ReportIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    out = feedback.report(session, user, unit_id, body.kind, body.note, body.attempt_id, now_utc())
+    session.commit()
+    return out
+
+
+@app.post("/api/units/{unit_id}/missed")
+def unit_missed(
+    unit_id: str, body: S.MissedIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    out = feedback.set_missed(session, user, unit_id, body.utterance_id, body.missed)
+    session.commit()
+    return {"missed": out}
+
+
+@app.post("/api/units/{unit_id}/dictation")
+def unit_dictation(
+    unit_id: str, body: S.DictationIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    return feedback.check_dictation(session, user, unit_id, body.utterance_id, body.typed)
+
+
+@app.get("/api/missed")
+def missed_lines(
+    mode: str | None = None, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    return {"lines": feedback.missed_list(session, user, mode)}
 
 
 @app.post("/api/attempts/{attempt_id}/ack", response_model=S.AckOut)
@@ -666,6 +767,16 @@ def admin_overview(session: Session = Depends(db), user: m.User = Depends(curren
     return {**out, "inventory": inv}
 
 
+@app.get("/api/admin/diagnostics")
+def admin_diagnostics(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    return diagnostics.run(session, user.realm)
+
+
+@app.get("/api/admin/costs")
+def admin_costs(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    return admin.cost_report(session, user.realm)
+
+
 @app.patch("/api/admin/system")
 def admin_system(
     body: S.SystemPatch, session: Session = Depends(db), user: m.User = Depends(current_user)
@@ -683,7 +794,7 @@ def admin_system(
         )
     )
     queue.release_blocked(
-        session, user.realm, ("paid_disabled", "budget", "job_cap", "no_provider", "missing_audio")
+        session, user.realm, ("paid_disabled", "budget", "monthly_budget", "job_cap", "no_provider", "missing_audio")
     )  # re-check with the new settings
     session.commit()
     return out
@@ -753,6 +864,9 @@ def admin_generate(
     for i in range(body.count):
         params = {"mode": body.mode, "part": body.part, "template_type": part["template_type"], "primary_skill": body.primary_skill, "band": body.band, "topic_hint": body.topic_hint,
                   "seed": f"manual-{batch}-{i}", "source": "generated", "pool": body.pool}  # fmt: skip
+        if body.source_text.strip():
+            params["extra"] = {"source_text": body.source_text.strip()}
+            params["origin"] = "own_text"
         job, _ = queue.enqueue(session, user.realm, "generate", params)
         ids.append(job.id)
     session.commit()
@@ -772,6 +886,30 @@ def admin_retry(job_id: str, session: Session = Depends(db), user: m.User = Depe
     return admin.job_dto(session, job)
 
 
+@app.post("/api/admin/jobs/{job_id}/rewrite")
+def admin_rewrite(job_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    try:
+        job, created = admin.rewrite_quarantined(session, user.realm, job_id)
+    except LookupError as e:
+        raise L.NotFound(str(e)) from e
+    except ValueError as e:
+        raise L.Invalid(str(e)) from e
+    session.commit()
+    return {"job_id": job.id, "created": created}
+
+
+@app.get("/api/admin/storage")
+def admin_storage(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    return admin.storage_summary(session, user.realm)
+
+
+@app.post("/api/admin/storage/cleanup")
+def admin_storage_cleanup(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    out = admin.cleanup_unusable(session, user.realm)
+    session.commit()
+    return out
+
+
 @app.get("/api/admin/units")
 def admin_units(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
     return {"units": admin.list_units(session, user.realm)}
@@ -785,6 +923,29 @@ def admin_approve(
     rec = importer.manual_approve(session, unit, target=body.target, reviewer=user.username, note=body.note)
     session.commit()
     return {"record": {"method": rec.method, "target": rec.target, "content_hash": rec.content_hash[:12]}}
+
+
+@app.get("/api/admin/reports")
+def admin_reports(
+    all: bool = False, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    return {"reports": feedback.list_reports(session, user.realm, include_resolved=all)}
+
+
+@app.post("/api/admin/reports/{report_id}/resolve")
+def admin_resolve_report(
+    report_id: str, body: S.ResolveReportIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    out = feedback.resolve(session, user, report_id, body.action, now_utc())
+    session.commit()
+    return out
+
+
+@app.post("/api/admin/units/{unit_id}/restore")
+def admin_restore(unit_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    out = feedback.restore_unit(session, user, unit_id)
+    session.commit()
+    return out
 
 
 @app.post("/api/admin/units/{unit_id}/invalidate")

@@ -17,7 +17,7 @@ export default function AdminPage() {
   const units = useData<{ units: Json[] }>(() => api("/admin/units"), [], 6000);
   const mock = useData<Json>(() => api(`/admin/mock?mode=${app.mode}`), [app.mode], 6000);
   const meta = useData<Json>(() => api("/meta"), []);
-  const [gen, setGen] = useState({ part: "", primary_skill: "explicit_detail", band: 3, count: 1, topic_hint: "" });
+  const [gen, setGen] = useState({ part: "", primary_skill: "explicit_detail", band: 3, count: 1, topic_hint: "", source_text: "" });
   const [budget, setBudget] = useState<Json | null>(null);
   const manifest = useRef<HTMLInputElement>(null);
   const files = useRef<HTMLInputElement>(null);
@@ -43,6 +43,7 @@ export default function AdminPage() {
             <>
               <p className="note">APIキー: {over.data.api_key_present ? "サーバーに設定済み" : "未設定（取り込みと手動承認は利用できます）"}。キーがあるだけでは有料処理は始まりません。</p>
               <dl className="kv"><dt>本日の利用（UTC）</dt><dd>確定 ${over.data.spend_today.settled_usd.toFixed(4)}・実行中の予約 ${over.data.spend_today.reserved_usd.toFixed(4)}・確定できない分 ${over.data.spend_today.unknown_usd.toFixed(4)}</dd>
+                {over.data.spend_month && <><dt>今月の利用（{over.data.spend_month.month}）</dt><dd>計上 ${over.data.spend_month.counted_usd.toFixed(4)}{over.data.settings.monthly_budget_usd != null && <> / 月の予算 ${over.data.settings.monthly_budget_usd}</>}</dd></>}
                 <dt>モデル</dt><dd>{over.data.providers.content_model} / {over.data.providers.tts_model} / {over.data.providers.asr_model}</dd><dt>単価の出典</dt><dd>{over.data.prices.source}（確認日 {over.data.prices.checked_at}）</dd></dl>
             </>
           )}
@@ -50,18 +51,25 @@ export default function AdminPage() {
             <div className="row" style={{ alignItems: "flex-end" }}>
               {app.me.realm !== "demo" && <>
                 <label className="field">1日の予算（USD）<input type="number" min={0} step={0.1} value={b.daily_budget_usd} onChange={(e) => setBudget({ ...b, daily_budget_usd: Number(e.target.value) })} /></label>
+                <label className="field">月の予算（USD）<input type="number" min={0} step={1} value={b.monthly_budget_usd ?? ""} onChange={(e) => setBudget({ ...b, monthly_budget_usd: Number(e.target.value) })} /></label>
                 <label className="field">1ジョブの上限（USD）<input type="number" min={0} step={0.05} value={b.per_job_cap_usd} onChange={(e) => setBudget({ ...b, per_job_cap_usd: Number(e.target.value) })} /></label>
               </>}
               <label className="field">同時実行数<input type="number" min={1} max={8} value={b.max_concurrent_jobs} onChange={(e) => setBudget({ ...b, max_concurrent_jobs: Number(e.target.value) })} /></label>
-              <button onClick={() => run(async () => { await api("/admin/system", { method: "PATCH", body: { daily_budget_usd: b.daily_budget_usd, per_job_cap_usd: b.per_job_cap_usd, max_concurrent_jobs: b.max_concurrent_jobs } }); setBudget(null); return "上限を保存しました。"; })}>上限を保存</button>
+              <button onClick={() => run(async () => { await api("/admin/system", { method: "PATCH", body: { daily_budget_usd: b.daily_budget_usd, monthly_budget_usd: b.monthly_budget_usd, per_job_cap_usd: b.per_job_cap_usd, max_concurrent_jobs: b.max_concurrent_jobs } }); setBudget(null); return "上限を保存しました。"; })}>上限を保存</button>
             </div>
           )}
           {sys && (
             <div className="row">
-              {app.me.realm !== "demo" && <label className="check"><input type="checkbox" checked={sys.paid_enabled} onChange={(e) => run(async () => { await api("/admin/system", { method: "PATCH", body: { paid_enabled: e.target.checked } }); return e.target.checked ? `有料生成を有効にしました（1日 $${sys.daily_budget_usd} まで）。この範囲内の自動補充は毎回の承認なしで実行されます。` : "有料生成を止めました。既存の教材で学習を続けられます。"; })} />有料生成を有効にする（1日 ${sys.daily_budget_usd}・1ジョブ ${sys.per_job_cap_usd} まで）</label>}
+              {app.me.realm !== "demo" && <label className="check"><input type="checkbox" checked={sys.paid_enabled} onChange={(e) => run(async () => { await api("/admin/system", { method: "PATCH", body: { paid_enabled: e.target.checked } }); return e.target.checked ? `有料生成を有効にしました（1日 $${sys.daily_budget_usd} まで）。この範囲内の自動補充は毎回の承認なしで実行されます。` : "有料生成を止めました。既存の教材で学習を続けられます。"; })} />有料生成を有効にする（1日 ${sys.daily_budget_usd}・月 ${sys.monthly_budget_usd}・1ジョブ ${sys.per_job_cap_usd} まで）</label>}
               <label className="check"><input type="checkbox" checked={sys.auto_replenish} onChange={(e) => run(async () => { await api("/admin/system", { method: "PATCH", body: { auto_replenish: e.target.checked } }); })} />在庫の自動補充</label>
               <button className="small" onClick={() => run(async () => { const r = await api<Json>("/admin/replenish/run", { body: {} }); return r.queued ? `${r.queued}件の生成を予約しました。` : `補充は行いませんでした: ${r.reason}`; })}>今すぐ在庫を確認</button>
             </div>
+          )}
+          {sys && app.me.realm !== "demo" && (
+            <label className="field">英語の発音（これから作る音声）
+              <select value={sys.tts_accent ?? ""} onChange={(e) => run(async () => { await api("/admin/system", { method: "PATCH", body: { tts_accent: e.target.value } }); return "発音の設定を保存しました。これから作る音声に反映されます（作成済みの音声は変わりません）。"; })}>
+                <option value="">声の標準のまま</option><option value="american">アメリカ英語</option><option value="british">イギリス英語</option><option value="australian">オーストラリア英語</option><option value="mixed">話者ごとに混ぜる</option>
+              </select></label>
           )}
           <p className="note">未学習の在庫（{MODE_LABEL[app.mode]}）: {over.data.inventory.untouched_units} Unit・{fmtMin(over.data.inventory.untouched_sec)}（約 {over.data.inventory.days_of_stock} 日分）・生成中 {over.data.inventory.jobs_in_progress} 件</p>
           <p className="faint">{over.data.inventory.by_part.map((p: Json) => `${p.label_ja} ${p.units}`).join(" / ")}</p>
@@ -69,6 +77,9 @@ export default function AdminPage() {
         </section>
       )}
 
+      <Diagnostics />
+      {app.me.realm !== "demo" && <Costs />}
+      <Reports />
       {app.me.realm === "live" && <VerifyLive />}
 
       <section className="panel" aria-labelledby="gen-h">
@@ -79,6 +90,8 @@ export default function AdminPage() {
           <label className="field">難度帯<select value={gen.band} onChange={(e) => setGen({ ...gen, band: Number(e.target.value) })}>{[1, 2, 3, 4, 5].map((x) => <option key={x}>{x}</option>)}</select></label>
           <label className="field">数量<input type="number" min={1} max={20} value={gen.count} onChange={(e) => setGen({ ...gen, count: Number(e.target.value) })} style={{ width: 90 }} /></label>
           <label className="field">話題（任意）<input value={gen.topic_hint} onChange={(e) => setGen({ ...gen, topic_hint: e.target.value })} maxLength={120} /></label>
+          <label className="field">元にする英文（任意・4000字まで）<textarea rows={3} value={gen.source_text} maxLength={4000} onChange={(e) => setGen({ ...gen, source_text: e.target.value })} placeholder="自分で書いた英文や、使ってよい英文を貼り付けると、その内容で教材を作ります" /></label>
+          {gen.source_text.trim() && <p className="faint">この英文は問題作成のために OpenAI に送られます。著作権のある記事などは、自分で使える範囲のものだけにしてください。台本は形式に合わせて言い換えます。</p>}
           <button className="primary" disabled={!gen.part} onClick={() => run(async () => { const r = await api<Json>("/admin/jobs", { body: { ...gen, mode: app.mode } }); return `${r.job_ids.length}件の生成を予約しました。画面を閉じても処理は続きます。`; })}>生成を予約</button>
         </div>
       </section>
@@ -95,7 +108,8 @@ export default function AdminPage() {
                 <td><small>{j.last_completed_step ? `完了した工程: ${STEP[j.last_completed_step] ?? j.last_completed_step}` : "未着手"}{j.status === "BLOCKED" ? <><br />{j.blocked_label ?? j.blocked_reason}</> : null}
                   {(j.status === "FAILED" || j.status === "RETRY_WAIT") && <><br />{j.unit_status_reason ?? j.stop_detail}（試行 {j.attempts}/{j.max_attempts}）</>}</small></td>
                 <td><small>{j.cost.requests ? `確定 $${j.cost.settled_usd.toFixed(4)}${j.cost.unknown_usd ? `・不明 $${j.cost.unknown_usd.toFixed(4)}` : ""}` : "—"}</small></td>
-                <td>{["FAILED", "BLOCKED", "RETRY_WAIT"].includes(j.status) && j.unit_status !== "QUARANTINED" && <button className="small" onClick={() => run(async () => { await api(`/admin/jobs/${j.id}/retry`, { body: {} }); return "再試行を予約しました。"; })}>再試行</button>}</td>
+                <td>{["FAILED", "BLOCKED", "RETRY_WAIT"].includes(j.status) && j.unit_status !== "QUARANTINED" && <button className="small" onClick={() => run(async () => { await api(`/admin/jobs/${j.id}/retry`, { body: {} }); return "再試行を予約しました。"; })}>再試行</button>}
+                  {j.unit_status === "QUARANTINED" && j.kind === "generate" && j.params.origin !== "rewrite" && <button className="small" onClick={() => { if (window.confirm("隔離の理由を伝えて、新しい教材を1件作り直します。1件分の生成費用（目安 $0.03〜0.10、1日・月の予算の範囲内）がかかります。")) run(async () => { const r = await api<Json>(`/admin/jobs/${j.id}/rewrite`, { body: {} }); return r.created ? "作り直しを予約しました。" : "この教材の作り直しは予約済みです。"; }); }}>指摘を伝えて作り直す</button>}</td>
               </tr>
             ))}</tbody></table></div>
         )}
@@ -201,5 +215,103 @@ function VerifyLive() {
         </div>
       )}
     </section>
+  );
+}
+
+
+function Reports() {
+  const { data, reload } = useData<{ reports: Json[] }>(() => api("/admin/reports"), [], 15000);
+  const [msg, setMsg] = useState("");
+  const act = async (id: string, action: string) => {
+    try { await api(`/admin/reports/${id}/resolve`, { body: { action } }); setMsg({ dismiss: "対応済みにしました。", withdraw: "教材を出題から外しました。", restore: "教材を元に戻しました。" }[action] ?? ""); reload(); }
+    catch (e) { setMsg((e as ApiError).detail); }
+  };
+  if (!data || data.reports.length === 0) return null;
+  return (
+    <section className="panel" aria-labelledby="rep-h">
+      <h2 id="rep-h">報告 <small>{data.reports.length} 件</small></h2>
+      <p className="note">解説画面から送った報告です。「答え・解説がおかしい」「音声がおかしい」は送った時点で出題から外れています。</p>
+      {msg && <Msg kind="ok">{msg}</Msg>}
+      <div className="table-wrap"><table className="list">
+        <thead><tr><th scope="col">教材</th><th scope="col">報告</th><th scope="col"><span className="sr">操作</span></th></tr></thead>
+        <tbody>{data.reports.map((r) => (
+          <tr key={r.id}>
+            <td>{r.title}<br /><small>{MODE_LABEL[r.mode]} {r.part}・{new Date(r.created_at).toLocaleString("ja-JP", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" })}</small></td>
+            <td><span className="chip">{r.kind_label}</span>{r.unit_withdrawn && <span className="chip demo">出題停止中</span>}{r.note && <><br /><small>{r.note}</small></>}</td>
+            <td><div className="row">
+              {r.unit_withdrawn ? <button className="small" onClick={() => act(r.id, "restore")}>元に戻す</button> : <button className="small danger" onClick={() => act(r.id, "withdraw")}>出題から外す</button>}
+              <button className="small" onClick={() => act(r.id, "dismiss")}>対応済みにする</button>
+            </div></td>
+          </tr>
+        ))}</tbody></table></div>
+    </section>
+  );
+}
+
+
+function Costs() {
+  const { data } = useData<Json>(() => api("/admin/costs"), [], 60000);
+  if (!data) return null;
+  const days = (data.days as Json[]).slice(-14).reverse();
+  return (
+    <section className="panel" aria-labelledby="cost-h">
+      <h2 id="cost-h">費用レポート</h2>
+      <dl className="kv">
+        <dt>直近7日</dt><dd>${data.last_7_days_usd.toFixed(4)}</dd>
+        <dt>今月（{data.month.month}）</dt><dd>${data.month.counted_usd.toFixed(4)}</dd>
+        <dt>使える教材1件あたり</dt><dd>{data.avg_per_ready_unit_usd == null ? "—" : `$${data.avg_per_ready_unit_usd.toFixed(4)}`}（直近31日に完成した {data.ready_units} 件の平均）</dd>
+        <dt>使えなかった教材の費用</dt><dd>${data.wasted_usd.toFixed(4)}（隔離・失敗 {data.wasted_jobs} 件）</dd>
+        {data.in_progress_usd > 0 && <><dt>処理中・待機中の費用</dt><dd>${data.in_progress_usd.toFixed(4)}</dd></>}
+      </dl>
+      <details><summary className="btn ghost small">日ごとの利用（直近14日）</summary>
+        <div className="table-wrap"><table className="list">
+          <thead><tr><th scope="col">日付（UTC）</th><th scope="col">計上</th></tr></thead>
+          <tbody>{days.map((d) => <tr key={d.day}><td>{d.day}</td><td>${d.counted_usd.toFixed(4)}</td></tr>)}</tbody>
+        </table></div>
+      </details>
+      <p className="faint">{data.note}</p>
+    </section>
+  );
+}
+
+
+const DIAG: Record<string, string> = { ok: "✓ 正常", warn: "△ 注意", error: "✗ 異常", info: "・" };
+
+function Diagnostics() {
+  const { data, reload } = useData<Json>(() => api("/admin/diagnostics"), [], 120000);
+  if (!data) return null;
+  return (
+    <section className="panel" aria-labelledby="diag-h">
+      <details open={data.status !== "ok"}>
+        <summary><h2 id="diag-h" style={{ display: "inline" }}>動作チェック <small>{DIAG[data.status]}</small></h2></summary>
+        <div className="table-wrap"><table className="list">
+          <thead><tr><th scope="col">項目</th><th scope="col">状態</th></tr></thead>
+          <tbody>{data.items.map((i: Json) => <tr key={i.key}><td>{i.label}</td><td><span className={`chip ${i.status === "error" ? "demo" : ""}`}>{DIAG[i.status]}</span><br /><small>{i.detail}</small></td></tr>)}</tbody>
+        </table></div>
+        <p className="faint">{data.version ? `版 ${data.version}・` : ""}{data.region ? `地域 ${data.region}・` : ""}確認 {new Date(data.checked_at).toLocaleTimeString("ja-JP")}</p>
+        <button className="small" onClick={reload}>もう一度確認</button>
+        <StorageBox />
+      </details>
+    </section>
+  );
+}
+
+const mb = (b: number) => `${(b / 1e6).toFixed(1)} MB`;
+
+function StorageBox() {
+  const { data, reload } = useData<Json>(() => api("/admin/storage"), []);
+  const [msg, setMsg] = useState("");
+  if (!data) return null;
+  const clean = async () => {
+    if (!window.confirm(`隔離・失敗した教材の音声（${mb(data.unusable_bytes)}）と、どこからも参照されていないファイルを削除します。学習で使える教材と履歴には影響しません。元には戻せません。`)) return;
+    try { const r = await api<Json>("/admin/storage/cleanup", { body: {} }); setMsg(`${r.deleted_files} 件（${mb(r.freed_bytes)}）と、参照のないファイル ${r.orphans_removed} 件を削除しました。`); reload(); }
+    catch (e) { setMsg((e as ApiError).detail); }
+  };
+  return (
+    <div className="qbox"><h3>音声の保存量</h3>
+      <p className="note">学習に使える教材 {mb(data.usable_bytes)}・無効化した教材 {mb(data.invalidated_bytes)}（履歴から参照するため保持）・隔離／失敗 {mb(data.unusable_bytes)}{data.other_bytes > 0 ? `・作成中 ${mb(data.other_bytes)}` : ""}</p>
+      {data.unusable_bytes > 0 && <button className="small" onClick={clean}>隔離・失敗した教材の音声を削除（7日以上前のもの）</button>}
+      {msg && <Msg kind="ok">{msg}</Msg>}
+    </div>
   );
 }

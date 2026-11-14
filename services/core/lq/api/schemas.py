@@ -45,6 +45,11 @@ class SettingsPatch(BaseModel):
     primary_side: Literal["left", "right"] | None = None
     font_scale: float | None = None
     radio_include_new: bool | None = None
+    auto_offline: bool | None = None
+    notify_reminder_hour: int | None = Field(default=None, ge=-1, le=23)  # -1 turns the reminder off
+    notify_new_material: bool | None = None
+    notify_problems: bool | None = None
+    exam_dates: dict[str, str | None] | None = None
 
 
 class AudioRef(BaseModel):
@@ -184,6 +189,8 @@ class ResultOut(BaseModel):
     slot_id: str | None
     audio_kind: str
     title: str
+    missed: list[str] = []
+    glossary: list[dict[str, Any]] = []
 
 
 class AckOut(BaseModel):
@@ -353,10 +360,12 @@ class AssessmentSubmitIn(BaseModel):
 class SystemPatch(BaseModel):
     paid_enabled: bool | None = None
     daily_budget_usd: float | None = None
+    monthly_budget_usd: float | None = None
     per_job_cap_usd: float | None = None
     max_concurrent_jobs: int | None = None
     auto_replenish: bool | None = None
     replenish_modes: list[str] | None = None
+    tts_accent: str | None = None
 
 
 class VerifyLiveIn(BaseModel):
@@ -371,11 +380,38 @@ class GenerateIn(BaseModel):
     count: int = Field(default=1, ge=1, le=20)
     topic_hint: str = Field(default="", max_length=120)
     pool: Literal["practice", "assessment"] = "practice"
+    source_text: str = Field(default="", max_length=4000)  # optional English text to base the material on
 
 
 class ApproveIn(BaseModel):
     target: Literal["content", "audio"]
     note: str = Field(default="", max_length=300)
+
+
+class ReportIn(BaseModel):
+    kind: Literal["unclear", "wrong", "audio", "other"]
+    note: str = Field(default="", max_length=1000)
+    attempt_id: str | None = None
+
+
+class ResolveReportIn(BaseModel):
+    action: Literal["dismiss", "withdraw", "restore"]
+
+
+class PushSubscribeIn(BaseModel):
+    endpoint: str = Field(min_length=10, max_length=2000)
+    p256dh: str = Field(min_length=20, max_length=200)
+    auth: str = Field(min_length=8, max_length=100)
+
+
+class DictationIn(BaseModel):
+    utterance_id: str = Field(min_length=1, max_length=64)
+    typed: str = Field(default="", max_length=4000)
+
+
+class MissedIn(BaseModel):
+    utterance_id: str = Field(min_length=1, max_length=64)
+    missed: bool
 
 
 class InvalidateIn(BaseModel):

@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/Shell";
 import { BandChip, DemoChip, Msg, Ring, useData } from "@/components/ui";
 import { api, ApiError, CATEGORY_LABEL, fmtMin, MODE_LABEL, type Home, type Json, type Plan } from "@/lib/api";
@@ -45,6 +45,15 @@ export default function HomePage() {
     packs.reload();
     setMsg({ kind: "ok", text: `${n}件の問題と音声を端末に保存しました。オフラインでも解答できます（採点は同期後）。` });
   });
+  // setting "auto_offline": once per plan and app start, save the not-started units while online
+  const autoDone = useRef("");
+  useEffect(() => {
+    const plan = data?.plan;
+    if (!app.settings.auto_offline || !app.online || !plan || busy || autoDone.current === plan.id) return;
+    if (!plan.slots.some((s) => s.state === "pending" && !s.reserved && s.unit)) return;
+    autoDone.current = plan.id;
+    takeOffline(plan);
+  });
   const release = (plan: Plan) => act("release", async () => {
     if (app.pending > 0) { await app.syncNow(); }
     const r = await api<{ released: number }>(`/plans/${plan.id}/release`, { body: {} });
@@ -76,6 +85,12 @@ export default function HomePage() {
       )}
       <section className="panel accent" aria-labelledby="quest-h">
         <h2 id="quest-h">今日のクエスト <small>{MODE_LABEL[plan?.mode ?? app.mode]}・学習日 {data.today}</small></h2>
+        {(() => {
+          const d = (app.settings.exam_dates as Record<string, string> | undefined)?.[app.mode];
+          if (!d) return null;
+          const left = Math.ceil((new Date(`${d}T00:00:00`).getTime() - new Date(`${data.today}T00:00:00`).getTime()) / 86400000);
+          return left >= 0 ? <p className="chip rainbow">{MODE_LABEL[app.mode]}の試験日まで あと {left} 日（{d}）</p> : null;
+        })()}
         {plan ? (
           <>
             <div className="quest">

@@ -19,10 +19,12 @@ from lq.db.base import session_factory
 DEFAULT_SYSTEM = {
     "paid_enabled": False,
     "daily_budget_usd": 1.0,
+    "monthly_budget_usd": 15.0,  # calendar month (UTC); a second ceiling above the daily one
     "per_job_cap_usd": 0.5,
     "max_concurrent_jobs": 1,
     "auto_replenish": False,
     "replenish_modes": [],  # empty = the learner's active mode only
+    "tts_accent": "",  # "" (voice default) | american | british | australian | mixed
     # one-off live verification: exactly this job may spend up to cap_usd even while paid_enabled is off
     "verification": None,  # {"job_id": str, "cap_usd": float, "started_at": iso}
     "last_verification_job_id": None,
@@ -54,9 +56,11 @@ def get_system(session, realm: str, *, lock: bool = False) -> dict:
 def set_system(session, realm: str, patch: dict) -> dict:
     cur = get_system(session, realm, lock=True)
     allowed = {k: v for k, v in patch.items() if k in DEFAULT_SYSTEM}
-    for k in ("daily_budget_usd", "per_job_cap_usd"):
-        if k in allowed and not (0 <= float(allowed[k]) <= 1000):
+    for k in ("daily_budget_usd", "per_job_cap_usd", "monthly_budget_usd"):
+        if k in allowed and not (0 <= float(allowed[k]) <= (10000 if k == "monthly_budget_usd" else 1000)):
             raise ValueError(f"{k} out of range")
+    if "tts_accent" in allowed and allowed["tts_accent"] not in ("", "american", "british", "australian", "mixed"):
+        raise ValueError("unknown accent")
     if "max_concurrent_jobs" in allowed and not (1 <= int(allowed["max_concurrent_jobs"]) <= 8):
         raise ValueError("max_concurrent_jobs out of range")
     cur.update(allowed)
@@ -91,6 +95,31 @@ def spent_today(session, realm: str, day=None) -> dict:
         elif e.state == "unknown":
             out["unknown_usd"] += e.estimated_usd
     return {k: (round(v, 6) if isinstance(v, float) else v) for k, v in out.items()}
+
+
+def spent_month(session, realm: str, day=None) -> dict:
+    """Spend counted in the calendar month (UTC) that contains `day`, in the same terms as spent_today."""
+    day = day or datetime.now(UTC).date()
+    first = day.replace(day=1)
+    rows = (
+        session.execute(
+            select(m.CostEntry).where(
+                m.CostEntry.realm == realm, m.CostEntry.budget_day >= first, m.CostEntry.budget_day <= day
+            )
+        )
+        .scalars()
+        .all()
+    )
+    out = {"settled_usd": 0.0, "reserved_usd": 0.0, "unknown_usd": 0.0, "counted_usd": 0.0}
+    for e in rows:
+        out["counted_usd"] += _counted(e)
+        if e.state in ("settled", "computed"):
+            out["settled_usd"] += e.actual_usd or 0.0
+        elif e.state == "reserved":
+            out["reserved_usd"] += e.estimated_usd
+        elif e.state == "unknown":
+            out["unknown_usd"] += e.estimated_usd
+    return {**{k: round(v, 6) for k, v in out.items()}, "month": first.strftime("%Y-%m")}
 
 
 class BudgetMeter:
@@ -132,6 +161,14 @@ class BudgetMeter:
                     "budget",
                     f"daily budget {cfg['daily_budget_usd']} USD would be exceeded (used {used:.4f}, need {estimated_usd:.4f})",
                 )
+            monthly = cfg.get("monthly_budget_usd")
+            if monthly is not None:
+                used_m = spent_month(s, self.realm, day)["counted_usd"]
+                if used_m + estimated_usd > float(monthly) + 1e-9:
+                    raise BudgetBlocked(
+                        "monthly_budget",
+                        f"monthly budget {monthly} USD would be exceeded (used {used_m:.4f}, need {estimated_usd:.4f})",
+                    )
             if self.job_id:
                 rows = s.execute(select(m.CostEntry).where(m.CostEntry.job_id == self.job_id)).scalars().all()
                 job_used = sum(_counted(e) for e in rows)

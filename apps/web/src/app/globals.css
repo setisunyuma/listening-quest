@@ -171,3 +171,7 @@ table.list td small { overflow-wrap: anywhere; }
 
 /* leave room so the last choice can scroll above the fixed answer bar and the bottom navigation */
 main:has(.sticky-actions) { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
+
+.evidence .line { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; }
+.evidence .line p { margin: 4px 0; flex: 1; }
+.report textarea { width: 100%; }
