@@ -245,6 +245,51 @@
    "title": "FigureRow",
    "type": "object"
   },
+  "GlossItem": {
+   "additionalProperties": false,
+   "properties": {
+    "meaning_ja": {
+     "maxLength": 300,
+     "minLength": 1,
+     "title": "Meaning Ja",
+     "type": "string"
+    },
+    "term": {
+     "maxLength": 80,
+     "minLength": 1,
+     "title": "Term",
+     "type": "string"
+    }
+   },
+   "required": [
+    "term",
+    "meaning_ja"
+   ],
+   "title": "GlossItem",
+   "type": "object"
+  },
+  "LineTranslation": {
+   "additionalProperties": false,
+   "properties": {
+    "ja": {
+     "maxLength": 2000,
+     "minLength": 1,
+     "title": "Ja",
+     "type": "string"
+    },
+    "utterance_id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Utterance Id",
+     "type": "string"
+    }
+   },
+   "required": [
+    "utterance_id",
+    "ja"
+   ],
+   "title": "LineTranslation",
+   "type": "object"
+  },
   "MatchItem": {
    "additionalProperties": false,
    "properties": {
@@ -690,6 +735,30 @@
    "title": "StimulusSegment",
    "type": "object"
   },
+  "StudyNotes": {
+   "additionalProperties": false,
+   "description": "Learning aids shown only with the results: a short glossary and a Japanese rendering of each line.\nNot part of grading, so not part of the content hash (adding them never changes an existing unit's hash).",
+   "properties": {
+    "glossary": {
+     "default": [],
+     "items": {
+      "$ref": "#/$defs/GlossItem"
+     },
+     "title": "Glossary",
+     "type": "array"
+    },
+    "translations": {
+     "default": [],
+     "items": {
+      "$ref": "#/$defs/LineTranslation"
+     },
+     "title": "Translations",
+     "type": "array"
+    }
+   },
+   "title": "StudyNotes",
+   "type": "object"
+  },
   "Utterance": {
    "additionalProperties": false,
    "properties": {
@@ -888,6 +957,13 @@
    "minItems": 1,
    "title": "Speakers",
    "type": "array"
+  },
+  "study_notes": {
+   "$ref": "#/$defs/StudyNotes",
+   "default": {
+    "glossary": [],
+    "translations": []
+   }
   },
   "template_type": {
    "title": "Template Type",

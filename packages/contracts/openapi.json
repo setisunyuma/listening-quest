@@ -1752,6 +1752,15 @@
       "title": "Figures",
       "type": "array"
      },
+     "glossary": {
+      "default": [],
+      "items": {
+       "additionalProperties": true,
+       "type": "object"
+      },
+      "title": "Glossary",
+      "type": "array"
+     },
      "missed": {
       "default": [],
       "items": {
@@ -2531,6 +2540,54 @@
      }
     },
     "summary": "Admin Costs"
+   }
+  },
+  "/api/admin/diagnostics": {
+   "get": {
+    "operationId": "admin_diagnostics_api_admin_diagnostics_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Admin Diagnostics Api Admin Diagnostics Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Admin Diagnostics"
    }
   },
   "/api/admin/import": {

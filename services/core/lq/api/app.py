@@ -22,7 +22,7 @@ from lq.domain.content import MODE_LABELS_JA, MODES, SKILL_LABELS_JA, SKILLS, un
 from lq.domain.profiles import current_profile, load_profiles
 from lq.generator import budget
 from lq.jobs import queue
-from lq.services import admin, assessment, auth, backup, feedback, importer, plans, radio, replenish, stats
+from lq.services import admin, assessment, auth, backup, diagnostics, feedback, importer, plans, radio, replenish, stats
 from lq.services import learning as L
 from lq.storage import get_storage
 
@@ -691,6 +691,11 @@ def admin_overview(session: Session = Depends(db), user: m.User = Depends(curren
     inv.pop("state")
     session.commit()
     return {**out, "inventory": inv}
+
+
+@app.get("/api/admin/diagnostics")
+def admin_diagnostics(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    return diagnostics.run(session, user.realm)
 
 
 @app.get("/api/admin/costs")

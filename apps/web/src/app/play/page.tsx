@@ -244,6 +244,18 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
     try { await api(`/units/${result.unit_id}/missed`, { body: { utterance_id: uttId, missed: on } }); }
     catch (e) { setMissed(missed); setMsg((e as ApiError).detail); }
   };
+  const [rate, setRate] = useState(1);
+  const lineAudio: Record<string, string> = Object.fromEntries(result.questions.flatMap((q) => q.evidence.filter((e) => e.type === "utterance" && e.audio_url).map((e) => [e.utterance_id, e.audio_url])));
+  const [loop, setLoop] = useState(false);
+  const [hideEn, setHideEn] = useState(false);
+  const [showJa, setShowJa] = useState(false);
+  const [revealed, setRevealed] = useState<Set<string>>(new Set());
+  const hasJa = result.transcript.some((sg: Json) => sg.lines.some((l: Json) => l.ja));
+  const playLine = async (id: string, url: string) => {
+    setActive(id);
+    player.setLoop(loop);
+    await player.play((await playableUrl(app.me.user_id, url)).src, rate, 0);
+  };
   const MissBtn = ({ id }: { id: string }) => (
     <button className="small ghost" aria-pressed={missed.has(id)} onClick={() => toggleMissed(id)}>{missed.has(id) ? "✓ 聞き取れなかった" : "聞き取れなかった"}</button>
   );
@@ -312,10 +324,29 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
             </div>
           );
         })}
+        {result.glossary.length > 0 && (
+          <div className="qbox" aria-label="語注"><h3>語注</h3>
+            {result.glossary.map((g: Json) => <p key={g.term}><strong className="en">{g.term}</strong>　{g.meaning_ja}</p>)}
+          </div>
+        )}
         <details><summary className="btn ghost small">英文全体を見る</summary>
+          <div className="row" role="group" aria-label="英文の表示">
+            <button className="small" aria-pressed={hideEn} onClick={() => { setHideEn(!hideEn); setRevealed(new Set()); }}>{hideEn ? "✓ " : ""}英文を隠す（タップで表示）</button>
+            {hasJa && <button className="small" aria-pressed={showJa} onClick={() => setShowJa(!showJa)}>{showJa ? "✓ " : ""}和訳を表示</button>}
+          </div>
           <div className="evidence">{result.transcript.map((s: Json) => s.lines.map((l: Json) => (
-            <div key={l.utterance_id} className="line"><p className="en"><strong>{l.speaker}:</strong> {l.text}</p><MissBtn id={l.utterance_id} /></div>
+            <div key={l.utterance_id} className="line"><div style={{ flex: 1 }}>
+              {hideEn && !revealed.has(l.utterance_id)
+                ? <button className="small ghost wide" onClick={() => setRevealed(new Set([...revealed, l.utterance_id]))}><strong>{l.speaker}:</strong> （タップで英文を表示）</button>
+                : <p className="en"><strong>{l.speaker}:</strong> {l.text}</p>}
+              {showJa && l.ja && <p className="faint">{l.ja}</p>}</div>
+              <div className="row">{(l.audio_url ?? lineAudio[l.utterance_id]) && <button className="small" aria-label="この文を再生" onClick={() => playLine(l.utterance_id, l.audio_url ?? lineAudio[l.utterance_id])}>{active === l.utterance_id && player.state === "playing" ? "♪" : "▶"}</button>}<MissBtn id={l.utterance_id} /></div></div>
           )))}</div>
+          <div className="row" role="group" aria-label="1文再生の速さ">
+            {[0.8, 1, 1.2].map((r) => <button key={r} className="small" aria-pressed={rate === r} onClick={() => setRate(r)}>{r}倍</button>)}
+            <button className="small" aria-pressed={loop} onClick={() => { setLoop(!loop); player.setLoop(!loop); }}>{loop ? "✓ " : ""}くり返し</button>
+            {player.state === "playing" && <button className="small" onClick={player.pause}>❚❚ 止める</button>}
+          </div>
           <p className="faint">「聞き取れなかった」を付けた文は、メニューの「聞き取れなかった文」でまとめて聞き直せます。ラジオでも優先して流れます。</p></details>
         <ReportBox unitId={result.unit_id} attemptId={result.attempt_id} />
         {msg && <Msg>{msg}</Msg>}

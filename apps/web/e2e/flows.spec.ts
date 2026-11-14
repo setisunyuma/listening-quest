@@ -205,6 +205,20 @@ test("feedback: mark a line as missed, replay it from the list, and report a uni
   await miss.click();
   await expect(page.getByRole("button", { name: "✓ 聞き取れなかった" }).first()).toBeVisible();
   await checkTouchLayout(page);
+  // glossary, line playback, hidden English and the Japanese rendering (demo material carries sample notes)
+  await page.getByText("英文全体を見る").click();
+  await page.getByRole("button", { name: "英文を隠す（タップで表示）" }).click();
+  const hidden = page.getByRole("button", { name: /（タップで英文を表示）/ });
+  const n = await hidden.count();
+  expect(n).toBeGreaterThan(0);
+  await hidden.first().click();
+  await expect(hidden).toHaveCount(n - 1);
+  if (await page.getByRole("button", { name: "和訳を表示" }).count()) {  // units generated with study notes
+    await page.getByRole("button", { name: "和訳を表示" }).click();
+    await expect(page.locator(".evidence .faint").first()).toBeVisible();
+  }
+  await expect(page.getByRole("button", { name: "この文を再生" }).first()).toBeVisible();
+  await checkTouchLayout(page);
   await page.getByText("この教材を報告する").click();
   await page.getByRole("group", { name: "報告の種類" }).getByRole("button", { name: "意味・解説が分かりにくい" }).click();
   await page.getByLabel("メモ（任意）").fill("e2e: 背景が分からない");

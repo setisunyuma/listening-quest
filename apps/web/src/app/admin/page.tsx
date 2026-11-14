@@ -71,6 +71,7 @@ export default function AdminPage() {
         </section>
       )}
 
+      <Diagnostics />
       {app.me.realm !== "demo" && <Costs />}
       <Reports />
       {app.me.realm === "live" && <VerifyLive />}
@@ -260,6 +261,27 @@ function Costs() {
         </table></div>
       </details>
       <p className="faint">{data.note}</p>
+    </section>
+  );
+}
+
+
+const DIAG: Record<string, string> = { ok: "✓ 正常", warn: "△ 注意", error: "✗ 異常", info: "・" };
+
+function Diagnostics() {
+  const { data, reload } = useData<Json>(() => api("/admin/diagnostics"), [], 120000);
+  if (!data) return null;
+  return (
+    <section className="panel" aria-labelledby="diag-h">
+      <details open={data.status !== "ok"}>
+        <summary><h2 id="diag-h" style={{ display: "inline" }}>動作チェック <small>{DIAG[data.status]}</small></h2></summary>
+        <div className="table-wrap"><table className="list">
+          <thead><tr><th scope="col">項目</th><th scope="col">状態</th></tr></thead>
+          <tbody>{data.items.map((i: Json) => <tr key={i.key}><td>{i.label}</td><td><span className={`chip ${i.status === "error" ? "demo" : ""}`}>{DIAG[i.status]}</span><br /><small>{i.detail}</small></td></tr>)}</tbody>
+        </table></div>
+        <p className="faint">{data.version ? `版 ${data.version}・` : ""}{data.region ? `地域 ${data.region}・` : ""}確認 {new Date(data.checked_at).toLocaleTimeString("ja-JP")}</p>
+        <button className="small" onClick={reload}>もう一度確認</button>
+      </details>
     </section>
   );
 }

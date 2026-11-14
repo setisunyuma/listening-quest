@@ -105,6 +105,16 @@ class AQuestion(_S):
     distractors: list[ADistractor]
 
 
+class AGloss(_S):
+    term: str
+    meaning_ja: str
+
+
+class ATranslation(_S):
+    utterance_id: str
+    ja: str
+
+
 class AuthoredUnit(_S):
     title: str
     topic: str
@@ -115,6 +125,8 @@ class AuthoredUnit(_S):
     segments: list[ASegment]
     questions: list[AQuestion]
     radio_figure_description_en: str
+    glossary: list[AGloss]
+    translations_ja: list[ATranslation]
 
 
 _DROP = ("title", "default", "minLength", "maxLength", "pattern", "minItems", "maxItems", "minimum", "maximum")
@@ -232,6 +244,15 @@ def _slug(s: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")[:48] or "x"
 
 
+def study_notes(glossary: list[dict], translations: list[dict], utterance_ids: set[str]) -> dict:
+    """Glossary (at most 12, empty entries dropped) and translations of lines that really exist: a model may
+    invent or skip ids, and a translation of a line that is not in the script would be misleading."""
+    return {
+        "glossary": [g for g in glossary if g.get("term", "").strip() and g.get("meaning_ja", "").strip()][:12],
+        "translations": [t for t in translations if t.get("ja", "").strip() and t.get("utterance_id") in utterance_ids],
+    }
+
+
 def authored_to_unit(raw: dict, spec: GenSpec) -> dict:
     """Convert model output to a UnitContent dict. Format-level fields come from the profile, not the model."""
     a = AuthoredUnit.model_validate(raw)
@@ -277,6 +298,10 @@ def authored_to_unit(raw: dict, spec: GenSpec) -> dict:
         "questions": questions,
         "scoring_groups": unit_scoring_groups(profile, spec.part, [q["id"] for q in questions]),
         "radio": {"supported": True, "reason": "", "figure_description_en": a.radio_figure_description_en},
+        "study_notes": study_notes(
+            [g.model_dump() for g in a.glossary], [t.model_dump() for t in a.translations_ja],
+            {u.id for seg in a.segments for u in seg.utterances},
+        ),
     }  # fmt: skip
 
 

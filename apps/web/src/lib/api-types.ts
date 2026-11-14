@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/admin/diagnostics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Admin Diagnostics */
+        get: operations["admin_diagnostics_api_admin_diagnostics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/admin/import": {
         parameters: {
             query?: never;
@@ -1743,6 +1760,13 @@ export interface components {
                 [key: string]: unknown;
             }[];
             /**
+             * Glossary
+             * @default []
+             */
+            glossary: {
+                [key: string]: unknown;
+            }[];
+            /**
              * Missed
              * @default []
              */
@@ -1961,6 +1985,39 @@ export interface components {
 export type $defs = Record<string, never>;
 export interface operations {
     admin_costs_api_admin_costs_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admin_diagnostics_api_admin_diagnostics_get: {
         parameters: {
             query?: never;
             header?: {

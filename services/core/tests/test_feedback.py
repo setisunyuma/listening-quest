@@ -78,3 +78,38 @@ def test_radio_plays_units_with_missed_lines_before_other_heard_units(db, user):
 
     chosen = radio.select_radio_units(db, user, target.mode, 10_000, L.user_day(user, T0), include_new=False)
     assert chosen and chosen[0][0].id == target.id
+
+
+def test_study_notes_do_not_change_the_content_hash_and_appear_only_with_results(db, user):
+    from helpers import make_content
+
+    from lq.domain.content import content_hash
+
+    base = make_content(seed="notes1")
+    plain = base.model_copy(update={"study_notes": type(base.study_notes)()})
+    assert content_hash(base) == content_hash(plain)  # learning aids are not part of the graded meaning
+    unit = ready_unit(db, content=base)
+    db.commit()
+    att = L.start_attempt(db, user, attempt_id="a" * 32, unit_id=unit.id, slot_id=None)
+    db.commit()
+    c = login()
+    before = c.get(f"/api/attempts/{att.id}").text
+    assert "デモ用の仮訳" not in before and "デモ用の語注" not in before  # nothing before answering
+    after = do_attempt(db, user, unit)
+    res = c.get(f"/api/attempts/{after.id}/result").json()
+    assert res["glossary"] and res["glossary"][0]["meaning_ja"].startswith("（デモ用の語注）")
+    assert all(line["ja"] for seg in res["transcript"] for line in seg["lines"])
+
+
+def test_authored_notes_keep_only_real_lines():
+    from lq.generator.authoring import study_notes
+
+    out = study_notes(
+        [{"term": "seed exchange", "meaning_ja": "種の交換"}, {"term": " ", "meaning_ja": ""}],
+        [{"utterance_id": "u1", "ja": "訳"}, {"utterance_id": "ghost", "ja": "x"}, {"utterance_id": "u2", "ja": " "}],
+        {"u1", "u2"},
+    )
+    assert out == {
+        "glossary": [{"term": "seed exchange", "meaning_ja": "種の交換"}],
+        "translations": [{"utterance_id": "u1", "ja": "訳"}],
+    }

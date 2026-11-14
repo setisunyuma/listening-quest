@@ -753,13 +753,17 @@ def result_dto(session, att: m.Attempt) -> dict:
             "self_reason": (att.error_reasons or {}).get(q.id),
         })  # fmt: skip
     fb = assets.get("feedback")
+    ja = {t.utterance_id: t.ja for t in content.study_notes.translations}
     return {
         "attempt_id": att.id, "unit_id": unit.id, "status": att.status, "session_type": att.session_type, "category": att.category,
         "complete": att.complete, "correct_count": att.result["correct_count"], "total": att.result["total"],
         "counted_as_first": att.strict_first, "not_first_reasons": att.not_first_reasons, "assisted": att.result.get("assisted", False),
         "presentation": att.presentation, "schedule": att.result.get("schedule"), "band": att.result.get("band"),
         "feedback_audio": {"url": audio_url(fb), "duration_ms": fb.duration_ms} if fb else None,
-        "transcript": [{"id": seg.id, "lines": [{"utterance_id": u.id, "speaker": labels.get(u.speaker_id, u.speaker_id), "text": u.text} for u in seg.utterances]} for seg in content.segments],
+        "transcript": [{"id": seg.id, "lines": [{"utterance_id": u.id, "speaker": labels.get(u.speaker_id, u.speaker_id), "text": u.text,
+                                                "audio_url": audio_url(assets[f"utt:{u.id}"]) if f"utt:{u.id}" in assets else None,
+                                                "ja": ja.get(u.id)} for u in seg.utterances]} for seg in content.segments],
+        "glossary": [g.model_dump() for g in content.study_notes.glossary],
         "figures": [f.model_dump() for f in content.figures], "questions": questions, "feedback_viewed": att.feedback_viewed_at is not None,
         "slot_id": att.slot_id, "audio_kind": unit.audio_kind, "title": unit.title,
     }  # fmt: skip

@@ -213,6 +213,24 @@ class RadioInfo(Strict):
     figure_description_en: str = ""  # narrated replacement for figures (audio arrangement)
 
 
+class GlossItem(Strict):
+    term: str = Field(min_length=1, max_length=80)
+    meaning_ja: str = Field(min_length=1, max_length=300)
+
+
+class LineTranslation(Strict):
+    utterance_id: _ID
+    ja: str = Field(min_length=1, max_length=2000)
+
+
+class StudyNotes(Strict):
+    """Learning aids shown only with the results: a short glossary and a Japanese rendering of each line.
+    Not part of grading, so not part of the content hash (adding them never changes an existing unit's hash)."""
+
+    glossary: list[GlossItem] = []
+    translations: list[LineTranslation] = []
+
+
 class UnitContent(Strict):
     schema_version: Literal[2] = 2
     source: _ID
@@ -240,6 +258,7 @@ class UnitContent(Strict):
     scoring_groups: list[ScoringGroup] = []
     radio: RadioInfo = RadioInfo()
     estimated_duration_sec: int | None = None
+    study_notes: StudyNotes = StudyNotes()
 
     @model_validator(mode="after")
     def _check(self):

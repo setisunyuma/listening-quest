@@ -185,6 +185,7 @@ class ResultOut(BaseModel):
     audio_kind: str
     title: str
     missed: list[str] = []
+    glossary: list[dict[str, Any]] = []
 
 
 class AckOut(BaseModel):
