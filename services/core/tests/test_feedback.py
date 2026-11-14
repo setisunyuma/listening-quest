@@ -185,3 +185,35 @@ def test_r03_lost_play_events_arrive_with_the_submission_and_are_not_counted_twi
     assert again.status_code == 200 and again.json()["attempt_id"] == att["attempt_id"]
     db.refresh(a)
     assert a.plays[seg.id] == 2 and db.query(m.XpEvent).filter(m.XpEvent.user_id == user.id).count() == xp_before
+
+
+def test_r04_assisted_review_is_not_retention_and_easy_material_does_not_promote(db, user):
+    from datetime import timedelta
+
+    from helpers import T0
+
+    from lq.services import stats
+
+    # an assisted due review: counted as assisted, not as unassisted retention
+    unit = ready_unit(db, seed="r04a")
+    db.commit()
+    do_attempt(db, user, unit)  # first attempt schedules a review
+    sched = (
+        db.query(m.ReviewSchedule)
+        .filter(m.ReviewSchedule.user_id == user.id, m.ReviewSchedule.unit_id == unit.id)
+        .one()
+    )
+    due_at = T0 + timedelta(days=(sched.due_day - L.user_day(user, T0)).days, hours=1)
+    do_attempt(db, user, unit, now=due_at, aid="transcript")
+    g = stats.growth(db, user, due_at + timedelta(minutes=5), unit.mode)
+    assert g["review"]["units"] == 0 and g["assisted"]["units"] >= 1
+
+    # band 3 learner, ten band-1 units all correct: not evidence for promotion
+    for i in range(10):
+        u = ready_unit(db, seed=f"easy{i}", band=1)
+        db.commit()
+        do_attempt(db, user, u, now=due_at + timedelta(minutes=10 + i))
+    st = L.get_mode_state(db, user.id, unit.mode)
+    assert st.difficulty_band == 3
+    obs = L.band_observations(db, user.id, unit.mode, st.band_since)
+    assert len(obs) == 1  # only the band-3 first attempt above is band evidence

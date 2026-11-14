@@ -549,7 +549,16 @@ def apply_schedule(
     }
 
 
+def is_unassisted_review(att: m.Attempt) -> bool:
+    """R04: one definition of "retained without help", shared by growth, home and the library. An assisted
+    review stays in the learning record (and in the assisted figures) but never counts as retention."""
+    return att.category == "review" and bool(att.complete) and not (att.result or {}).get("assisted")
+
+
 def band_observations(session, user_id: str, mode: str, since: datetime) -> list[tuple[str, float]]:
+    """Evidence for moving the difficulty band (R04): first, unassisted, complete attempts on valid material
+    whose OWN band equals the learner's band at the start of the attempt, in the official presentation.
+    Easier or harder material can still be practised; it just does not move the band."""
     A, U = m.Attempt, m.Unit
     rows = session.execute(
         select(A.stimulus_fingerprint, A.unit_score)
@@ -562,6 +571,8 @@ def band_observations(session, user_id: str, mode: str, since: datetime) -> list
             A.status == "submitted",
             U.invalidated_at.is_(None),
             A.submitted_at > since,
+            U.difficulty_band == A.band_at_start,
+            A.presentation == "official",
         )
         .order_by(A.submitted_at)
     ).all()
