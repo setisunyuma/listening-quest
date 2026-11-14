@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useApp } from "@/components/Shell";
 import { DemoChip, Figure, Msg, useData } from "@/components/ui";
 import { api, ApiError, fmtClock, fmtMin, MODE_LABEL, type Answer, type Json } from "@/lib/api";
+import { kvDel, kvGet, kvSet } from "@/lib/offline";
 import { usePlayer } from "@/lib/usePlayer";
 
 export default function CheckPage() {
@@ -47,22 +48,50 @@ function Score({ r }: { r: Json }) {
 }
 
 function Paper({ paper, onDone }: { paper: Json; onDone: (r: Json) => void }) {
+  const app = useApp();
   const [idx, setIdx] = useState(-1); // -1: not started
   const [answers, setAnswers] = useState<Record<string, Answer>>({});
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
   const [elapsed, setElapsed] = useState(0);
+  const [resumed, setResumed] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const idxRef = useRef(-1);
+  const startedAt = useRef<number | null>(null);
+  // R05: answers, position and start time live on the device, so a reload or PWA restart does not reset them
+  const key = `draft:assessment:${paper.session_id}`;
+  const condition = (kind: string, detail = "") => api(`/assessments/${paper.session_id}/conditions`, { body: { kind, detail } }).catch(() => {});
+  useEffect(() => {
+    kvGet<Json>(app.me.user_id, key).then((d) => {
+      if (d && (d.idx >= 0 || Object.keys(d.answers ?? {}).length)) {
+        setAnswers(d.answers ?? {}); idxRef.current = d.idx; setIdx(d.idx); startedAt.current = d.startedAt ?? null;
+        setResumed(true);
+        condition("resume", `item ${d.idx + 1}`); // interrupted: the result is labelled as conditional, not standard
+      }
+    }).catch(() => {}).finally(() => setLoaded(true));
+  }, [key]);
+  useEffect(() => { if (loaded) kvSet(app.me.user_id, key, { answers, idx, startedAt: startedAt.current }).catch(() => {}); }, [answers, idx, loaded]);
   const player = usePlayer({
     onEnded: () => { const n = idxRef.current + 1; if (n < paper.items.length) playItem(n); else { idxRef.current = paper.items.length; setIdx(paper.items.length); } },
   });
-  const playItem = async (i: number) => { idxRef.current = i; setIdx(i); await player.play(paper.items[i].audio.url, 1, 0); };
-  useEffect(() => { if (idx < 0) return; const t = setInterval(() => setElapsed((e) => e + 1), 1000); return () => clearInterval(t); }, [idx >= 0]);
+  const playItem = async (i: number, again = false) => {
+    if (startedAt.current === null) startedAt.current = Date.now();
+    if (again) condition("retry", `item ${i + 1}`);
+    idxRef.current = i; setIdx(i); await player.play(paper.items[i].audio.url, 1, 0);
+  };
+  useEffect(() => {
+    if (idx < 0) return;
+    // elapsed time comes from the stored start, not a counter in the page (no reset to zero on reload)
+    const tick = () => setElapsed(startedAt.current ? Math.floor((Date.now() - startedAt.current) / 1000) : 0);
+    tick();
+    const t = setInterval(tick, 1000); return () => clearInterval(t);
+  }, [idx >= 0]);
+  useEffect(() => { if (player.state === "error") condition("audio_error", `item ${idxRef.current + 1}`); }, [player.state]);
   const submit = async () => {
     const blank = paper.slot_count - Object.keys(answers).length;
     if (blank > 0 && !window.confirm(`未回答が ${blank} 問あります（0点として採点されます）。提出しますか？`)) return;
     setBusy(true); player.pause();
-    try { await api(`/assessments/${paper.session_id}/submit`, { body: { answers } }); onDone(await api(`/assessments/${paper.session_id}/result`)); }
+    try { await api(`/assessments/${paper.session_id}/submit`, { body: { answers } }); kvDel(app.me.user_id, key).catch(() => {}); onDone(await api(`/assessments/${paper.session_id}/result`)); }
     catch (e) { setMsg((e as ApiError).offline ? "通信できませんでした。回答は画面に残っています。もう一度提出してください。" : (e as ApiError).detail); }
     setBusy(false);
   };
@@ -70,11 +99,12 @@ function Paper({ paper, onDone }: { paper: Json; onDone: (r: Json) => void }) {
   return (
     <>
       <section className="panel accent" style={{ position: "sticky", top: 0, zIndex: 6 }}>
-        <div className="row"><strong>{paper.label}</strong><span className="chip">{Object.keys(answers).length} / {paper.slot_count} 回答</span><span className="chip">経過 {fmtClock(elapsed * 1000)} / 目安 {fmtMin(paper.duration_sec)}</span><DemoChip kind={paper.items[0]?.audio_kind} /></div>
+        <div className="row"><strong>{paper.label}</strong><span className="chip">{Object.keys(answers).length} / {paper.slot_count} 回答</span><span className="chip">経過 {fmtClock(elapsed * 1000)} / 目安 {fmtMin(paper.duration_sec)}</span><DemoChip kind={paper.items[0]?.audio_kind} />{resumed && <span className="chip demo">中断・再開あり（条件付き）</span>}</div>
+        {resumed && idx >= 0 && idx < paper.items.length && player.state !== "playing" && <p className="note">前回の続きです（回答は端末から復元しました）。<button className="small" onClick={() => playItem(Math.max(0, idx), true)}>この音声から再開</button></p>}
         {idx < 0 ? <button className="primary big wide" onClick={() => playItem(0)}>音声を開始する</button>
           : finished ? <p className="note" role="status">音声は終了しました。見直して提出してください。</p>
           : <p className="note" role="status" aria-live="polite">{player.state === "playing" ? "♪ 再生中" : player.state === "loading" ? "読み込み中" : "待機中"}：{paper.items[idx].part_label}（{idx + 1} / {paper.items.length}）</p>}
-        {player.state === "error" && <Msg>{player.error} <button className="small" onClick={() => playItem(Math.max(0, idx))}>この音声から再開</button></Msg>}
+        {player.state === "error" && <Msg>{player.error} <button className="small" onClick={() => playItem(Math.max(0, idx), true)}>この音声から再開</button></Msg>}
         {msg && <Msg>{msg}</Msg>}
       </section>
       {paper.items.map((it: Json, i: number) => (
@@ -103,6 +133,7 @@ function ResultView({ result, onClose }: { result: Json; onClose: () => void }) 
     <>
       <section className="panel accent pop"><h2>{r.label}の結果</h2>
         <p style={{ fontSize: "1.6rem" }}><Score r={r} /></p>
+        {r.standard === false && <p className="chip demo">条件付きの結果（{(r.conditions as string[]).map((c) => ({ resume: "中断・再開", replay: "聞き直し", audio_error: "音声エラー", retry: "再試行" } as Record<string, string>)[c] ?? c).join("・")}あり）: 標準条件の結果とは区別します</p>}
         <div className="table-wrap"><table className="list"><thead><tr><th scope="col">区分</th><th scope="col">正答数</th>{r.score_kind === "points" && <th scope="col">得点</th>}</tr></thead>
           <tbody>{Object.entries(r.by_section as Record<string, Json>).map(([k, v]) => <tr key={k}><th scope="row">{r.mode === "common_test" ? `第${k}問` : k}</th><td>{v.correct} / {v.total}</td>{r.score_kind === "points" && <td>{v.points} / {v.max_points}</td>}</tr>)}</tbody></table></div>
         <p className="faint">{r.kind === "app_check" ? "アプリ独自の構成による確認です。CEFRの認定や公式試験の結果を示すものではありません。" : r.score_kind === "count" ? "正答数のみを表示します。CSEスコアや合否への換算は行いません。" : "形式を参考にしたオリジナル問題での得点です。本試験の得点を保証するものではありません。"} 未回答は0点です。</p>

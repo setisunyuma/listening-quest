@@ -13,7 +13,7 @@ import yaml
 from pydantic import BaseModel, ConfigDict
 
 from lq.domain.content import SKILLS, UnitContent, is_correct, normalize_answer
-from lq.domain.profiles import current_profile, part_spec, slot_layout
+from lq.domain.profiles import current_profile, get_profile, part_spec, slot_layout
 from lq.generator.providers import GenSpec
 
 
@@ -369,10 +369,13 @@ _JA = re.compile(r"[぀-ヿ一-鿿]")
 def lint_unit(unit: UnitContent, require_distractors: bool = True) -> list[str]:
     """Format rules that do not need a model: structure vs. profile, distractor coverage, leaks in the title."""
     errs: list[str] = []
+    # R05: check material against the profile version it was written for - never silently against "current"
     try:
-        profile = current_profile(unit.mode)
+        profile = get_profile(unit.profile_version)
     except KeyError:
-        return [f"unknown mode {unit.mode}"]
+        return [f"unknown profile version {unit.profile_version!r} (no fallback to the current version)"]
+    if profile["mode"] != unit.mode:
+        return [f"profile {unit.profile_version} is for {profile['mode']}, not {unit.mode}"]
     part = part_spec(profile, unit.part)
     if part is None:
         return [f"part {unit.part!r} is not defined in profile {profile['id']}"]

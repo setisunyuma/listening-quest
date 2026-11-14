@@ -353,6 +353,31 @@
     "title": "Body_cli_import_api_import_post",
     "type": "object"
    },
+   "ConditionIn": {
+    "properties": {
+     "detail": {
+      "default": "",
+      "maxLength": 200,
+      "title": "Detail",
+      "type": "string"
+     },
+     "kind": {
+      "enum": [
+       "resume",
+       "replay",
+       "audio_error",
+       "retry"
+      ],
+      "title": "Kind",
+      "type": "string"
+     }
+    },
+    "required": [
+     "kind"
+    ],
+    "title": "ConditionIn",
+    "type": "object"
+   },
    "DictationIn": {
     "properties": {
      "typed": {
@@ -4246,6 +4271,73 @@
      }
     },
     "summary": "Assessment Get"
+   }
+  },
+  "/api/assessments/{session_id}/conditions": {
+   "post": {
+    "operationId": "assessment_condition_api_assessments__session_id__conditions_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "session_id",
+      "required": true,
+      "schema": {
+       "title": "Session Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ConditionIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Assessment Condition Api Assessments  Session Id  Conditions Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Assessment Condition"
    }
   },
   "/api/assessments/{session_id}/result": {

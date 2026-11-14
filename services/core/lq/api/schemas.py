@@ -435,6 +435,11 @@ class PhraseIn(BaseModel):
     on: bool = True
 
 
+class ConditionIn(BaseModel):
+    kind: Literal["resume", "replay", "audio_error", "retry"]
+    detail: str = Field(default="", max_length=200)
+
+
 class MissedIn(BaseModel):
     utterance_id: str = Field(min_length=1, max_length=64)
     missed: bool

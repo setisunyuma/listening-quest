@@ -10,7 +10,7 @@ from sqlalchemy import or_, select
 
 from lq.db import models as m
 from lq.domain.content import canonical_json, is_correct, learner_view, normalize_answer, sha256_hex
-from lq.domain.profiles import current_profile, score_exam, slot_layout, total_slots
+from lq.domain.profiles import current_profile, get_profile, score_exam, slot_layout, total_slots
 from lq.generator.authoring import lint_unit
 from lq.jobs import queue
 from lq.services import learning as L
@@ -211,15 +211,33 @@ def assemble(session, realm: str, mode: str) -> m.MockSet:
     n = sum(len(i["slots"]) for i in items)
     if n != total_slots(profile):
         raise L.Invalid(f"set has {n} answer slots, profile needs {total_slots(profile)}")
-    ms = m.MockSet(realm=realm, mode=mode, profile_id=profile["id"], kind=profile["exam"]["kind"], items=items, duration_sec=round(duration_ms / 1000),
+    ms = m.MockSet(realm=realm, mode=mode, profile_id=profile["id"], profile_snapshot=profile, kind=profile["exam"]["kind"], items=items, duration_sec=round(duration_ms / 1000),
                    validation={"slots": n, "units": len(items), "checked": ["format", "answer_slots", "speakers", "plays", "scoring_groups", "exam_audio"]})  # fmt: skip
     session.add(ms)
     session.flush()
     return ms
 
 
+def set_profile(ms: m.MockSet) -> dict:
+    """R05: the profile a set was built with. Older sets without a snapshot use the stored profile id exactly;
+    an id that no longer exists is an error, never a silent switch to the current version."""
+    if ms.profile_snapshot:
+        return ms.profile_snapshot
+    try:
+        return get_profile(ms.profile_id)
+    except KeyError as e:
+        raise L.Conflict(f"this set was built with profile {ms.profile_id}, which is no longer available") from e
+
+
+def session_profile(session, sess: m.LearningSession) -> dict:
+    ms = session.get(m.MockSet, sess.mock_set_id) if sess.mock_set_id else None
+    if ms is None:
+        raise L.Conflict("the set of this assessment is missing")
+    return set_profile(ms)
+
+
 def mock_set_dto(ms: m.MockSet) -> dict:
-    profile = current_profile(ms.mode)
+    profile = set_profile(ms)
     return {"id": ms.id, "mode": ms.mode, "profile_id": ms.profile_id, "kind": ms.kind, "label": profile["exam"]["label_ja"], "status": ms.status, "units": len(ms.items),
             "slots": sum(len(i["slots"]) for i in ms.items), "duration_sec": ms.duration_sec, "venue_note_ja": profile["exam"]["venue_note_ja"],
             "answer_time_min": profile["exam"].get("answer_time_min"), "created_at": ms.created_at.isoformat()}  # fmt: skip
@@ -283,7 +301,7 @@ def get_session(session, user: m.User, session_id: str, lock: bool = False) -> m
 
 def paper_dto(session, sess: m.LearningSession) -> dict:
     """The exam paper: learner views + exam audio only. No scripts, answers, feedback or aids."""
-    profile = current_profile(sess.mode)
+    profile = session_profile(session, sess)
     items = []
     for it in sess.meta["items"]:
         unit = session.get(m.Unit, it["unit_id"])
@@ -313,7 +331,7 @@ def submit(session, user: m.User, session_id: str, answers: dict, now: datetime 
     """answers: {global slot (string): answer object or null}. Unanswered slots score 0. Idempotent."""
     now = now or datetime.now(UTC)
     sess = get_session(session, user, session_id, lock=True)
-    profile = current_profile(sess.mode)
+    profile = session_profile(session, sess)
     slot_correct: dict[int, bool] = {}
     per_unit = []
     normalized_all = {}
@@ -392,6 +410,10 @@ def submit(session, user: m.User, session_id: str, answers: dict, now: datetime 
         "label": profile["exam"]["label_ja"],
         "kind": profile["exam"]["kind"],
         "mode": sess.mode,
+        "profile_id": profile["id"],
+        # R05: interrupted / replayed / audio-error runs are kept, but never shown as standard-condition results
+        "conditions": sorted({c["kind"] for c in (sess.meta or {}).get("conditions", [])}),
+        "standard": not (sess.meta or {}).get("conditions"),
     }
     sess.status = "submitted"
     sess.submit_hash = h
@@ -413,3 +435,22 @@ def result_dto(session, user: m.User, session_id: str) -> dict:
                 q["global_slot"] = it["slots"][q["id"]]
             reviews.append({"part": it["part"], "section": it["section"], **d})
     return {"session_id": sess.id, "result": sess.result, "units": reviews}
+
+
+CONDITION_KINDS = ("resume", "replay", "audio_error", "retry")
+
+
+def record_condition(
+    session, user: m.User, session_id: str, kind: str, detail: str = "", now: datetime | None = None
+) -> dict:
+    """R05: the paper was resumed after an interruption, a section was heard again, or the audio failed and was
+    retried. Recorded before submission; the result then says "条件付き" instead of standard conditions."""
+    if kind not in CONDITION_KINDS:
+        raise L.Invalid("unknown condition")
+    sess = get_session(session, user, session_id, lock=True)
+    if sess.status != "open":
+        return {"conditions": sess.meta.get("conditions", [])}
+    now = now or datetime.now(UTC)
+    conds = [*(sess.meta or {}).get("conditions", []), {"kind": kind, "detail": detail[:200], "at": now.isoformat()}]
+    sess.meta = {**(sess.meta or {}), "conditions": conds[-50:]}
+    return {"conditions": sess.meta["conditions"]}
