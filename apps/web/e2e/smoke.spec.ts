@@ -55,7 +55,7 @@ test("main screens render and the five modes switch everywhere", async ({ page, 
 test("empty states explain what to do, and nothing is offered as playable", async ({ page }) => {
   await login(page, "owner", "owner-password-123"); // live area: no material, paid generation off
   await expect(page.getByText("このモードには、まだ学習できる教材がありません。").first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "クエストを開始" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "今日の学習を始める" })).toHaveCount(0);
   await page.goto("/library");
   await expect(page.getByText("このモードには、まだ学習できる教材がありません。")).toBeVisible();
   await page.goto("/radio");

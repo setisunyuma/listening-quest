@@ -157,12 +157,15 @@ def plan_dto(session, plan: m.DailyPlan) -> dict:
             "unit": unit_card(unit) if unit else None, "unit_revision": unit.revision if unit else None,
             "attempt_id": s.attempt_id, "attempt_status": att.status if att else None, "needs_all_answers": bool(att and att.status == "submitted" and not att.complete),
             "awaiting_feedback_ack": bool(att and att.status == "submitted" and att.complete and s.state != "completed"),
+            "kind": s.kind, "context": task_context(session, s), "carry_reason": s.carry_reason, "carried_from": s.carried_from,
+            "carry_count": int((s.payload or {}).get("carry_count", 0)),
         })  # fmt: skip
     done = sum(1 for s in slots if s.state == "completed")
     return {
         "id": plan.id, "learning_day": plan.learning_day.isoformat(), "kind": plan.kind, "mode": plan.mode, "status": plan.status, "version": plan.version,
         "goal_minutes": plan.goal_minutes, "budget_sec": plan.budget_sec, "planned_sec": plan.planned_sec, "total_slots": plan.total_slots, "completed_slots": done,
-        "remaining_sec": sum(s.est_sec for s in slots if s.state != "completed"), "notes": plan.params.get("notes", []), "radio_program_id": plan.radio_program_id, "slots": out_slots,
+        "remaining_sec": sum(s.est_sec for s in slots if s.state in ("pending", "started")), "notes": plan.params.get("notes", []), "radio_program_id": plan.radio_program_id, "slots": out_slots,
+        "summary": day_summary(session, plan),
     }  # fmt: skip
 
 
@@ -226,17 +229,46 @@ def start_plan(session, user: m.User, now: datetime, kind: str = "quest", mode: 
         from lq.services import radio
 
         return radio.start_radio_plan(session, user, now, mode, budget, day)
-    cands, state, _ = learner_context(session, user, mode, day, now)
-    draft = rec.build_plan(cands, state, budget, cfg, _seed(user, day, mode))
-    if not draft.slots:
-        raise L.Invalid("no READY material for this mode yet")
+    # U01: an earlier day's plan that was left open ends now; its unfinished tasks are carried on, not dropped
+    for old in session.execute(
+        select(m.DailyPlan).where(m.DailyPlan.user_id == user.id, m.DailyPlan.learning_day < day, m.DailyPlan.status == "active",
+                                  m.DailyPlan.kind == "quest").with_for_update()
+    ).scalars():  # fmt: skip
+        for x in _plan_slots(session, old.id, lock=True):
+            if x.state in ("pending", "started") and not x.reserved:
+                x.state, x.carry_reason = "carried", "日付が変わった"
+        _check_plan_done(session, user, old, now)
     plan = m.DailyPlan(user_id=user.id, learning_day=day, kind="quest", mode=mode, goal_minutes=int(s["daily_goal_minutes"]), budget_sec=budget,
-                       total_slots=len(draft.slots), planned_sec=draft.planned_sec, params={"seed": _seed(user, day, mode), "split": cfg.plan_split, "notes": draft.notes})  # fmt: skip
+                       total_slots=0, planned_sec=0, params={"seed": _seed(user, day, mode), "split": cfg.plan_split, "notes": []})  # fmt: skip
     session.add(plan)
     session.flush()
-    for i, sl in enumerate(draft.slots):
+    carried, carried_sec = carry_over(session, user, plan, day, budget)
+    cands, state, _ = learner_context(session, user, mode, day, now)
+    draft = rec.build_plan(
+        cands,
+        state,
+        budget - carried_sec,
+        cfg,
+        _seed(user, day, mode),
+        exclude={x.unit_id for x in carried if x.unit_id},
+    )
+    if not draft.slots and not carried:
+        session.delete(plan)
+        session.flush()
+        raise L.Invalid("no READY material for this mode yet")
+    for x in carried:
+        session.add(x)
+    for i, sl in enumerate(draft.slots, start=len(carried)):
         session.add(m.PlanSlot(plan_id=plan.id, idx=i, category=sl["category"], mode=mode, unit_id=sl["unit_id"], time_cap_sec=sl["time_cap_sec"], est_sec=sl["est_sec"],
                                reason_code=sl["reason_code"], reason_text=sl["reason_text"], reason_params=sl["reason_params"]))  # fmt: skip
+    notes = list(draft.notes)
+    if carried:
+        notes.insert(0, f"前回から持ち越した課題が {len(carried)} 件あります（先に行います）")
+    if any((x.payload or {}).get("carry_count", 0) >= 3 for x in carried):
+        notes.insert(0, "同じ課題が3回以上持ち越されています。新しい問題を減らして、先に取り組めるようにしました")
+    plan.total_slots = len(carried) + len(draft.slots)
+    plan.planned_sec = carried_sec + draft.planned_sec
+    plan.params = {**plan.params, "notes": notes}
     session.flush()
     return plan
 
@@ -331,13 +363,29 @@ def complete_slot(session, user: m.User, slot_id: str, attempt_id: str, now: dat
     return out
 
 
+DONE_FOR_TODAY = ("completed", "skipped", "carried", "removed")
+
+
 def _check_plan_done(session, user: m.User, plan: m.DailyPlan, now: datetime) -> dict:
+    """U01: the day is "completed" only when every task of today's plan was really done. Skipped or carried
+    tasks finish the day as "ended" (today is over, the rest moves on) - never as completed, and without the
+    daily bonus."""
     session.flush()
     left = session.execute(
         select(func.count())
         .select_from(m.PlanSlot)
-        .where(m.PlanSlot.plan_id == plan.id, m.PlanSlot.state.notin_(("completed", "removed")))
+        .where(m.PlanSlot.plan_id == plan.id, m.PlanSlot.state.notin_(DONE_FOR_TODAY))
     ).scalar_one()
+    unfinished = session.execute(
+        select(func.count())
+        .select_from(m.PlanSlot)
+        .where(m.PlanSlot.plan_id == plan.id, m.PlanSlot.state.in_(("skipped", "carried")))
+    ).scalar_one()
+    if left == 0 and plan.total_slots > 0 and unfinished:
+        if plan.status == "active":
+            plan.status = "ended"
+            plan.completed_at = now
+        return {"plan_completed": False, "plan_ended": True, "daily_xp": 0}
     if left == 0 and plan.total_slots > 0:
         if plan.status != "completed":
             plan.status = "completed"
@@ -568,3 +616,152 @@ def sync_offline_answers(session, user: m.User, items: list[dict], now: datetime
         except (L.Conflict, L.Invalid, L.NotFound) as e:
             results.append({"event_id": eid, "status": "rejected", "error": str(e)})
     return results
+
+
+# ---------------------------------------------------------------- U01: today's tasks
+
+
+def _unit_context(unit: m.Unit | None) -> str:
+    """'desk' when the task needs the screen (a figure or a printed situation to read); 'any' otherwise."""
+    if unit is None:
+        return "any"
+    c = unit.content or {}
+    return "desk" if c.get("figures") or (c.get("pre_info") or {}).get("situation_en") else "any"
+
+
+def task_context(session, slot: m.PlanSlot) -> str:
+    if slot.kind == "unit":
+        return _unit_context(session.get(m.Unit, slot.unit_id) if slot.unit_id else None)
+    return slot.context or "any"
+
+
+def next_task(session, plan: m.DailyPlan, on_the_move: bool = False) -> m.PlanSlot | None:
+    """The task "続ける" opens: a started task first, then the next pending one in order. On the move, tasks
+    that need the screen wait for the desk (they stay in the plan; nothing is marked done)."""
+    slots = _plan_slots(session, plan.id)
+    for st in ("started", "pending"):
+        for x in slots:
+            if x.state == st and (not on_the_move or task_context(session, x) != "desk"):
+                return x
+    return None
+
+
+def _own_slot(session, user: m.User, slot_id: str, lock: bool = True) -> tuple[m.PlanSlot, m.DailyPlan]:
+    q = select(m.PlanSlot).where(m.PlanSlot.id == slot_id)
+    slot = session.execute(q.with_for_update() if lock else q).scalar_one_or_none()
+    plan = session.get(m.DailyPlan, slot.plan_id) if slot else None
+    if slot is None or plan is None or plan.user_id != user.id:
+        raise L.NotFound("task not found")
+    return slot, plan
+
+
+def skip_task(session, user: m.User, slot_id: str, now: datetime) -> dict:
+    """ "この課題を飛ばす": the task is not done and not counted as done; it moves to a later day."""
+    slot, plan = _own_slot(session, user, slot_id)
+    if slot.state not in ("pending", "started"):
+        raise L.Conflict("this task is already finished for today")
+    if slot.reserved:
+        raise L.Conflict("this task is saved for offline use; answer it or release it first")
+    slot.state, slot.carry_reason = "skipped", "飛ばした"
+    return {"slot_id": slot.id, "state": slot.state, **_check_plan_done(session, user, plan, now)}
+
+
+def end_day(session, user: m.User, plan_id: str, now: datetime) -> dict:
+    """ "今日は終了": every task not done moves on with a reason. Offline-saved tasks stay (their answers may
+    still arrive). Nothing becomes "completed"."""
+    plan = session.execute(select(m.DailyPlan).where(m.DailyPlan.id == plan_id).with_for_update()).scalar_one_or_none()
+    if plan is None or plan.user_id != user.id:
+        raise L.NotFound("plan not found")
+    moved = 0
+    for x in _plan_slots(session, plan.id, lock=True):
+        if x.state in ("pending", "started") and not x.reserved:
+            x.state, x.carry_reason = "carried", "今日は終了"
+            moved += 1
+    return {"carried": moved, **_check_plan_done(session, user, plan, now)}
+
+
+def shorten(session, user: m.User, plan_id: str, minutes_left: int, now: datetime) -> dict:
+    """ "今日はあと N 分": keep the tasks that fit in order (a started task always stays); the rest moves on
+    with a reason. The learner never re-plans by hand."""
+    plan = session.execute(select(m.DailyPlan).where(m.DailyPlan.id == plan_id).with_for_update()).scalar_one_or_none()
+    if plan is None or plan.user_id != user.id:
+        raise L.NotFound("plan not found")
+    left = max(0, int(minutes_left)) * 60
+    kept, moved = 0, 0
+    for x in _plan_slots(session, plan.id, lock=True):
+        if x.state not in ("pending", "started"):
+            continue
+        if x.state == "started" or x.reserved or kept + x.est_sec <= left:
+            kept += x.est_sec
+            continue
+        x.state, x.carry_reason = "carried", f"時間短縮（あと{minutes_left}分）"
+        moved += 1
+    return {"kept_sec": kept, "carried": moved, **_check_plan_done(session, user, plan, now)}
+
+
+def carry_over(session, user: m.User, plan: m.DailyPlan, today: date, budget_sec: int) -> tuple[list[m.PlanSlot], int]:
+    """Tasks skipped or carried on earlier days come first in today's plan - each once (a task that was carried
+    on is not carried again from the same source), only while they still make sense (material still valid and
+    not solved since), and only up to half of today's time so new material keeps coming."""
+    P, S = m.DailyPlan, m.PlanSlot
+    old = session.execute(
+        select(S, P).join(P, P.id == S.plan_id)
+        .where(P.user_id == user.id, P.learning_day < today, P.learning_day >= today - timedelta(days=7),
+               S.state.in_(("skipped", "carried")))
+        .order_by(P.learning_day, S.idx)
+    ).all()  # fmt: skip
+    taken = set(session.execute(select(S.carried_from).where(S.carried_from.is_not(None))).scalars())
+    out, used = [], 0
+    for x, p in old:
+        if x.id in taken or len(out) >= 3:
+            continue
+        unit = session.get(m.Unit, x.unit_id) if x.unit_id else None
+        if x.kind == "unit" and (unit is None or unit.status != "READY" or unit.invalidated_at is not None):
+            continue
+        if x.kind == "unit":
+            solved = session.execute(
+                select(m.Attempt.id).where(m.Attempt.user_id == user.id, m.Attempt.unit_id == x.unit_id,
+                                           m.Attempt.status == "submitted", m.Attempt.submitted_at >= p.created_at)
+            ).first()  # fmt: skip
+            if solved:
+                continue
+        if used + x.est_sec > budget_sec // 2:
+            continue
+        n = int((x.payload or {}).get("carry_count", 0)) + 1
+        out.append(m.PlanSlot(plan_id=plan.id, idx=len(out), category=x.category, mode=x.mode, unit_id=x.unit_id, time_cap_sec=x.time_cap_sec,
+                              est_sec=x.est_sec, kind=x.kind, context=x.context, payload={**(x.payload or {}), "carry_count": n},
+                              carried_from=x.id, reason_code="carried", reason_text=f"前回からの持ち越し（{x.carry_reason or '未実施'}）"
+                              + (f"・{n}回目" if n > 1 else "")))  # fmt: skip
+        used += x.est_sec
+    return out, used
+
+
+def bind_free_attempt(session, user: m.User, att: m.Attempt, now: datetime) -> dict | None:
+    """U01 T10: a unit solved from the library that is also today's pending task completes that task (once),
+    so the plan never asks for the same unit again."""
+    if att.slot_id or not att.complete:
+        return None
+    day = L.user_day(user, now)
+    slot = session.execute(
+        select(m.PlanSlot).join(m.DailyPlan, m.DailyPlan.id == m.PlanSlot.plan_id)
+        .where(m.DailyPlan.user_id == user.id, m.DailyPlan.learning_day == day, m.PlanSlot.unit_id == att.unit_id,
+               m.PlanSlot.state.in_(("pending", "started")), m.PlanSlot.reserved.is_(False))
+        .with_for_update()
+    ).scalars().first()  # fmt: skip
+    if slot is None:
+        return None
+    slot.attempt_id = att.id
+    att.slot_id = slot.id
+    return complete_slot(session, user, slot.id, att.id, now)
+
+
+def day_summary(session, plan: m.DailyPlan) -> dict:
+    slots = _plan_slots(session, plan.id)
+    by = {k: [x for x in slots if x.state == k] for k in ("completed", "skipped", "carried", "pending", "started")}
+    label = {"completed": "今日の予定を完了", "ended": "今日はここまで"}.get(plan.status, "")
+    return {
+        "status": plan.status, "label": label, "done": len(by["completed"]), "skipped": len(by["skipped"]),
+        "carried": len(by["carried"]), "remaining": len(by["pending"]) + len(by["started"]),
+        "moved": [{"slot_id": x.id, "title": (session.get(m.Unit, x.unit_id).title if x.unit_id else x.kind), "reason": x.carry_reason or ""}
+                  for x in by["skipped"] + by["carried"]],
+    }  # fmt: skip

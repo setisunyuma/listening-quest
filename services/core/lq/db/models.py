@@ -416,7 +416,9 @@ class DailyPlan(Base):
     budget_sec: Mapped[int] = mapped_column(Integer)
     total_slots: Mapped[int] = mapped_column(Integer)
     planned_sec: Mapped[int] = mapped_column(Integer)
-    status: Mapped[str] = mapped_column(String(16), default="active")  # active | completed
+    status: Mapped[str] = mapped_column(
+        String(16), default="active"
+    )  # active | completed | ended (finished for today with skipped / carried tasks; never "completed")
     version: Mapped[int] = mapped_column(Integer, default=1)
     params: Mapped[dict] = mapped_column(JSONB, default=dict)  # seed, split, shortage notes
     radio_program_id: Mapped[str | None] = mapped_column(ID, nullable=True)
@@ -435,7 +437,14 @@ class PlanSlot(Base):
     unit_id: Mapped[str | None] = mapped_column(ForeignKey("units.id"), nullable=True)
     time_cap_sec: Mapped[int] = mapped_column(Integer)
     est_sec: Mapped[int] = mapped_column(Integer)
-    state: Mapped[str] = mapped_column(String(16), default="pending")  # pending | started | completed | removed
+    # pending | started | completed | skipped | carried | removed. skipped/carried are never "completed" (U01)
+    state: Mapped[str] = mapped_column(String(16), default="pending")
+    kind: Mapped[str] = mapped_column(String(16), default="unit")  # unit | repair | recall | check (U01 task kinds)
+    context: Mapped[str] = mapped_column(String(8), default="any")  # any | desk (needs the screen: figures, typing)
+    payload: Mapped[dict] = mapped_column(JSONB, default=dict)  # task references (utterances, source attempt, ...)
+    result: Mapped[dict] = mapped_column(JSONB, default=dict)  # what was done, under which conditions
+    carry_reason: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    carried_from: Mapped[str | None] = mapped_column(ID, nullable=True)  # slot of an earlier day this continues
     reserved: Mapped[bool] = mapped_column(Boolean, default=False)
     assignment_version: Mapped[int] = mapped_column(Integer, default=1)
     reason_code: Mapped[str] = mapped_column(String(32), default="")

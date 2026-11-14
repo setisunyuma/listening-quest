@@ -260,7 +260,8 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
     try {
       const home = await api<Json>("/home");
       const plan: Plan | null = [home.plan, home.carried_plan].find((p: Plan | null) => p?.slots.some((s) => s.id === result.slot_id)) ?? home.plan;
-      const s = plan?.slots.find((x) => x.state !== "completed" && x.unit && x.id !== result.slot_id) ?? plan?.slots.find((x) => x.state !== "completed" && x.unit);
+      const open = (x: Json) => x.state === "pending" || x.state === "started";  // skipped / carried tasks are not "next"
+      const s = plan?.slots.find((x) => open(x) && x.unit && x.id !== result.slot_id) ?? plan?.slots.find((x) => open(x) && x.unit);
       router.push(s && plan?.kind === "quest" && s.id !== result.slot_id ? `/play?unit=${s.unit!.id}&slot=${s.id}` : "/");
     } catch { router.push("/"); }
   }, [result.slot_id, router]);

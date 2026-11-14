@@ -16,11 +16,11 @@ async function answerAll(page: Page, pick: "first" | "skipLast" = "first") {
 test("quest: play, answer, grading, explanation, XP, and the next unit", async ({ page }) => {
   await login(page);
   await expect(page.getByText(/目標 30分 →/)).toBeVisible();
-  await page.getByRole("button", { name: "クエストを開始" }).click();
+  await page.getByRole("button", { name: "今日の学習を始める" }).click();
   await expect(page.getByRole("img", { name: /今日の進捗 0 \/ \d+/ })).toBeVisible();
   await checkTouchLayout(page);
   const total = Number((await page.getByRole("img", { name: /今日の進捗/ }).getAttribute("aria-label"))!.split("/")[1]);
-  await page.getByRole("link", { name: "開始する" }).click();
+  await page.getByRole("link", { name: "今日の学習を始める" }).click();
 
   // the answering screen never contains answers or explanations
   await expect(page.getByRole("button", { name: /再生/ }).first()).toBeVisible();
@@ -55,13 +55,13 @@ test("quest: play, answer, grading, explanation, XP, and the next unit", async (
   await expect(page).toHaveURL(/\/play\?unit=.*slot=/);
   await page.goto("/");
   await expect(page.getByRole("img", { name: `今日の進捗 1 / ${total}` })).toBeVisible(); // the plan did not grow
-  await expect(page.getByRole("link", { name: "再開する" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "続ける" })).toBeVisible();
   await expect(page.getByText(/XP（今日 \+10）/)).toBeVisible();
 });
 
 test("skipping leaves the slot open and aids are recorded as assisted", async ({ page }) => {
   await login(page);
-  await page.getByRole("link", { name: "再開する" }).click();
+  await page.getByRole("link", { name: "続ける" }).click();
   await page.getByText("学習の補助を使う").click();
   await page.getByRole("button", { name: "英文を表示" }).click();
   await expect(page.getByLabel("英文")).toBeVisible();
@@ -94,6 +94,7 @@ test("offline: answer a saved unit, survive a restart, grade once after sync", a
   await page.getByRole("button", { name: "未開始分をオフライン用に保存" }).click();
   await expect(page.getByText(/件の問題と音声を端末に保存しました/)).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("heading", { name: "端末に保存した問題" })).toBeVisible();
+  await page.getByText(/今日の計画の詳細/).click(); // U01: the slot list is one tap away
   await expect(page.getByText("オフライン用に予約").first()).toBeVisible();
   await page.reload(); // from here the service worker controls the page and has the app shell
   await page.waitForFunction(() => navigator.serviceWorker.controller !== null);
@@ -262,6 +263,34 @@ test("R03: an online attempt survives a reload and a lost connection, and is gra
   await context.setOffline(false);
   await page.goto("/settings");
   await expect(page.getByText(/未同期の回答 0 件/)).toBeVisible({ timeout: 20000 });
+});
+
+test("U01: skip a task, shorten the day, end it; nothing skipped counts as done", async ({ page }) => {
+  await login(page);
+  await expect(page.getByRole("heading", { name: /今日のクエスト/ })).toBeVisible();
+  const group = page.getByRole("group", { name: "今日の調整" });
+  await expect(group).toBeVisible();
+  await group.getByRole("button", { name: "この課題を飛ばす" }).click();
+  await expect(page.getByText("この課題は飛ばしました（完了にはなりません）。次回の計画に持ち越します。")).toBeVisible();
+  await group.getByRole("button", { name: "今日はあと5分" }).click();
+  await expect(page.getByText(/残り5分/)).toBeVisible();
+  await checkTouchLayout(page);
+  if (await page.getByRole("button", { name: "オフライン用の予約を解除" }).count()) {  // left by the offline test
+    await page.getByRole("button", { name: "オフライン用の予約を解除" }).click();
+    await expect(page.getByText(/オフライン用の予約を\d+件解除しました/)).toBeVisible();
+  }
+  page.once("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: "今日は終了" }).click();
+  await expect(page.getByText(/次回に持ち越し/)).toBeVisible();
+  // a task whose answer arrived from offline but whose explanation was not confirmed stays: finish it via 続ける
+  if (await page.getByRole("link", { name: "続ける" }).count()) {
+    await page.getByRole("link", { name: "続ける" }).click();
+    await page.getByRole("button", { name: "解説を確認した" }).click();
+    await page.goto("/");
+  }
+  await expect(page.getByText(/今日はここまで/)).toBeVisible();
+  await expect(page.getByText(/次回へ: .*（飛ばした）/).first()).toBeVisible();
+  await expect(page.getByText("✓ 今日の予定を完了")).toHaveCount(0);
 });
 
 test("settings: unsent answers are announced before logout clears the device", async ({ page, context }) => {

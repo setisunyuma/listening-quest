@@ -334,6 +334,43 @@ def plan_rebuild(plan_id: str, body: S.RebuildIn, session: Session = Depends(db)
     return plans.plan_dto(session, plan)
 
 
+@app.get("/api/plans/{plan_id}/next")
+def plan_next(
+    plan_id: str, move: bool = False, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    """U01: the one task "始める／続ける" opens. On the move, tasks that need the screen wait for the desk."""
+    plan = session.get(m.DailyPlan, plan_id)
+    if plan is None or plan.user_id != user.id:
+        raise L.NotFound("plan not found")
+    slot = plans.next_task(session, plan, on_the_move=move)
+    waiting_desk = bool(move and slot is None and plans.next_task(session, plan) is not None)
+    return {"slot_id": slot.id if slot else None, "kind": slot.kind if slot else None, "unit_id": slot.unit_id if slot else None,
+            "reason_text": slot.reason_text if slot else None, "waiting_desk": waiting_desk, "summary": plans.day_summary(session, plan)}  # fmt: skip
+
+
+@app.post("/api/slots/{slot_id}/skip")
+def slot_skip(slot_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    out = plans.skip_task(session, user, slot_id, now_utc())
+    session.commit()
+    return out
+
+
+@app.post("/api/plans/{plan_id}/end")
+def plan_end(plan_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    out = plans.end_day(session, user, plan_id, now_utc())
+    session.commit()
+    return out
+
+
+@app.post("/api/plans/{plan_id}/shorten")
+def plan_shorten(
+    plan_id: str, body: S.ShortenIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    out = plans.shorten(session, user, plan_id, body.minutes, now_utc())
+    session.commit()
+    return out
+
+
 @app.post("/api/plans/{plan_id}/reserve")
 def plan_reserve(plan_id: str, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
     out = plans.reserve_slots(session, user, plan_id)

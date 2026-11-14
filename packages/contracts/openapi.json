@@ -23,6 +23,11 @@
       "title": "Plan Completed",
       "type": "boolean"
      },
+     "plan_ended": {
+      "default": false,
+      "title": "Plan Ended",
+      "type": "boolean"
+     },
      "slot_completed": {
       "title": "Slot Completed",
       "type": "boolean"
@@ -1299,6 +1304,12 @@
       "title": "Status",
       "type": "string"
      },
+     "summary": {
+      "additionalProperties": true,
+      "default": {},
+      "title": "Summary",
+      "type": "object"
+     },
      "total_slots": {
       "title": "Total Slots",
       "type": "integer"
@@ -1360,8 +1371,40 @@
       "title": "Awaiting Feedback Ack",
       "type": "boolean"
      },
+     "carried_from": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Carried From"
+     },
+     "carry_count": {
+      "default": 0,
+      "title": "Carry Count",
+      "type": "integer"
+     },
+     "carry_reason": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Carry Reason"
+     },
      "category": {
       "title": "Category",
+      "type": "string"
+     },
+     "context": {
+      "default": "any",
+      "title": "Context",
       "type": "string"
      },
      "est_sec": {
@@ -1375,6 +1418,11 @@
      "idx": {
       "title": "Idx",
       "type": "integer"
+     },
+     "kind": {
+      "default": "unit",
+      "title": "Kind",
+      "type": "string"
      },
      "mode": {
       "title": "Mode",
@@ -2352,6 +2400,21 @@
      "reason"
     ],
     "title": "SetupStatusOut",
+    "type": "object"
+   },
+   "ShortenIn": {
+    "properties": {
+     "minutes": {
+      "maximum": 180.0,
+      "minimum": 0.0,
+      "title": "Minutes",
+      "type": "integer"
+     }
+    },
+    "required": [
+     "minutes"
+    ],
+    "title": "ShortenIn",
     "type": "object"
    },
    "SubmitIn": {
@@ -5508,6 +5571,131 @@
     "summary": "Plan Get"
    }
   },
+  "/api/plans/{plan_id}/end": {
+   "post": {
+    "operationId": "plan_end_api_plans__plan_id__end_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "title": "Plan Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Plan End Api Plans  Plan Id  End Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Plan End"
+   }
+  },
+  "/api/plans/{plan_id}/next": {
+   "get": {
+    "description": "U01: the one task \"始める／続ける\" opens. On the move, tasks that need the screen wait for the desk.",
+    "operationId": "plan_next_api_plans__plan_id__next_get",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "title": "Plan Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "query",
+      "name": "move",
+      "required": false,
+      "schema": {
+       "default": false,
+       "title": "Move",
+       "type": "boolean"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Plan Next Api Plans  Plan Id  Next Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Plan Next"
+   }
+  },
   "/api/plans/{plan_id}/rebuild": {
    "post": {
     "operationId": "plan_rebuild_api_plans__plan_id__rebuild_post",
@@ -5685,6 +5873,73 @@
      }
     },
     "summary": "Plan Reserve"
+   }
+  },
+  "/api/plans/{plan_id}/shorten": {
+   "post": {
+    "operationId": "plan_shorten_api_plans__plan_id__shorten_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "plan_id",
+      "required": true,
+      "schema": {
+       "title": "Plan Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ShortenIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Plan Shorten Api Plans  Plan Id  Shorten Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Plan Shorten"
    }
   },
   "/api/push/key": {
@@ -6511,6 +6766,63 @@
      }
     },
     "summary": "Slot Replace"
+   }
+  },
+  "/api/slots/{slot_id}/skip": {
+   "post": {
+    "operationId": "slot_skip_api_slots__slot_id__skip_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "slot_id",
+      "required": true,
+      "schema": {
+       "title": "Slot Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Slot Skip Api Slots  Slot Id  Skip Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Slot Skip"
    }
   },
   "/api/stats/growth": {

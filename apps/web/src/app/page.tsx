@@ -18,6 +18,9 @@ export default function HomePage() {
   const { data, error, reload } = useData<Home>(() => api("/home"), [app.mode], 15000);
   const [msg, setMsg] = useState<{ kind: "ok" | "err" | "warn"; text: string } | null>(null);
   const [busy, setBusy] = useState("");
+  const [onMove, setOnMove] = useState(false);
+  useEffect(() => { setOnMove(localStorage.getItem("lq:onMove") === "1"); }, []);
+  const toggleMove = () => { const v = !onMove; setOnMove(v); localStorage.setItem("lq:onMove", v ? "1" : "0"); };
   const packs = useData(() => listPacks(app.me.user_id), [app.pending]);
 
   const act = async (key: string, fn: () => Promise<void>) => {
@@ -54,6 +57,20 @@ export default function HomePage() {
     autoDone.current = plan.id;
     takeOffline(plan);
   });
+  const skipNext = (slotId: string) => act("skip", async () => {
+    await api(`/slots/${slotId}/skip`, { body: {} });
+    setMsg({ kind: "ok", text: "この課題は飛ばしました（完了にはなりません）。次回の計画に持ち越します。" });
+  });
+  const shortenTo = (plan: Plan, minutes: number) => act("shorten", async () => {
+    const r = await api<Json>(`/plans/${plan.id}/shorten`, { body: { minutes } });
+    setMsg({ kind: "ok", text: r.carried ? `残り${minutes}分に収まるように ${r.carried} 件を次回へ持ち越しました。` : `残り${minutes}分にすべて収まります。` });
+  });
+  const endDay = (plan: Plan) => act("end", async () => {
+    if (!window.confirm("今日の学習を終了します。残りの課題は理由つきで次回に持ち越します（完了にはなりません）。")) return;
+    const r = await api<Json>(`/plans/${plan.id}/end`, { body: {} });
+    const kept = plan.slots.filter((s) => s.reserved && s.state === "pending").length;
+    setMsg({ kind: "ok", text: r.plan_ended || r.plan_completed ? `今日の学習を終了しました。${r.carried} 件を次回に持ち越します。` : `${r.carried} 件を次回に持ち越しました。オフライン用に保存した課題 ${kept} 件は、回答が届く可能性があるため残しています。` });
+  });
   const release = (plan: Plan) => act("release", async () => {
     if (app.pending > 0) { await app.syncNow(); }
     const r = await api<{ released: number }>(`/plans/${plan.id}/release`, { body: {} });
@@ -62,8 +79,12 @@ export default function HomePage() {
 
   if (!data) return error ? <OfflineHome error={error} /> : <p className="note" role="status">読み込み中…</p>;
   const plan = data.plan;
-  const next = plan?.slots.find((s) => s.state !== "completed");
-  const slotHref = (s: Json) => `/play?unit=${s.unit.id}&slot=${s.id}`;
+  // U01: the next task - a started one first, then the next pending one; on the move, desk tasks wait
+  const open = (s: Json) => s.state === "pending" || s.state === "started";
+  const next = plan?.slots.find((s) => s.state === "started" && (!onMove || s.context !== "desk")) ?? plan?.slots.find((s) => open(s) && (!onMove || s.context !== "desk"));
+  const deskWaiting = !!(onMove && !next && plan?.slots.some((s) => open(s)));
+  // a task whose answers are graded but whose explanation is not confirmed continues at its result
+  const slotHref = (s: Json) => (s.awaiting_feedback_ack && s.attempt_id ? `/play?attempt=${s.attempt_id}` : `/play?unit=${s.unit.id}&slot=${s.id}`);
   const slotRow = (s: Json) => (
     <div key={s.id} className={`slot ${s.state}`}>
                 <span className="n" aria-hidden="true">{s.state === "completed" ? "✓" : s.idx + 1}</span>
@@ -72,7 +93,7 @@ export default function HomePage() {
                   <div>{s.unit?.part_label} <small>{s.reason_text}・{fmtMin(s.est_sec)}</small></div>
                   {s.needs_all_answers && <small>未回答があるため未完了です。続きから解くか、別の問題に替えられます。</small>}
                 </div>
-                {s.state === "completed" ? <span className="chip">完了</span> : s.unit && <Link className="btn small" href={slotHref(s)} aria-label={`${s.idx + 1}番目を${s.state === "started" ? "続ける" : "解く"}`}>{s.awaiting_feedback_ack ? "解説へ" : s.state === "started" ? "続ける" : "解く"}</Link>}
+                {s.state === "completed" ? <span className="chip">完了</span> : s.state === "skipped" || s.state === "carried" ? <span className="chip">{s.state === "skipped" ? "飛ばした" : "持越"}{s.carry_reason ? `：${s.carry_reason}` : ""}</span> : s.unit && <Link className="btn small" href={slotHref(s)} aria-label={`${s.idx + 1}番目を${s.state === "started" ? "続ける" : "解く"}`}>{s.awaiting_feedback_ack ? "解説へ" : s.state === "started" ? "続ける" : "解く"}</Link>}
               </div>
   );
   return (
@@ -96,25 +117,36 @@ export default function HomePage() {
             <div className="quest">
               <Ring done={plan.completed_slots} total={plan.total_slots} />
               <div>
-                <p>残り <strong>{plan.total_slots - plan.completed_slots}</strong> Unit ・ 予定 {fmtMin(plan.remaining_sec)} <small>（全体 {fmtMin(plan.planned_sec)} / 目標 {plan.goal_minutes}分）</small></p>
-                {plan.status === "completed" ? <p className="verdict ok">✓ 今日の計画を完了しました</p> : plan.kind === "radio" ? (
+                <p>残りの予定 <strong>{fmtMin(plan.remaining_sec)}</strong> <small>（実施済み {plan.summary.done ?? plan.completed_slots}・残り {plan.summary.remaining ?? 0}{(plan.summary.carried || plan.summary.skipped) ? `・持越 ${(plan.summary.carried ?? 0) + (plan.summary.skipped ?? 0)}` : ""} / 目標 {plan.goal_minutes}分）</small></p>
+                {plan.status === "completed" ? <p className="verdict ok">✓ 今日の予定を完了</p> : plan.status === "ended" ? (
+                  <div><p className="verdict">今日はここまで <small>実施 {plan.summary.done} 件・持越 {plan.summary.carried + plan.summary.skipped} 件</small></p>
+                    {plan.summary.moved.map((x: Json) => <p key={x.slot_id} className="faint">次回へ: {x.title}（{x.reason}）</p>)}</div>
+                ) : plan.kind === "radio" ? (
                   <Link className="btn primary big" href={`/radio?program=${plan.radio_program_id}`}>ラジオを再生する</Link>
                 ) : next ? (
-                  <Link className="btn primary big" href={slotHref(next)}>{plan.completed_slots || next.state === "started" ? "再開する" : "開始する"}</Link>
-                ) : null}
+                  <>
+                    <Link className="btn primary big" href={slotHref(next)}>{plan.completed_slots || next.state === "started" ? "続ける" : "今日の学習を始める"}</Link>
+                    <p className="note">次: {next.unit?.part_label} <small>{next.reason_text}・{fmtMin(next.est_sec)}</small></p>
+                  </>
+                ) : deskWaiting ? <p className="note">移動中の予定は終了・机上の課題が残っています。机で「移動中」をオフにすると続きができます。</p> : null}
                 <p className="faint">予定時間は音声の長さ・規定の再生回数・解答と解説の見込みからの推定で、ちょうどその時間で終わる保証ではありません。</p>
               </div>
             </div>
             {plan.notes.map((n) => <Msg key={n} kind="warn">{NOTE[n] ?? n}</Msg>)}
             {plan.kind === "quest" && (() => {
               // show what comes next; finished and later slots stay one tap away
-              const open = plan.slots.filter((s) => s.state !== "completed");
-              const head = open.slice(0, 3), rest = plan.slots.filter((s) => !head.includes(s));
-              return (<>
-                {head.map(slotRow)}
-                {rest.length > 0 && <details className="group" style={{ marginTop: 10 }}><summary><span className="gt">ほかの枠（完了 {plan.completed_slots}・残り {open.length - head.length}）</span><span className="chev" aria-hidden="true">▶</span></summary><div className="body">{rest.map(slotRow)}</div></details>}
-              </>);
+              const left = plan.slots.filter(open);
+              return <details className="group" style={{ marginTop: 10 }}><summary><span className="gt">今日の計画の詳細（実施済み {plan.completed_slots}・残り {left.length}）</span><span className="chev" aria-hidden="true">▶</span></summary><div className="body">{plan.slots.map(slotRow)}</div></details>;
             })()}
+            {plan.kind === "quest" && plan.status === "active" && (
+              <div className="row" style={{ marginTop: 12 }} role="group" aria-label="今日の調整">
+                <label className="check"><input type="checkbox" checked={onMove} onChange={toggleMove} />移動中（画面を見る課題は後で）</label>
+                {next && <button onClick={() => skipNext(next.id)} disabled={!!busy}>この課題を飛ばす</button>}
+                <button onClick={() => shortenTo(plan, 5)} disabled={!!busy}>今日はあと5分</button>
+                <button onClick={() => shortenTo(plan, 10)} disabled={!!busy}>今日はあと10分</button>
+                <button className="ghost" onClick={() => endDay(plan)} disabled={!!busy}>今日は終了</button>
+              </div>
+            )}
             {plan.kind === "quest" && plan.status === "active" && (
               <div className="row" style={{ marginTop: 12 }}>
                 {plan.mode !== app.mode && <button onClick={() => rebuild(plan)} disabled={!!busy}>残りを{MODE_LABEL[app.mode]}に変更</button>}
@@ -130,7 +162,7 @@ export default function HomePage() {
                 <p>目標 {data.preview.goal_minutes}分 → <strong>{data.preview.slots}</strong> Unit・{fmtMin(data.preview.planned_sec)} の計画を作れます。</p>
                 <p className="note">内訳: 復習 {data.preview.by_category.review ?? 0}・弱点練習 {data.preview.by_category.weak ?? 0}・範囲を広げる {data.preview.by_category.explore ?? 0} <small>（開始すると枠数と時間上限が固定されます）</small></p>
                 <div className="row actions">
-                  <button className="primary big" onClick={() => start("quest")} disabled={!!busy}>クエストを開始</button>
+                  <button className="primary big" onClick={() => start("quest")} disabled={!!busy}>今日の学習を始める</button>
                   <button onClick={() => start("radio")} disabled={!!busy}>ラジオ中心で開始</button>
                 </div>
                 <p className="faint">ラジオ中心の計画は再生の進み具合で達成を判定し、解答型の成績とは別に記録します。</p>

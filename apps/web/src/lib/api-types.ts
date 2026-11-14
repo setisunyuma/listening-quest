@@ -871,6 +871,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/plans/{plan_id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Plan End */
+        post: operations["plan_end_api_plans__plan_id__end_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plans/{plan_id}/next": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Plan Next
+         * @description U01: the one task "始める／続ける" opens. On the move, tasks that need the screen wait for the desk.
+         */
+        get: operations["plan_next_api_plans__plan_id__next_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/plans/{plan_id}/rebuild": {
         parameters: {
             query?: never;
@@ -916,6 +953,23 @@ export interface paths {
         put?: never;
         /** Plan Reserve */
         post: operations["plan_reserve_api_plans__plan_id__reserve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/plans/{plan_id}/shorten": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Plan Shorten */
+        post: operations["plan_shorten_api_plans__plan_id__shorten_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1164,6 +1218,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/slots/{slot_id}/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Slot Skip */
+        post: operations["slot_skip_api_slots__slot_id__skip_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/stats/growth": {
         parameters: {
             query?: never;
@@ -1265,6 +1336,11 @@ export interface components {
             needs_all_answers: boolean;
             /** Plan Completed */
             plan_completed: boolean;
+            /**
+             * Plan Ended
+             * @default false
+             */
+            plan_ended: boolean;
             /** Slot Completed */
             slot_completed: boolean;
             /** Total Xp */
@@ -1732,6 +1808,13 @@ export interface components {
             slots: components["schemas"]["PlanSlotOut"][];
             /** Status */
             status: string;
+            /**
+             * Summary
+             * @default {}
+             */
+            summary: {
+                [key: string]: unknown;
+            };
             /** Total Slots */
             total_slots: number;
             /** Version */
@@ -1747,14 +1830,33 @@ export interface components {
             attempt_status: string | null;
             /** Awaiting Feedback Ack */
             awaiting_feedback_ack: boolean;
+            /** Carried From */
+            carried_from?: string | null;
+            /**
+             * Carry Count
+             * @default 0
+             */
+            carry_count: number;
+            /** Carry Reason */
+            carry_reason?: string | null;
             /** Category */
             category: string;
+            /**
+             * Context
+             * @default any
+             */
+            context: string;
             /** Est Sec */
             est_sec: number;
             /** Id */
             id: string;
             /** Idx */
             idx: number;
+            /**
+             * Kind
+             * @default unit
+             */
+            kind: string;
             /** Mode */
             mode: string;
             /** Needs All Answers */
@@ -2071,6 +2173,11 @@ export interface components {
             available: boolean;
             /** Reason */
             reason: string;
+        };
+        /** ShortenIn */
+        ShortenIn: {
+            /** Minutes */
+            minutes: number;
         };
         /** SubmitIn */
         SubmitIn: {
@@ -3981,6 +4088,78 @@ export interface operations {
             };
         };
     };
+    plan_end_api_plans__plan_id__end_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plan_next_api_plans__plan_id__next_get: {
+        parameters: {
+            query?: {
+                move?: boolean;
+            };
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     plan_rebuild_api_plans__plan_id__rebuild_post: {
         parameters: {
             query?: never;
@@ -4065,6 +4244,45 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plan_shorten_api_plans__plan_id__shorten_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShortenIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -4587,6 +4805,41 @@ export interface operations {
         };
     };
     slot_replace_api_slots__slot_id__replace_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                slot_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    slot_skip_api_slots__slot_id__skip_post: {
         parameters: {
             query?: never;
             header?: {
