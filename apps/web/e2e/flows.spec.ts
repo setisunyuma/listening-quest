@@ -346,3 +346,37 @@ test("settings: unsent answers are announced before logout clears the device", a
   expect(await page.evaluate(async () => (await indexedDB.databases()).filter((d) => d.name?.startsWith("lq-")).length)).toBe(0);
   expect(await page.evaluate(async () => (await caches.keys()).filter((k) => k.startsWith("lq-audio-")).length)).toBe(0);
 });
+
+test("practice: staged update task, a permitted check, results kept apart from exam scores", async ({ page }) => {
+  await login(page);
+  await setMode(page, "英検1級");
+  await page.getByRole("navigation", { name: "メイン" }).getByRole("link", { name: "教材", exact: true }).click();
+  await page.getByRole("link", { name: /会場の変更連絡/ }).click();
+  await expect(page.getByTestId("practice-purpose")).toContainText("変更連絡");
+  await expect(page.getByText("実践課題（試験形式の成績とは別に記録）")).toBeVisible();
+  await expect(page.getByText("生成した練習用の場面です（実録音ではありません）。")).toBeVisible();
+  // the update cannot be heard before the provisional judgement is given
+  await expect(page.getByRole("button", { name: "▶ 音声2を再生" })).toBeDisabled();
+  await page.getByRole("button", { name: "▶ 音声1を再生" }).click();
+  await expect(page.getByText(/再生済み 1 回/).first()).toBeVisible();
+  const groups = page.getByRole("group", { name: /問\d+の選択肢/ });
+  await expect(groups).toHaveCount(1);
+  await groups.first().getByRole("button").first().click();
+  await page.getByRole("button", { name: "▶ 音声2を再生" }).click();
+  await expect(groups).toHaveCount(4);
+  await expect(groups.first().getByRole("button").first()).toBeDisabled(); // the provisional answer is kept as it was
+  await checkTouchLayout(page);
+  await page.getByRole("button", { name: "Room B の新しい定員を事務に確認する" }).click();
+  await expect(page.getByText(/holds thirty people/)).toBeVisible();
+  for (let i = 1; i < 4; i++) await groups.nth(i).getByRole("button").first().click();
+  await page.getByRole("button", { name: "解答する" }).click();
+  const res = page.getByTestId("practice-result");
+  await expect(res).toBeVisible();
+  await expect(res.getByText("最初の理解（主要項目）")).toBeVisible();
+  await expect(res.getByText("確認後の達成")).toBeVisible();
+  await expect(res.getByText(/級や CEFR の認定ではありません/)).toBeVisible();
+  await page.goto("/growth");
+  await expect(page.getByTestId("practice-panel")).toBeVisible();
+  await expect(page.getByText("現在の主目標: 英検1級")).toBeVisible();
+  await setMode(page, "共通テスト");
+});

@@ -105,6 +105,8 @@ class LearnerUnit(BaseModel):
     figures: list[dict[str, Any]]
     segments: list[LearnerSegment]
     questions: list[LearnerQuestion]
+    # practice tasks: purpose, permitted checks (labels only) and rubric item names - never replies or answers
+    practice: dict[str, Any] | None = None
 
 
 class AttemptStartIn(BaseModel):
@@ -144,6 +146,12 @@ class PlayOut(BaseModel):
 class AidIn(BaseModel):
     event_id: str = EventId
     kind: Literal["transcript", "hint", "prompt_text"]
+
+
+class ClarifyIn(BaseModel):
+    event_id: str = EventId
+    clarification_id: str = Field(min_length=1, max_length=64)
+    initial_answers: dict[str, dict[str, Any] | None] = {}  # answers before the first check (first understanding)
 
 
 class SubmitIn(BaseModel):
@@ -201,6 +209,7 @@ class ResultOut(BaseModel):
     title: str
     missed: list[str] = []
     glossary: list[dict[str, Any]] = []
+    practice: dict[str, Any] | None = None  # practice tasks: per rubric item, first understanding vs after a check
 
 
 class AckOut(BaseModel):

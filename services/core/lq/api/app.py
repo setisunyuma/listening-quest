@@ -33,6 +33,7 @@ from lq.services import (
     importer,
     notify,
     plans,
+    practice,
     radio,
     replenish,
     stats,
@@ -452,6 +453,34 @@ def attempt_aid(
 ) -> dict[str, Any]:
     """Dedicated path for explicit help. The assisted flag is committed before any text is returned."""
     out = L.request_aid(session, user, attempt_id, event_id=body.event_id, kind=body.kind)
+    session.commit()
+    return out
+
+
+@app.post("/api/attempts/{attempt_id}/clarify")
+def attempt_clarify(
+    attempt_id: str, body: S.ClarifyIn, session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    """A permitted check inside a practice scene; recorded before the reply is returned."""
+    out = L.request_clarification(session, user, attempt_id, event_id=body.event_id, clarification_id=body.clarification_id,
+                                  initial_answers=body.initial_answers)  # fmt: skip
+    session.commit()
+    return out
+
+
+# ---------------------------------------------------------------- practice tasks (統合指示書 G01 / U02 / M01)
+
+
+@app.get("/api/practice")
+def practice_overview(session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    out = practice.overview(session, user, now_utc())
+    session.commit()
+    return out
+
+
+@app.post("/api/practice/{kind}/start")
+def practice_start(kind: str, session: Session = Depends(db), user: m.User = Depends(current_user)) -> dict[str, Any]:
+    out = practice.manual_start(session, user, kind, now_utc())
     session.commit()
     return out
 

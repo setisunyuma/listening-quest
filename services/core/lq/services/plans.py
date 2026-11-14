@@ -11,7 +11,7 @@ from lq.db import models as m
 from lq.domain import recommend as rec
 from lq.domain import rules
 from lq.domain.content import MODES, learner_view
-from lq.domain.profiles import current_profile, part_spec
+from lq.domain.profiles import get_profile, part_spec
 from lq.services import learning as L
 from lq.services.content import load_content
 
@@ -28,6 +28,7 @@ def candidate_units(session, user: m.User, mode: str, session_type: str = "train
                 U.invalidated_at.is_(None),
                 U.superseded_by.is_(None),
                 U.pool == "practice",
+                U.template_type != "practice_task",  # practice tasks are chosen apart (U02), never as exam items
             )
             .order_by(U.id)
         )
@@ -130,7 +131,7 @@ def _seed(user: m.User, day: date, mode: str, salt: str = "") -> str:
 
 def unit_card(unit: m.Unit) -> dict:
     try:
-        part = part_spec(current_profile(unit.mode), unit.part)
+        part = part_spec(get_profile(unit.profile_version), unit.part)
     except KeyError:
         part = None
     return {"id": unit.id, "title": unit.title, "mode": unit.mode, "part": unit.part, "part_label": part["label_ja"] if part else unit.part, "template_type": unit.template_type,
@@ -255,6 +256,10 @@ def start_plan(session, user: m.User, now: datetime, kind: str = "quest", mode: 
     )
     carried = [*carried, *extra]
     carried_sec += extra_sec
+    ps = _practice_slot(session, user, plan, budget, budget - carried_sec, len(carried))  # U02: one practice task
+    if ps is not None:
+        carried = [*carried, ps]
+        carried_sec += ps.est_sec
     cands, state, _ = learner_context(session, user, mode, day, now)
     draft = rec.build_plan(
         cands,
@@ -286,6 +291,67 @@ def start_plan(session, user: m.User, now: datetime, kind: str = "quest", mode: 
     plan.params = {**plan.params, "notes": notes, "held_reviews": held[:30]}
     session.flush()
     return plan
+
+
+def _practice_slot(
+    session, user: m.User, plan: m.DailyPlan, budget: int, room_sec: int, idx: int, kinds: list[str] | None = None
+) -> m.PlanSlot | None:
+    """U02: normally one practice main task a day, from the kinds open to this learner, on unseen material, inside
+    the remaining time. Short days and a common-test focus get none unless the learner opened a kind themselves."""
+    from lq.domain import progression as P
+    from lq.domain.practice import task_def
+    from lq.services import practice
+
+    if budget <= P.load_progression()["transition_period"]["short_day_sec"] or room_sec <= 0:
+        return None
+    for k in kinds or practice.available_kinds(session, user):
+        u = practice.unseen_unit(session, user, k)
+        if u is None:
+            continue
+        est = int(u.estimated_duration_sec or 300)
+        if est > room_sec:
+            continue
+        t = task_def(k)
+        p = (u.content or {}).get("practice") or {}
+        return m.PlanSlot(plan_id=plan.id, idx=idx, category="practice", mode=u.mode, unit_id=u.id, est_sec=est,
+                          time_cap_sec=rec.slot_cap(est, rules.load_config()), kind="practice",
+                          context="desk" if p.get("input_mode") == "desk" else "any", reason_code="practice",
+                          reason_text=f"実践: {t['title_ja']}", reason_params={"practice_kind": k, "purpose_ja": p.get("purpose_ja", "")})  # fmt: skip
+    return None
+
+
+def add_practice_today(session, user: m.User, kind: str, now: datetime) -> bool:
+    """A newly opened task replaces a not-started optional slot of today; otherwise it starts on a later day.
+    The day's time budget never grows."""
+    plan = get_plan(session, user, L.user_day(user, now))
+    if plan is None or plan.kind != "quest" or plan.status != "active":
+        return False
+    slots = _plan_slots(session, plan.id, lock=True)
+    if any(
+        x.kind == "practice"
+        and x.state in ("pending", "started")
+        and (x.reason_params or {}).get("practice_kind") == kind
+        for x in slots
+    ):
+        return True
+    optional = [
+        x
+        for x in slots
+        if x.state == "pending" and not x.reserved and x.kind == "unit" and x.category in ("explore", "weak")
+    ]
+    for x in sorted(optional, key=lambda x: (x.category != "explore", -x.idx)):
+        live = sum(y.est_sec for y in _live(slots) if y.id != x.id)
+        ps = _practice_slot(session, user, plan, plan.budget_sec, plan.budget_sec - live, x.idx, kinds=[kind])
+        if ps is None:
+            continue
+        x.state, x.carry_reason = "removed", "新しく解放した実践課題に置き換え"
+        session.add(ps)
+        session.flush()
+        slots = _plan_slots(session, plan.id)
+        plan.total_slots = len(_live(slots))
+        _sync_planned(plan, slots)
+        return True
+    return False
 
 
 def _inherited_and_bridge(

@@ -353,6 +353,45 @@
     "title": "Body_cli_import_api_import_post",
     "type": "object"
    },
+   "ClarifyIn": {
+    "properties": {
+     "clarification_id": {
+      "maxLength": 64,
+      "minLength": 1,
+      "title": "Clarification Id",
+      "type": "string"
+     },
+     "event_id": {
+      "maxLength": 64,
+      "minLength": 8,
+      "pattern": "^[A-Za-z0-9_\\-]+$",
+      "title": "Event Id",
+      "type": "string"
+     },
+     "initial_answers": {
+      "additionalProperties": {
+       "anyOf": [
+        {
+         "additionalProperties": true,
+         "type": "object"
+        },
+        {
+         "type": "null"
+        }
+       ]
+      },
+      "default": {},
+      "title": "Initial Answers",
+      "type": "object"
+     }
+    },
+    "required": [
+     "event_id",
+     "clarification_id"
+    ],
+    "title": "ClarifyIn",
+    "type": "object"
+   },
    "ConditionIn": {
     "properties": {
      "detail": {
@@ -829,6 +868,18 @@
      "part": {
       "title": "Part",
       "type": "string"
+     },
+     "practice": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Practice"
      },
      "pre_info": {
       "anyOf": [
@@ -1981,6 +2032,18 @@
       },
       "title": "Not First Reasons",
       "type": "array"
+     },
+     "practice": {
+      "anyOf": [
+       {
+        "additionalProperties": true,
+        "type": "object"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "Practice"
      },
      "presentation": {
       "title": "Presentation",
@@ -4737,6 +4800,74 @@
     "summary": "Attempt Aid"
    }
   },
+  "/api/attempts/{attempt_id}/clarify": {
+   "post": {
+    "description": "A permitted check inside a practice scene; recorded before the reply is returned.",
+    "operationId": "attempt_clarify_api_attempts__attempt_id__clarify_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "attempt_id",
+      "required": true,
+      "schema": {
+       "title": "Attempt Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/ClarifyIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Attempt Clarify Api Attempts  Attempt Id  Clarify Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Attempt Clarify"
+   }
+  },
   "/api/attempts/{attempt_id}/error-reasons": {
    "post": {
     "operationId": "attempt_reason_api_attempts__attempt_id__error_reasons_post",
@@ -6242,6 +6373,111 @@
      }
     },
     "summary": "Plan Shorten"
+   }
+  },
+  "/api/practice": {
+   "get": {
+    "operationId": "practice_overview_api_practice_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Practice Overview Api Practice Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Practice Overview"
+   }
+  },
+  "/api/practice/{kind}/start": {
+   "post": {
+    "operationId": "practice_start_api_practice__kind__start_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "kind",
+      "required": true,
+      "schema": {
+       "title": "Kind",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Practice Start Api Practice  Kind  Start Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Practice Start"
    }
   },
   "/api/push/key": {

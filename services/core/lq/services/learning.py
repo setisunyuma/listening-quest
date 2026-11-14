@@ -346,7 +346,7 @@ def start_attempt(
     sess = get_or_create_session(session, user.id, session_type, unit.mode, plan.id if plan else None, today)
     att = m.Attempt(
         id=attempt_id, user_id=user.id, unit_id=unit.id, stimulus_fingerprint=unit.stimulus_fingerprint, mode=unit.mode, session_id=sess.id,
-        session_type=session_type, slot_id=slot_id, presentation="official" if unit.presentation_profile.get("kind") == "official" else "arranged",
+        session_type=session_type, slot_id=slot_id, presentation={"official": "official", "practice": "practice"}.get(unit.presentation_profile.get("kind"), "arranged"),
         eligible_at_start=eligible, family_seen_before=family_seen, review_was_due=due, band_at_start=state.difficulty_band, plays={}, aids={},
         offline=offline, learning_day=today, started_at=start, first_claim=False,
     )  # fmt: skip
@@ -482,6 +482,45 @@ def request_aid(session, user: m.User, attempt_id: str, *, event_id: str, kind: 
     else:
         data = {"prompts": {q.id: q.prompt_en for q in content.questions}}
     return {"kind": kind, "aids": att.aids, **data}
+
+
+def request_clarification(
+    session, user: m.User, attempt_id: str, *, event_id: str, clarification_id: str, initial_answers: dict | None = None
+) -> dict:
+    """A permitted check inside a practice scene (統合指示書 G01 確認行為). The answers given before the first check
+    are kept as the first-understanding answers; asking is recorded and never turns into first-time success."""
+    att = _open_attempt(session, user, attempt_id)
+    unit = session.get(m.Unit, att.unit_id)
+    content = load_content(unit)
+    p = content.practice
+    if p is None:
+        raise Invalid("checks are only available in practice tasks")
+    c = next((x for x in p.clarifications if x.id == clarification_id), None)
+    if c is None:
+        raise Invalid("unknown check")
+    meta = dict(att.client_meta or {})
+    used = list(meta.get("clarifications", []))
+    if any(u.get("event_id") == event_id for u in used) or any(u["id"] == c.id for u in used):
+        return {"id": c.id, "reply_en": c.reply_en, "used": len(used), "max": p.max_clarifications}
+    if att.status != "open":
+        raise Conflict("this attempt is already submitted")
+    if len(used) >= p.max_clarifications:
+        raise Invalid("no more checks are available in this task")
+    if not used:
+        qmap = content.question_map()
+        snap = {}
+        for qid, a in (initial_answers or {}).items():
+            if qid in qmap and a is not None:
+                try:
+                    snap[qid] = normalize_answer(qmap[qid], a)
+                except ValueError:
+                    continue
+        meta["initial_answers"] = snap
+    used.append({"id": c.id, "event_id": event_id, "at": datetime.now(UTC).isoformat()})
+    meta["clarifications"] = used
+    att.client_meta = meta
+    session.flush()
+    return {"id": c.id, "reply_en": c.reply_en, "used": len(used), "max": p.max_clarifications}
 
 
 # ---------------------------------------------------------------- submit
@@ -713,8 +752,23 @@ def submit_attempt(
     att.result = {"questions": per_q, "correct_count": correct_n, "total": len(per_q), "complete": complete, "assisted": assisted,
                   "skills_wrong": sorted(set(skills_wrong)), "skills_right": sorted(set(skills_right) - set(skills_wrong))}  # fmt: skip
 
+    practice_res = None
+    if content.practice is not None:
+        # practice track: scored per rubric item, kept out of exam-format rates, skill bands and need signals
+        from lq.domain import practice as PR
+
+        used = [c["id"] for c in (att.client_meta or {}).get("clarifications", [])]
+        initial = {**{q: None for q in qmap}, **(att.client_meta or {}).get("initial_answers", {})} if used else None
+        practice_res = PR.score_practice(content, normalized, initial, used)
+        ok, why = PR.evidence_eligible(
+            practice_res, complete=complete, first_claim=att.first_claim, aids=att.aids, external_answer=external,
+            invalid=unit.invalidated_at is not None,
+            prosody_ok=(not content.practice.prosody_required) or content.practice.prosody_confirmed,
+        )  # fmt: skip
+        practice_res.update(evidence_eligible=ok, not_evidence_reasons=why)
+        att.result = {**att.result, "practice": practice_res, "critical_errors": practice_res["critical_first"]}
     # observations: one per skill per unit (mean over that unit's questions), strict-first only
-    if strict:
+    if strict and practice_res is None:
         by_skill: dict[str, list[float]] = {}
         for q in content.questions:
             for s in q.skill_tags:
@@ -733,7 +787,7 @@ def submit_attempt(
                     band=unit.difficulty_band,
                 )
             )
-    need = set(skills_wrong) | ({unit.primary_skill} if assisted else set())
+    need = set() if practice_res is not None else set(skills_wrong) | ({unit.primary_skill} if assisted else set())
     for s in sorted(need):  # "missed or needed help just now": steers the next pick, never the band
         session.add(
             m.SkillObservation(
@@ -761,9 +815,13 @@ def submit_attempt(
     )
     today = user_day(user, now)
     sched = apply_schedule(session, user, unit, _srs_outcome(complete, all_correct, assisted), today, attempt_id=att.id)
-    band = update_band(session, user, unit.mode, today, now) if strict else None
+    band = update_band(session, user, unit.mode, today, now) if strict and practice_res is None else None
     att.result = {**att.result, "schedule": sched, "band": band}
     session.flush()
+    if practice_res is not None:
+        from lq.services import practice as practice_svc
+
+        practice_svc.after_submit(session, user, att, now)
     if att.slot_id:
         from lq.services import plans
 
@@ -822,6 +880,24 @@ def result_dto(session, att: m.Attempt) -> dict:
         "glossary": [g.model_dump() for g in content.study_notes.glossary],
         "figures": [f.model_dump() for f in content.figures], "questions": questions, "feedback_viewed": att.feedback_viewed_at is not None,
         "slot_id": att.slot_id, "audio_kind": unit.audio_kind, "title": unit.title,
+        "practice": _practice_view(content, att),
+    }  # fmt: skip
+
+
+def _practice_view(content, att: m.Attempt) -> dict | None:
+    res = (att.result or {}).get("practice")
+    if not res or content.practice is None:
+        return None
+    from lq.domain.practice import CRITICAL_JA, task_def
+
+    t = task_def(content.practice.practice_kind)
+    labels = {r["id"]: r["label_ja"] for r in t["rubric"]}
+    used = {c["id"] for c in (att.client_meta or {}).get("clarifications", [])}
+    return {
+        **res, "title_ja": t["title_ja"], "goal_ja": t["goal_ja"], "purpose_ja": content.practice.purpose_ja,
+        "rubric_labels": labels, "critical_labels": {k: CRITICAL_JA.get(k, k) for k in {*res["critical_first"], *res["critical_final"]}},
+        "clarification_replies": [{"id": c.id, "label_ja": c.label_ja, "reply_en": c.reply_en} for c in content.practice.clarifications if c.id in used],
+        "generated_note_ja": "生成した練習用の場面です（実録音ではありません）" if content.practice.generated else "",
     }  # fmt: skip
 
 

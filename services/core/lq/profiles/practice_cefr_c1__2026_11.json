@@ -1,0 +1,61 @@
+{
+ "id": "practice_cefr_c1/2026-11-v1",
+ "mode": "cefr_c1",
+ "version": "2026-11-v1",
+ "current": false,
+ "label_ja": "CEFR C1の段階の実践課題（アプリ独自の練習。公式の試験形式ではありません）",
+ "kind": "practice",
+ "curriculum_version": "practice/2026-11-v1",
+ "sources": [
+  {
+   "url": "",
+   "note": "統合実装指示書（2026-11-14）E01/E02/C01/C02 の課題設計",
+   "checked_at": "2026-11-14",
+   "verified": "アプリ独自の練習設計。公式機関が指定・認定した方法ではない。"
+  }
+ ],
+ "exam": {
+  "label_ja": "実践課題",
+  "kind": "practice",
+  "answer_time_min": null,
+  "venue_note_ja": "",
+  "score": "count",
+  "total_questions": 7
+ },
+ "timing": {
+  "between_plays_sec": 0,
+  "note": "実践課題は試験形式の時間条件を使わない"
+ },
+ "scoring": [],
+ "section_points": {},
+ "parts": [
+  {
+   "part": "P3A",
+   "section": "実践",
+   "label_ja": "実践 P3A 会議を聞いて引き継ぐ",
+   "template_type": "practice_task",
+   "units": 1,
+   "questions_per_unit": 4,
+   "plays": 1,
+   "question_medium": "screen",
+   "question_timing": "after",
+   "min_speakers": 2,
+   "answer_wait_sec": 0,
+   "pre_read_sec": 0
+  },
+  {
+   "part": "P3B",
+   "section": "実践",
+   "label_ja": "実践 P3B 講義を使えるメモにする",
+   "template_type": "practice_task",
+   "units": 1,
+   "questions_per_unit": 3,
+   "plays": 1,
+   "question_medium": "screen",
+   "question_timing": "after",
+   "min_speakers": 1,
+   "answer_wait_sec": 0,
+   "pre_read_sec": 0
+  }
+ ]
+}

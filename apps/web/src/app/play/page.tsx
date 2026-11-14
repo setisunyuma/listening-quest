@@ -137,6 +137,23 @@ function AnswerView({ unit, attempt, pack, onResult }: { unit: LearnerUnit; atte
       if (kind === "prompt_text") setU({ ...u, questions: u.questions.map((x) => ({ ...x, prompt_en: r.prompts[x.id] ?? x.prompt_en })) });
     } catch (e) { setMsg((e as ApiError).detail); }
   };
+  // practice tasks (統合指示書): purpose first, staged questions, permitted checks recorded apart
+  const pr = u.practice as Json | null | undefined;
+  const itemOf = (qid: string): Json | undefined => pr?.items.find((it: Json) => it.question_id === qid);
+  const segIdx: Record<string, number> = Object.fromEntries(u.segments.map((sg, i) => [sg.id, i]));
+  const heard = (x: Json) => !pr || (x.segment_ids ?? []).every((sid: string) => (plays[sid] ?? 0) > 0);
+  const lockedInitial = (x: Json) => !!pr && itemOf(x.id)?.stage === "initial" && u.segments.some((sg) => !(x.segment_ids ?? []).includes(sg.id) && (plays[sg.id] ?? 0) > 0);
+  const segOpen = (i: number) => !pr || u.questions.every((x) => {
+    const ids: string[] = x.segment_ids ?? [];
+    return !ids.length || ids.some((sid) => segIdx[sid] >= i) || answers[x.id] !== undefined;
+  });
+  const [checks, setChecks] = useState<Json[]>([]);
+  const clarify = async (cid: string) => {
+    try {
+      const r = await api<Json>(`/attempts/${attempt!.attempt_id}/clarify`, { body: { event_id: uid(), clarification_id: cid, initial_answers: Object.fromEntries(u.questions.map((x) => [x.id, answers[x.id] ?? null])) } });
+      setChecks((c) => [...c.filter((x) => x.id !== r.id), r]);
+    } catch (e) { setMsg((e as ApiError).detail); }
+  };
   const ready = u.questions.every((x) => answers[x.id] !== undefined);
   const submit = async () => {
     setBusy(true); setMsg(""); player.pause();
@@ -184,7 +201,16 @@ function AnswerView({ unit, attempt, pack, onResult }: { unit: LearnerUnit; atte
       <section className="panel">
         <div className="row"><span className="chip">{u.part}</span>{attempt && <BandChip band={attempt.band} />}<DemoChip kind={attempt?.audio_kind ?? pack?.card.audio_kind} />
           {offline ? <span className="chip">オフライン解答</span> : attempt!.session_type === "review" ? <span className="chip purple">復習</span> : attempt!.counts_as_first && !assisted ? <span className="chip">初見として記録</span> : <span className="chip">練習として記録</span>}
-          {u.presentation_profile.kind !== "official" && <span className="chip">音声向けアレンジ</span>}</div>
+          {u.presentation_profile.kind === "audio_arranged" && <span className="chip">音声向けアレンジ</span>}
+          {pr && <span className="chip cat-practice">実践課題（試験形式の成績とは別に記録）</span>}</div>
+        {pr && (
+          <div className="msg ok" style={{ marginTop: 10 }} data-testid="practice-purpose">
+            <p><strong>目的:</strong> {pr.purpose_ja}</p>
+            {pr.listener_ja && <p><strong>伝える相手:</strong> {pr.listener_ja}</p>}
+            <p><strong>できたらよいこと:</strong> {pr.success_ja}</p>
+            {pr.generated && <p className="faint">生成した練習用の場面です（実録音ではありません）。</p>}
+          </div>
+        )}
         {u.pre_info?.situation_en && (<div style={{ marginTop: 10 }}><h3>Situation <small>（再生前に読んでください）</small></h3><p className="en">{u.pre_info.situation_en}</p></div>)}
         {u.figures.map((f: Json) => <Figure key={f.id} fig={f} />)}
         <div className="playbox" style={{ marginTop: 12 }}>
@@ -195,7 +221,7 @@ function AnswerView({ unit, attempt, pack, onResult }: { unit: LearnerUnit; atte
                 <div className="row">
                   {st === "playing" ? <button className="playbtn wide" onClick={player.pause} aria-label="一時停止">❚❚ 一時停止</button>
                     : st === "paused" ? <button className="playbtn wide primary" onClick={() => player.play()} aria-label="続きを再生">▶ 続きを再生</button>
-                    : <button className="playbtn wide primary" onClick={() => startPlay(seg)} disabled={st === "loading"}>
+                    : <button className="playbtn wide primary" onClick={() => startPlay(seg)} disabled={st === "loading" || !segOpen(i)}>
                         {st === "loading" ? "読み込み中…" : n === 0 ? `▶ ${u.segments.length > 1 ? `音声${i + 1}を` : ""}再生` : n < seg.plays ? `▶ ${n + 1}回目を再生` : "↻ もう一度聞く（補助として記録）"}</button>}
                 </div>
                 <p className="faint" aria-live="polite">規定 {seg.plays} 回・再生済み {n} 回{st === "playing" ? "・再生中" : st === "ended" ? "・再生終了" : ""}{u.questions.some((x) => x.prompt_medium === "audio") && i === u.segments.length - 1 ? "・問いは本文の後に音声で流れます" : ""}</p>
@@ -222,14 +248,15 @@ function AnswerView({ unit, attempt, pack, onResult }: { unit: LearnerUnit; atte
       </section>
 
       <section className="panel" aria-label="設問">
-        {u.questions.map((x) => (
+        {pr && u.segments.length > 1 && <p className="note">前半を聞いて暫定の判断を答えてから、後半（更新情報）を聞きます。暫定の答えは後から書き換えず、両方を記録します。</p>}
+        {u.questions.filter(heard).map((x) => (
           <div className="qbox" key={x.id}>
-            <h3>問 {x.slot}{u.questions.length > 1 ? ` / ${u.questions.length}` : ""}</h3>
+            <h3>問 {x.slot}{u.questions.length > 1 ? ` / ${u.questions.length}` : ""}{itemOf(x.id) && <small> {itemOf(x.id)!.label_ja}{itemOf(x.id)!.stage === "initial" ? "（暫定）" : ""}</small>}</h3>
             {x.prompt_en ? <p className="en">{x.prompt_en}</p> : <p className="note">問いは音声で流れます。</p>}
             {hints[x.id] && <p className="msg warn">ヒント: {hints[x.id]}</p>}
             <div className="choices" role="group" aria-label={`問${x.slot}の選択肢`}>
               {x.choices.map((c, i) => (
-                <button key={c.id} className="choice" aria-pressed={answers[x.id]?.choice_id === c.id} onClick={() => setAnswers({ ...answers, [x.id]: { choice_id: c.id } })}>
+                <button key={c.id} className="choice" aria-pressed={answers[x.id]?.choice_id === c.id} disabled={lockedInitial(x)} onClick={() => setAnswers({ ...answers, [x.id]: { choice_id: c.id } })}>
                   <span className="num" aria-hidden="true">{i + 1}</span><span className="en">{c.text}</span>
                 </button>
               ))}
@@ -245,6 +272,21 @@ function AnswerView({ unit, attempt, pack, onResult }: { unit: LearnerUnit; atte
             <button className="ghost small" aria-pressed={answers[x.id] === null} onClick={() => setAnswers({ ...answers, [x.id]: answers[x.id] === null ? undefined : null })}>{answers[x.id] === null ? "✓ スキップする（取り消す）" : "この問題をスキップ"}</button>
           </div>
         ))}
+        {pr && !offline && pr.clarifications.length > 0 && (
+          <div className="qbox" aria-label="確認する">
+            <h3>確認する <small>（場面の中で許される確認・最大 {pr.max_clarifications} 回）</small></h3>
+            <p className="note">確認する前の答えが「最初の理解」、確認した後の答えが「確認後の達成」として別々に記録されます。確認は失敗扱いになりません。</p>
+            {pr.clarifications.map((c: Json) => {
+              const got = checks.find((x) => x.id === c.id);
+              return (
+                <div key={c.id}>
+                  <button className="small" onClick={() => clarify(c.id)} disabled={!!got || checks.length >= pr.max_clarifications}>{c.label_ja}</button>
+                  {got && <p className="en msg ok">{got.reply_en}</p>}
+                </div>
+              );
+            })}
+          </div>
+        )}
         <div className="sticky-actions row actions">
           <button className="primary big wide" onClick={submit} disabled={!ready || busy}>{busy ? "送信中…" : offline ? "解答を保存する（採点は同期後）" : "解答する"}</button>
           {!ready && <small>すべての問いに答えるか、スキップを選ぶと解答できます。</small>}
@@ -271,7 +313,8 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
       const plan: Plan | null = [home.plan, home.carried_plan].find((p: Plan | null) => p?.slots.some((s) => s.id === result.slot_id)) ?? home.plan;
       const open = (x: Json) => x.state === "pending" || x.state === "started";  // skipped / carried tasks are not "next"
       const s = plan?.slots.find((x) => open(x) && x.unit && x.id !== result.slot_id) ?? plan?.slots.find((x) => open(x) && x.unit);
-      router.push(s && plan?.kind === "quest" && s.id !== result.slot_id ? `/play?unit=${s.unit!.id}&slot=${s.id}` : "/");
+      const href = (x: Json) => (x.kind === "repair" || x.kind === "recall" ? `/task?slot=${x.id}` : `/play?unit=${x.unit!.id}&slot=${x.id}`);
+      router.push(s && plan?.kind === "quest" && s.id !== result.slot_id ? href(s) : "/");
     } catch { router.push("/"); }
   }, [result.slot_id, router]);
   const confirm = async () => {
@@ -342,6 +385,7 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
           </div>
         )}
       </section>
+      {result.practice && <PracticeResult p={result.practice} />}
       {result.figures.length > 0 && <section className="panel">{result.figures.map((f: Json) => <Figure key={f.id} fig={f} highlight={result.questions.flatMap((x) => x.evidence.filter((e) => e.type === "figure").map((e) => e.element_id))} />)}</section>}
       <section className="panel" aria-label="設問ごとの解説">
         {result.questions.map((x) => {
@@ -433,6 +477,34 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
 
 
 const REPORT_KINDS: [string, string][] = [["unclear", "意味・解説が分かりにくい"], ["wrong", "答え・解説がおかしい"], ["audio", "音声がおかしい"], ["other", "その他"]];
+
+function PracticeResult({ p }: { p: Json }) {
+  const items = Object.entries(p.items as Record<string, Json>);
+  const pct = (v: number | null) => (v === null || v === undefined ? "判定保留" : `${Math.round(v * 100)}%`);
+  const checked = p.clarifications.length > 0;
+  return (
+    <section className="panel" aria-labelledby="pr-h" data-testid="practice-result">
+      <h2 id="pr-h">実践課題: {p.title_ja}</h2>
+      <p className="note">{p.purpose_ja}</p>
+      <dl className="kv">
+        <dt>最初の理解（主要項目）</dt><dd>{pct(p.first_understanding)}</dd>
+        {checked && <><dt>確認後の達成</dt><dd>{pct(p.task_success)}（確認 {p.clarifications.length} 回）</dd></>}
+      </dl>
+      <div className="table-wrap"><table className="fig">
+        <thead><tr><th scope="col">項目</th><th scope="col">最初</th>{checked && <th scope="col">確認後</th>}</tr></thead>
+        <tbody>{items.map(([qid, it]) => (
+          <tr key={qid}><td>{p.rubric_labels[it.rubric] ?? it.rubric}{it.main ? "" : "（補助項目）"}</td>
+            <td>{it.first.pending ? "判定保留" : it.first.correct ? "◯" : "×"}</td>
+            {checked && <td>{it.final.pending ? "判定保留" : it.final.correct ? "◯" : "×"}</td>}</tr>
+        ))}</tbody>
+      </table></div>
+      {p.critical_first.length > 0 && <Msg kind="warn">重大な取り違え: {p.critical_first.map((k: string) => p.critical_labels[k] ?? k).join("・")}。ほかの項目が正しくても、この点は短い確認で見直します。</Msg>}
+      {p.clarification_replies.map((c: Json) => <p key={c.id} className="note">確認「{c.label_ja}」への返答: <span className="en">{c.reply_en}</span></p>)}
+      <p className="faint">{p.evidence_eligible ? "次の課題に進むための証拠として記録しました。" : `証拠には数えません（${p.not_evidence_reasons.join("・")}）。練習としては記録されています。`} {p.generated_note_ja}</p>
+      <p className="faint">英語の表現の良し悪しは聴解の判定に入れていません。級や CEFR の認定ではありません。</p>
+    </section>
+  );
+}
 
 function ReportBox({ unitId, attemptId }: { unitId: string; attemptId: string }) {
   const [kind, setKind] = useState("");

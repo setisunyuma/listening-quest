@@ -18,7 +18,7 @@ from sqlalchemy import select
 from lq.config import get_settings
 from lq.db import models as m
 from lq.domain.content import UnitContent
-from lq.domain.profiles import current_profile, load_profiles, part_spec, profile_hash
+from lq.domain.profiles import current_profile, get_profile, load_profiles, part_spec, profile_hash
 from lq.generator import budget
 from lq.generator.authoring import lint_unit, unit_scoring_groups
 from lq.jobs import queue
@@ -46,7 +46,8 @@ def _sid(label: str) -> str:
 
 def expand_fixture(raw: dict) -> dict:
     """Expand the compact authoring notation of fixtures/units/*.yaml into a schema-2 unit dict."""
-    profile = current_profile(raw["mode"])
+    # practice tasks use their stage's practice profile (never the exam profile; 統合指示書 A01)
+    profile = get_profile(f"practice_{raw['mode']}/2026-11-v1") if raw.get("practice") else current_profile(raw["mode"])
     part = part_spec(profile, raw["part"])
     speakers = [{"id": "narrator", "role": "narrator", "label": "Narrator", "voice_hint": "neutral"}]
     speakers += [
@@ -103,16 +104,50 @@ def expand_fixture(raw: dict) -> dict:
             "answer": {"type": "single_choice", "choice_id": f"c{q['answer']}"}, "skill_tags": skills, "evidence": evidence,
             "feedback": {"answer_en": q["answer_en"], "explanation_ja": q["ja"], "hint_ja": q.get("hint", ""), "distractors": [{"choice_id": cid, "reason_ja": r} for cid, r in zip(wrong_ids, q["wrong"], strict=True)]},
         })  # fmt: skip
+    for q, rq in zip(questions, raw["questions"], strict=True):
+        if rq.get("accepted"):  # short answer: the same content in Japanese or English (V06)
+            q.update(type="blank", choices=[], answer={"type": "blank", "accepted": [str(a) for a in rq["accepted"]]})
+            q["feedback"]["distractors"] = []
     skills = sorted({s for q in questions for s in q["skill_tags"]})
     primary = raw.get("primary_skill") or max(skills, key=lambda s: sum(1 for q in questions if s in q["skill_tags"]))
+    practice = _practice_block(raw, questions) if raw.get("practice") else None
     return {
+        "practice": practice,
         "schema_version": 2, "source": "fixture", "content_id": raw["id"], "revision": raw.get("revision", 1), "mode": raw["mode"], "profile_version": profile["id"],
         "part": raw["part"], "template_type": part["template_type"], "title": raw["title"], "topic": raw["topic"], "skill_tags": skills, "primary_skill": primary,
         "provisional_difficulty_band": raw["band"], "calibration_status": "provisional", "family_id": raw["family"], "variant_of": raw.get("variant_of"),
-        "presentation_profile": _presentation(part), "speakers": speakers,
+        "presentation_profile": _presentation(part) if practice is None else {"kind": "practice", "choices_read_aloud": False, "figure_verbalized": False, "notes": "生成した練習用の場面（実録音ではありません）"},
+        "speakers": speakers,
         "pre_info": {"situation_en": raw["pre"], "read_seconds": part.get("pre_read_sec", 10)} if raw.get("pre") else None, "figures": figures, "segments": segments,
         "questions": questions, "scoring_groups": unit_scoring_groups(profile, raw["part"], [q["id"] for q in questions]),
-        "radio": {"supported": raw.get("radio", True), "reason": raw.get("radio_reason", ""), "figure_description_en": raw.get("radio_desc", "")},
+        "radio": {"supported": False, "reason": "実践課題はラジオでは扱いません", "figure_description_en": ""} if practice else
+                 {"supported": raw.get("radio", True), "reason": raw.get("radio_reason", ""), "figure_description_en": raw.get("radio_desc", "")},
+    }  # fmt: skip
+
+
+def _practice_block(raw: dict, questions: list[dict]) -> dict:
+    from lq.domain.practice import load_curriculum
+
+    cur = load_curriculum()
+    t = cur["tasks"][raw["part"]]
+    rub = {r["id"]: r for r in t["rubric"]}
+    pr = raw["practice"]
+    items = []
+    for q, rq in zip(questions, raw["questions"], strict=True):
+        r = rub[rq["rubric"]]
+        items.append({
+            "question_id": q["id"], "rubric": rq["rubric"], "main": bool(r.get("main")), "stage": r.get("stage", "final"),
+            # short answers have no choices: their critical errors are judged by the accepted content only
+            "critical_choices": {} if rq.get("accepted") else {f"c{k}": v for k, v in (rq.get("critical") or {}).items()},
+            "accept_choice_ids": [] if rq.get("accepted") else [f"c{k}" for k in rq.get("accept") or []],
+            "pending_if_unmatched": bool(rq.get("accepted")),
+        })  # fmt: skip
+    return {
+        "practice_kind": raw["part"], "curriculum_version": cur["version"], "purpose_ja": pr["purpose"], "listener_ja": pr.get("listener", ""),
+        "success_ja": pr["success"], "support_level": pr.get("support", 1), "input_mode": pr.get("input_mode", "voice_first"), "scene": pr["scene"],
+        "items": items, "max_clarifications": pr.get("max_clarifications", 0),
+        "clarifications": [{"id": c["id"], "label_ja": c["label"], "reply_en": c["reply"], "informs": [f"q{i}" for i in c.get("informs", [])]} for c in pr.get("clarifications", [])],
+        "prosody_required": bool(pr.get("prosody_required")), "prosody_confirmed": False, "audio_needed_checked": True, "generated": True,
     }  # fmt: skip
 
 
