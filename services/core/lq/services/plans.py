@@ -246,6 +246,22 @@ def _plan_slots(session, plan_id: str, lock: bool = False) -> list[m.PlanSlot]:
     return list(session.execute(q.with_for_update() if lock else q).scalars())
 
 
+def _live(slots) -> list[m.PlanSlot]:
+    return [s for s in slots if s.state != "removed"]
+
+
+def _budget_cap(plan: m.DailyPlan, slots, slot: m.PlanSlot) -> int:
+    """R07: a re-pick for `slot` may use its own cap, but never more than what the day's budget leaves after
+    every other slot - and never less than the slot's current length (so a re-pick cannot grow the total)."""
+    others = sum(x.est_sec for x in _live(slots) if x.id != slot.id)
+    return max(min(slot.time_cap_sec, plan.budget_sec - others), min(slot.est_sec, slot.time_cap_sec))
+
+
+def _sync_planned(plan: m.DailyPlan, slots) -> None:
+    """The plan's planned time is always the sum of its slots (R07: the display matches the slots)."""
+    plan.planned_sec = sum(x.est_sec for x in _live(slots))
+
+
 def _assign(slot: m.PlanSlot, pick: rec.Pick) -> None:
     if slot.unit_id != pick.unit_id:
         slot.assignment_version += 1
@@ -289,9 +305,9 @@ def after_unit(session, user: m.User, slot_id: str, now: datetime) -> None:
                 recent_topics=state.recent_topics,
                 recent_skills=state.recent_skills,
             )
-            pick = rec.pick_weak(cands, miss_state, used, s.time_cap_sec, seed, cfg)
+            pick = rec.pick_weak(cands, miss_state, used, _budget_cap(plan, slots, s), seed, cfg)
         if pick is None:
-            pick = rec.pick_for(s.category, cands, state, used, s.time_cap_sec, seed, cfg)
+            pick = rec.pick_for(s.category, cands, state, used, _budget_cap(plan, slots, s), seed, cfg)
         first_pending = False
         if pick is None:
             if s.unit_id:
@@ -299,6 +315,7 @@ def after_unit(session, user: m.User, slot_id: str, now: datetime) -> None:
             continue
         _assign(s, pick)
         used.add(pick.unit_id)
+    _sync_planned(plan, slots)
 
 
 def complete_slot(session, user: m.User, slot_id: str, attempt_id: str, now: datetime) -> dict:
@@ -362,7 +379,7 @@ def replace_slot(session, user: m.User, slot_id: str, now: datetime, reason: str
         cands,
         state,
         used,
-        slot.time_cap_sec,
+        _budget_cap(plan, slots, slot),
         f"{plan.params.get('seed', plan.id)}:replace:{slot.idx}:{slot.assignment_version}",
         rules.load_config(),
     )
@@ -371,6 +388,7 @@ def replace_slot(session, user: m.User, slot_id: str, now: datetime, reason: str
     _assign(slot, pick)
     slot.state = "pending"
     slot.attempt_id = None
+    _sync_planned(plan, slots)
     return {"replaced": True, "slot_id": slot.id, "unit_id": pick.unit_id, "reason_text": pick.reason_text}
 
 
