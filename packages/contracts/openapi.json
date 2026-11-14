@@ -491,6 +491,45 @@
     "title": "GenerateIn",
     "type": "object"
    },
+   "GoalDecisionIn": {
+    "properties": {
+     "decision": {
+      "enum": [
+       "adopt",
+       "defer",
+       "keep",
+       "manual_switch",
+       "return",
+       "trial"
+      ],
+      "title": "Decision",
+      "type": "string"
+     },
+     "event_id": {
+      "maxLength": 64,
+      "minLength": 8,
+      "title": "Event Id",
+      "type": "string"
+     },
+     "to_mode": {
+      "anyOf": [
+       {
+        "type": "string"
+       },
+       {
+        "type": "null"
+       }
+      ],
+      "title": "To Mode"
+     }
+    },
+    "required": [
+     "event_id",
+     "decision"
+    ],
+    "title": "GoalDecisionIn",
+    "type": "object"
+   },
    "HTTPValidationError": {
     "properties": {
      "detail": {
@@ -5232,6 +5271,112 @@
      }
     },
     "summary": "Export"
+   }
+  },
+  "/api/goals": {
+   "get": {
+    "operationId": "goals_overview_api_goals_get",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Goals Overview Api Goals Get",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Goals Overview"
+   }
+  },
+  "/api/goals/decision": {
+   "post": {
+    "operationId": "goals_decision_api_goals_decision_post",
+    "parameters": [
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "$ref": "#/components/schemas/GoalDecisionIn"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Goals Decision Api Goals Decision Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Goals Decision"
    }
   },
   "/api/health": {

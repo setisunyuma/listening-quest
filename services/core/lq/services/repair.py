@@ -193,7 +193,10 @@ def recall_slot_for_plan(session, user: m.User, plan: m.DailyPlan, today: date, 
     within a fifth of the day's time."""
     R = m.RepairItem
     due = session.execute(
-        select(R).where(R.user_id == user.id, R.stage == "delayed", R.due_day <= today).order_by(R.due_day, R.created_at).limit(MAX_RECALL_ITEMS)
+        # Q01: lines of invalidated material are not offered (the item and its history are kept)
+        select(R).join(m.Unit, m.Unit.id == R.unit_id)
+        .where(R.user_id == user.id, R.stage == "delayed", R.due_day <= today, m.Unit.invalidated_at.is_(None))
+        .order_by(R.due_day, R.created_at).limit(MAX_RECALL_ITEMS)
     ).scalars().all()  # fmt: skip
     cap = min(budget_left, plan.budget_sec // 5)
     items = due[: max(0, cap // RECALL_SEC_PER_ITEM)]

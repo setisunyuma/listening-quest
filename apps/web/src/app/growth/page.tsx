@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
+import { GoalPanel } from "@/components/Goals";
 import { useApp } from "@/components/Shell";
 import { Msg, useData } from "@/components/ui";
 import { api, fmtMin, MODE_LABEL, type Json } from "@/lib/api";
@@ -36,6 +37,7 @@ export default function GrowthPage() {
         <p className="note">{g.period_from} 〜 {g.period_to}。種類の違う数字は混ぜずに表示しています。</p>
         <p className="faint">{g.disclaimer}</p>
       </section>
+      <GoalPanel full />
       <div className="grid2">
         <div className="panel"><h3 style={{ marginTop: 0 }}>{g.volume.label}</h3>
           <dl className="kv"><dt>学習したUnit</dt><dd>{g.volume.units}</dd><dt>回答数</dt><dd>{g.volume.answers}</dd><dt>ラジオの再生時間</dt><dd>{g.volume.radio_listened_sec ? fmtMin(g.volume.radio_listened_sec) : "0分"}</dd><dt>XP（全モード）</dt><dd>{g.volume.xp_all_modes}</dd></dl></div>

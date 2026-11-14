@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { GoalPanel } from "@/components/Goals";
 import { useApp } from "@/components/Shell";
 import { BandChip, DemoChip, Msg, Ring, useData } from "@/components/ui";
 import { api, ApiError, CATEGORY_LABEL, fmtMin, MODE_LABEL, type Home, type Json, type Plan } from "@/lib/api";
@@ -177,6 +178,8 @@ export default function HomePage() {
             {data.carried_plan.slots.filter((s) => s.state !== "completed" && s.unit).slice(0, 1).map((s) => <Link key={s.id} className="btn small" href={slotHref(s)}>続きから</Link>)}</div>
         )}
       </section>
+
+      <GoalPanel />
 
       <section className="panel" aria-label="継続の記録">
         <div className="stats">
