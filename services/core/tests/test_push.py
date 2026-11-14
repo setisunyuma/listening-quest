@@ -95,10 +95,10 @@ def test_rules_send_each_kind_once_per_period(db, user, monkeypatch):
     monkeypatch.setattr(push, "send", lambda session, sub, msg, **k: (got.append(msg["title"]), "ok")[1])
     db.add(m.PushSubscription(user_id=user.id, endpoint="https://push.example/1", p256dh="x" * 20, auth="y" * 8))
     user.settings = {**(user.settings or {}), "notify_reminder_hour": 20, "timezone": "Asia/Tokyo"}
-    u = ready_unit(db, seed="n1")
-    u.ready_at = datetime.now(UTC)
-    db.commit()
     at_20 = datetime(2026, 11, 14, 11, 5, tzinfo=UTC)  # 20:05 in Tokyo
+    u = ready_unit(db, seed="n1")
+    u.ready_at = at_20 - timedelta(minutes=30)  # fixed, not the wall clock: the test must not depend on the time of day
+    db.commit()
     assert sorted(notify.run_for_user(db, user, at_20)) == ["material", "reminder"]
     db.commit()
     assert notify.run_for_user(db, user, at_20 + timedelta(minutes=10)) == []  # once per day each

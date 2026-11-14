@@ -883,12 +883,14 @@ def ack_feedback(session, user: m.User, attempt_id: str, *, now: datetime | None
             )
             if got:
                 awarded.append({"kind": "review_bonus", "amount": got})
-        if att.slot_id:
-            from lq.services import plans
+        from lq.services import plans
 
+        if not att.slot_id:
+            plan_info = plans.bind_free_attempt(session, user, att, now)  # U01 T10: same unit from the library
+        elif att.slot_id:
             plan_info = plans.complete_slot(session, user, att.slot_id, att.id, now)
-            if plan_info and plan_info.get("daily_xp"):
-                awarded.append({"kind": "daily_plan", "amount": plan_info["daily_xp"]})
+        if plan_info and plan_info.get("daily_xp"):
+            awarded.append({"kind": "daily_plan", "amount": plan_info["daily_xp"]})
     xp = total_xp(session, user.id)
     return {
         "awarded": awarded,
@@ -896,6 +898,7 @@ def ack_feedback(session, user: m.User, attempt_id: str, *, now: datetime | None
         "level": rules.level_for(xp, cfg),
         "slot_completed": bool(plan_info and plan_info.get("slot_completed")),
         "plan_completed": bool(plan_info and plan_info.get("plan_completed")),
+        "plan_ended": bool(plan_info and plan_info.get("plan_ended")),
         "needs_all_answers": not att.complete,
     }
 

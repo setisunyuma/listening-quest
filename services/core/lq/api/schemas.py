@@ -201,6 +201,7 @@ class AckOut(BaseModel):
     level: int
     slot_completed: bool
     plan_completed: bool
+    plan_ended: bool = False
     needs_all_answers: bool
 
 
@@ -241,6 +242,11 @@ class PlanSlotOut(BaseModel):
     attempt_status: str | None
     needs_all_answers: bool
     awaiting_feedback_ack: bool
+    kind: str = "unit"
+    context: str = "any"
+    carry_reason: str | None = None
+    carried_from: str | None = None
+    carry_count: int = 0
 
 
 class PlanOut(BaseModel):
@@ -259,6 +265,11 @@ class PlanOut(BaseModel):
     notes: list[str]
     radio_program_id: str | None
     slots: list[PlanSlotOut]
+    summary: dict[str, Any] = {}
+
+
+class ShortenIn(BaseModel):
+    minutes: int = Field(ge=0, le=180)
 
 
 class PlanStartIn(BaseModel):
