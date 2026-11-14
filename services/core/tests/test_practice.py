@@ -292,3 +292,13 @@ def test_api_practice_overview_and_clarify(db, user):
     ).json()
     assert "three working days" in r["reply_en"]
     assert c.post("/api/practice/P2A/start").json()["kind"] == "P2A"
+
+
+def test_m01_growth_keeps_practice_apart_from_exam_figures(db, user):
+    from lq.services import stats
+
+    u = unit(db, "pr-p1a-studio-a")
+    submit(db, user, u, choose(u, {1: 1}))  # online booking for two hours: a condition mix-up
+    g = stats.growth(db, user, T0 + days(1), "eiken_pre1")
+    assert g["first_official"]["units"] == 0 and g["first_arranged"]["units"] == 0 and g["review"]["units"] == 0
+    assert g["practice"]["tasks"] == 1 and g["practice"]["critical"] == 1 and g["practice"]["first_mean"] == 0.5

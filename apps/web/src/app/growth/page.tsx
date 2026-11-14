@@ -45,6 +45,13 @@ export default function GrowthPage() {
           <dl className="kv"><dt>学習したUnit</dt><dd>{g.volume.units}</dd><dt>回答数</dt><dd>{g.volume.answers}</dd><dt>ラジオの再生時間</dt><dd>{g.volume.radio_listened_sec ? fmtMin(g.volume.radio_listened_sec) : "0分"}</dd><dt>XP（全モード）</dt><dd>{g.volume.xp_all_modes}</dd></dl></div>
         <Stat s={g.first_official} /><Stat s={g.review} /><Stat s={g.assisted} />
         {g.first_arranged.units > 0 && <Stat s={g.first_arranged} />}
+        {g.practice?.tasks > 0 && (
+          <div className="panel"><h3 style={{ marginTop: 0 }}>{g.practice.label}</h3>
+            <dl className="kv"><dt>実施した課題</dt><dd>{g.practice.tasks}</dd><dt>証拠になった課題</dt><dd>{g.practice.evidence_tasks}</dd>
+              <dt>最初の理解（主要項目の平均）</dt><dd>{g.practice.first_mean === null ? "未確認" : `${Math.round(g.practice.first_mean * 100)}%`}</dd>
+              {g.practice.after_check_mean !== null && <><dt>確認後の達成</dt><dd>{Math.round(g.practice.after_check_mean * 100)}%</dd></>}
+              <dt>重大な取り違えがあった課題</dt><dd>{g.practice.critical}</dd></dl></div>
+        )}
         <div className="panel"><h3 style={{ marginTop: 0 }}>{g.self_reported.label}</h3>
           <dl className="kv"><dt>自分では正解</dt><dd>{g.self_reported.counts.correct ?? 0}</dd><dt>自分では不正解</dt><dd>{g.self_reported.counts.incorrect ?? 0}</dd><dt>不明</dt><dd>{g.self_reported.counts.unknown ?? 0}</dd><dt>ラジオで接触したUnit</dt><dd>{g.self_reported.radio_units}</dd></dl></div>
       </div>
