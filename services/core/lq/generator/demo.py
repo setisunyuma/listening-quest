@@ -569,6 +569,10 @@ def _demo_practice(spec: GenSpec) -> dict:
     first = script[0][0]
     script[0][0] = f"{first} (Demo variation {tag}.)" if not first.rstrip().endswith(".)") else first
     raw["script"] = script
+    scene = ((spec.extra or {}).get("scene") or "").strip()
+    if scene:  # the requested scene of the pool (demo: a label on a marked variation of the bundled example)
+        raw["practice"] = {**raw["practice"], "scene": scene}
+        raw["title"] = f"{raw['title']}（{(spec.extra or {}).get('scene_ja') or scene}・デモ）"[:120]
     data = expand_fixture(raw)
     data["source"] = spec.source
     return data

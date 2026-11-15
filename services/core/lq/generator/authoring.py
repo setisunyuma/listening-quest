@@ -230,13 +230,15 @@ def build_practice_prompt(spec: GenSpec) -> tuple[str, str]:
     user = (
         f"Practice task {spec.practice_kind} for the {spec.mode} stage (an app practice task, NOT an official exam item).\n"
         f"Goal: {task['goal_ja']}. Example scene: {task['scene_ja']}. Cognitive demand: {task['demand_ja']}.\n"
-        f"Write a realistic scene with a clear purpose, a listener for any hand-over, and the conditions needed to act. Use only knowledge given "
+        + (f"Scene type for this task (required, set 'scene' to '{(spec.extra or {}).get('scene')}'): {(spec.extra or {}).get('scene_ja') or (spec.extra or {}).get('scene')}.\n" if (spec.extra or {}).get("scene") else "")
+        + "Write a realistic scene with a clear purpose, a listener for any hand-over, and the conditions needed to act. Use only knowledge given "
         f"in the audio (no outside facts, no culture-specific knowledge without context). Natural speed and length for the scene; do not make it "
         f"harder by speed, rare words, noise or extreme accents.\n"
         f"Questions: exactly {part['questions_per_unit']}, one per rubric item, in this order: {rub}. Single choice, 4 options.\n"
         f"For each question list the choices that are critical misunderstandings with their kind (one of {', '.join(task['critical'])}). "
         f"Include an option such as 'need to check' / 'cannot be decided from this audio' and make it the answer whenever the audio lacks the "
-        f"needed information. Options must not be solvable by matching the same word.\n"
+        f"needed information. Options must not be solvable by matching the same word, by length or by caution: keep all "
+        f"four options similar in length and specificity, and give some wrong options cautious wording too.\n"
         f"Speakers: at least {part['min_speakers']}. Give each segment a short label. "
         + (f"Permitted checks: at most {clar.get('max', 0)}; for each give the question the learner may ask and the pre-written reply. " if clar.get("max") else "No permitted checks: return an empty list. ")
         + "In audio_dependency_en state which condition in the audio decides the answer and how the answer would change if it changed.\n"
@@ -446,7 +448,7 @@ def _practice_to_unit(raw: dict, spec: GenSpec) -> dict:
         "practice": {
             "practice_kind": spec.practice_kind, "curriculum_version": cur["version"], "purpose_ja": a.purpose_ja[:300] or task["goal_ja"],
             "listener_ja": a.listener_ja[:200], "success_ja": a.success_ja[:300] or task["goal_ja"], "support_level": 1,
-            "input_mode": (task.get("input_modes") or ["voice_first"])[0], "scene": _slug(a.scene)[:48] or "scene", "items": items,
+            "input_mode": (task.get("input_modes") or ["voice_first"])[0], "scene": ((spec.extra or {}).get("scene") or _slug(a.scene))[:48] or "scene", "items": items,
             "clarifications": [c.model_dump() for c in a.clarifications][:max_c], "max_clarifications": min(max_c, len(a.clarifications)),
             "prosody_required": bool(task.get("prosody_required")), "prosody_confirmed": False,
             # Q01 / V15: the author's statement is recorded; the blind review still has to solve it from the audio

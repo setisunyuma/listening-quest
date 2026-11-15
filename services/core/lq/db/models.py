@@ -660,4 +660,9 @@ class PracticeState(Base):
     rule_version: Mapped[str] = mapped_column(String(48))
     manual_started: Mapped[bool] = mapped_column(Boolean, default=False)
     recommendation: Mapped[dict] = mapped_column(JSONB, default=dict)
+    # three separate records (never merged): tried before it was open / unlock criteria met / opened by the main goal
+    tried_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    criteria_met_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    criteria: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    goal_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = ts()

@@ -43,6 +43,12 @@ export function PracticePanel({ full = false }: { full?: boolean }) {
             <p>{t.goal_ja}</p>
             <p className="note">場面の例: {t.scene_ja}（1回 {t.minutes[0]}〜{t.minutes[1]}分）</p>
             {t.reason_ja && <p className="note">理由: {t.reason_ja}</p>}
+            {t.records && (t.records.tried_at || t.records.criteria_met_at || t.records.goal_opened_at || t.records.manual) && (
+              <p className="faint" aria-label="記録">
+                {[t.records.tried_at && `先に体験: ${t.records.tried_at.slice(0, 10)}`, t.records.criteria_met_at && `解放基準を達成: ${t.records.criteria_met_at.slice(0, 10)}`,
+                  t.records.goal_opened_at && `主目標で開始: ${t.records.goal_opened_at.slice(0, 10)}`, t.records.manual && "本人の希望で開始"].filter(Boolean).join("・")}
+              </p>
+            )}
             {t.can_do.length > 0 ? (
               <ul aria-label="できたこと">{t.can_do.map((c: Json) => <li key={c.label_ja}>{c.label_ja}を取り出せた（{c.n}回・最近 {c.last}）</li>)}</ul>
             ) : <p className="faint">できたことの記録: 未確認（まだ証拠になる回答がありません）</p>}

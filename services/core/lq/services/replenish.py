@@ -107,23 +107,47 @@ def plan_jobs(session, user: m.User, mode: str, now: datetime) -> list[dict]:
     return specs
 
 
+PRACTICE_MIN_UNSEEN = 2  # unseen tasks kept ready per open practice kind (a small stock, not every stage)
+
+
 def practice_jobs(session, user: m.User) -> list[dict]:
-    """One generation job per open practice kind that has no unseen READY task and nothing on the way."""
+    """Generation jobs for the practice kinds open to this learner: each kind is topped up to a small unseen stock,
+    and each job asks for the scene of that kind used least so far, so unlock evidence (different material, several
+    scenes) can actually be collected and no single kind or scene takes over."""
     from lq.domain.practice import task_def
     from lq.services import practice
 
-    J = m.GenerationJob
-    inflight = {
-        j.params.get("practice_kind")
-        for j in session.execute(select(J).where(J.realm == user.realm, J.status.in_(("QUEUED", "RUNNING", "RETRY_WAIT", "BLOCKED")))).scalars()
-    }  # fmt: skip
+    J, U = m.GenerationJob, m.Unit
+    inflight = [
+        j for j in session.execute(select(J).where(J.realm == user.realm, J.status.in_(("QUEUED", "RUNNING", "RETRY_WAIT", "BLOCKED")))).scalars()
+        if (j.params or {}).get("practice_kind")
+    ]  # fmt: skip
     out = []
     for k in practice.available_kinds(session, user):
-        if k in inflight or practice.unseen_unit(session, user, k) is not None:
-            continue
         t = task_def(k)
-        out.append({"mode": t["stage"], "part": k, "template_type": "practice_task", "primary_skill": t["prereq_skills"][0], "band": 3,
-                    "source": "generated", "pool": "practice", "practice_kind": k})  # fmt: skip
+        mine = [j for j in inflight if j.params["practice_kind"] == k]
+        unseen = practice.unseen_count(session, user, k)
+        need = PRACTICE_MIN_UNSEEN - unseen - len(mine)
+        if need <= 0:
+            continue
+        used: dict[str, int] = {sc["id"]: 0 for sc in t.get("scene_pool", [])}
+        for u in session.execute(
+            select(U).where(U.realm == user.realm, U.template_type == "practice_task", U.part == k)
+        ).scalars():
+            sc = ((u.content or {}).get("practice") or {}).get("scene")
+            if sc in used:
+                used[sc] += 1
+        for j in mine:
+            sc = ((j.params or {}).get("extra") or {}).get("scene")
+            if sc in used:
+                used[sc] += 1
+        for _ in range(need):
+            scene = min(used, key=lambda x: (used[x], x)) if used else ""
+            if scene:
+                used[scene] += 1
+            ja = next((sc["ja"] for sc in t.get("scene_pool", []) if sc["id"] == scene), "")
+            out.append({"mode": t["stage"], "part": k, "template_type": "practice_task", "primary_skill": t["prereq_skills"][0], "band": 3,
+                        "source": "generated", "pool": "practice", "practice_kind": k, "extra": {"scene": scene, "scene_ja": ja}})  # fmt: skip
     return out
 
 
@@ -145,12 +169,16 @@ def run_for_user(session, user: m.User, now: datetime | None = None) -> int:
     modes = cfg_sys["replenish_modes"] or [L.user_settings(user)["active_mode"]]  # never all five unconditionally
     made = 0
     # T01 / Q01: practice tasks get a minimum stock only for the kinds open to this learner (never all stages)
+    per_kind: dict[str, int] = {}
     for spec in practice_jobs(session, user):
         if made_today + made >= cfg.replenish["max_jobs_per_day"]:
             return made
-        _, created = queue.enqueue(session, user.realm, "generate", {**spec, "seed": f"auto-{day}-{spec['practice_kind']}"},
-                                   dedupe_key=f"replenish:{user.realm}:{spec['practice_kind']}:{day}:p")  # fmt: skip
+        k = spec["practice_kind"]
+        per_kind[k] = per_kind.get(k, 0) + 1
+        _, created = queue.enqueue(session, user.realm, "generate", {**spec, "seed": f"auto-{day}-{k}-{per_kind[k]}-{spec['extra']['scene']}"},
+                                   dedupe_key=f"replenish:{user.realm}:{k}:{day}:p{per_kind[k]}")  # fmt: skip
         made += 1 if created else 0
+
     for mode in modes:
         for spec in plan_jobs(session, user, mode, now):
             if made_today + made >= cfg.replenish["max_jobs_per_day"]:
