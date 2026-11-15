@@ -571,3 +571,187 @@
       answer_en: Parking near the station should be arranged first.
       ja: Emmaが駅近くの駐車場を先に求めようと言い、Saraがそれに同意しています。
       wrong: [中止すべきだとは言っていません。, 店の移転は話題になっていません。, 対象は日曜日だけです。]
+
+# ---- picture variety (checked against the 2024 / 2025 Common Test pictures): attributes, counts, states, worn
+# things, and one labeled scene (Part 2). Hand-made verification items.
+- id: ct-1b-pic-watch
+  mode: common_test
+  part: 1B
+  title: 場面と絵の対応 B-3（絵・形と色）
+  topic: shopping
+  band: 2
+  family: ct-1b-shape-shade
+  speakers: {W: female}
+  figures:
+    - id: f1
+      kind: picture_set
+      title: Pictures
+      pictures:
+        - items: [{kind: watch, x: 50, y: 50, shape: round, shade: dark, label: "12:15", size: 150}]
+        - items: [{kind: watch, x: 50, y: 50, shape: square, shade: white, label: "12:15", size: 150}]
+        - items: [{kind: watch, x: 50, y: 50, shape: round, shade: white, label: "12:15", size: 150}]
+        - items: [{kind: watch, x: 50, y: 50, shape: square, shade: dark, label: "12:15", size: 150}]
+  script:
+    - - "W: I chose the watch with the square face. The face isn't white, though."
+  radio_desc: "There are four watches showing 12:15. Picture 1: a round, dark face. Picture 2: a square, white face. Picture 3: a round, white face. Picture 4: a square, dark face."
+  questions:
+    - prompt: Which picture matches what you hear?
+      skill: numbers_negation
+      figures: [f1]
+      choices: [Picture 1, Picture 2, Picture 3, Picture 4]
+      answer: 4
+      evidence: [1, "f1:p4"]
+      answer_en: Picture 4, the watch with a square face that is not white.
+      ja: 「四角い文字盤」で「白ではない」のは4です。
+      wrong:
+        - 文字盤は暗い色ですが、丸い形です。
+        - 四角い文字盤ですが、白です。
+        - 丸くて白い文字盤で、どちらの条件にも合いません。
+
+- id: ct-1b-pic-scarves
+  mode: common_test
+  part: 1B
+  title: 場面と絵の対応 B-4（絵・身に着けている物）
+  topic: winter
+  band: 3
+  family: ct-1b-worn-things
+  speakers: {M: male}
+  figures:
+    - id: f1
+      kind: picture_set
+      title: Pictures
+      pictures:
+        - items: [{kind: person, x: 30, y: 58, size: 150, hair: ponytail, pose: wave, wear: [{kind: scarf, pattern: check}]}, {kind: person, x: 72, y: 58, size: 150, hair: short, wear: [{kind: scarf, pattern: dots}, {kind: gloves, shade: dark}]}]
+        - items: [{kind: person, x: 30, y: 58, size: 150, hair: ponytail, pose: wave, wear: [{kind: scarf, pattern: check}]}, {kind: person, x: 72, y: 58, size: 150, hair: short, wear: [{kind: gloves, shade: dark}]}]
+        - items: [{kind: person, x: 30, y: 58, size: 150, hair: ponytail, pose: wave, wear: [{kind: scarf, pattern: dots}]}, {kind: person, x: 72, y: 58, size: 150, hair: short, wear: [{kind: scarf, pattern: check}, {kind: gloves, shade: dark}]}]
+        - items: [{kind: person, x: 30, y: 58, size: 150, hair: ponytail, pose: wave}, {kind: person, x: 72, y: 58, size: 150, hair: short, wear: [{kind: scarf, pattern: dots}]}]
+  script:
+    - - "M: My sister is wearing her checked scarf. I forgot mine, but at least I have my gloves on."
+  radio_desc: "Two people in each picture, a girl and a boy. Picture 1: the girl has a checked scarf; the boy has a dotted scarf and dark gloves. Picture 2: the girl has a checked scarf; the boy has dark gloves and no scarf. Picture 3: the girl has a dotted scarf; the boy has a checked scarf and gloves. Picture 4: the girl has no scarf; the boy has a dotted scarf and no gloves."
+  questions:
+    - prompt: Which picture matches what you hear?
+      skill: explicit_detail
+      figures: [f1]
+      choices: [Picture 1, Picture 2, Picture 3, Picture 4]
+      answer: 2
+      evidence: [1, "f1:p2"]
+      answer_en: Picture 2, the sister in a checked scarf and the speaker with gloves but no scarf.
+      ja: 姉（妹）はチェックのマフラー、話し手はマフラーを忘れて手袋だけなので2です。
+      wrong:
+        - 話し手（男の子）もマフラーをしています。
+        - 女の子のマフラーが水玉で、男の子はマフラーをしています。
+        - 女の子がマフラーをしておらず、男の子は手袋をしていません。
+
+- id: ct-1b-pic-tree-season
+  mode: common_test
+  part: 1B
+  title: 場面と絵の対応 B-5（絵・季節の状態）
+  topic: nature
+  band: 3
+  family: ct-1b-state-season
+  speakers: {W: female}
+  figures:
+    - id: f1
+      kind: picture_set
+      title: Pictures
+      pictures:
+        - items: [{kind: tree, x: 50, y: 50, state: fruit, size: 160}]
+        - items: [{kind: tree, x: 50, y: 50, size: 160}, {kind: leaf, x: 50, y: 92, count: 3}]
+        - items: [{kind: tree, x: 50, y: 50, state: bare, size: 160}, {kind: leaf, x: 50, y: 92, count: 8}]
+        - items: [{kind: tree, x: 40, y: 50, state: bare, size: 160}, {kind: snowman, x: 82, y: 80}, {kind: snow, x: 50, y: 20, count: 3}]
+  script:
+    - - "W: All the apples have been picked, but most of the leaves are still on the tree."
+  radio_desc: "Four pictures of one tree. Picture 1: the tree has leaves and apples. Picture 2: the tree has leaves and a few leaves are on the ground. Picture 3: the tree is bare and many leaves are on the ground. Picture 4: the tree is bare, it is snowing and there is a snowman."
+  questions:
+    - prompt: Which picture matches what you hear?
+      skill: explicit_detail
+      figures: [f1]
+      choices: [Picture 1, Picture 2, Picture 3, Picture 4]
+      answer: 2
+      evidence: [1, "f1:p2"]
+      answer_en: Picture 2, no apples but most of the leaves still on the tree.
+      ja: りんごはもう取られ、葉はまだほとんど木に残っているので2です。
+      wrong:
+        - りんごがまだなっています。
+        - 葉がほとんど落ちています。
+        - 葉がすべて落ちて、雪が降っています。
+
+- id: ct-2-pic-fish-count
+  mode: common_test
+  part: "2"
+  title: 短い対話と問い 2-3（絵・数）
+  topic: leisure
+  band: 2
+  family: ct-2-count
+  speakers: {M: male, W: female}
+  figures:
+    - id: f1
+      kind: picture_set
+      title: Pictures
+      pictures:
+        - items: [{kind: cooler, x: 50, y: 62, state: full, size: 150}, {kind: person, x: 18, y: 58}]
+        - items: [{kind: cooler, x: 50, y: 62, state: open, size: 150}, {kind: fish, x: 50, y: 64, count: 2}, {kind: person, x: 18, y: 58}]
+        - items: [{kind: cooler, x: 50, y: 62, state: empty, size: 150}, {kind: person, x: 18, y: 58}]
+        - items: [{kind: cooler, x: 50, y: 62, state: open, size: 150}, {kind: fish, x: 50, y: 64, count: 2}, {kind: fish, x: 84, y: 82, count: 4, size: 70}, {kind: person, x: 18, y: 58}]
+  script:
+    - - "W: How was fishing? Your cooler looks heavy."
+      - "M: It's mostly ice, actually. I only kept two fish."
+      - "W: Only two?"
+      - "M: I let the small ones go back into the river."
+      - "narrator: What does the man's cooler look like?"
+  radio_desc: "Four pictures of a man with an open cooler. Picture 1: the cooler is full of fish. Picture 2: two fish in the cooler. Picture 3: the cooler is empty. Picture 4: two fish in the cooler and four more fish lying next to it."
+  questions:
+    - prompt: What does the man's cooler look like?
+      skill: numbers_negation
+      figures: [f1]
+      choices: [Picture 1, Picture 2, Picture 3, Picture 4]
+      answer: 2
+      evidence: [2, 4, "f1:p2"]
+      answer_en: Picture 2, only two fish in the cooler; the small ones went back into the river.
+      ja: 残したのは2匹だけで、小さい魚は川に戻したので2です。
+      wrong:
+        - 重そうに見えたのは氷のためで、魚でいっぱいではありません。
+        - 2匹は残しています。
+        - 小さい魚は川に戻したので、横に並んではいません。
+
+- id: ct-2-scene-envelope
+  mode: common_test
+  part: "2"
+  title: 短い対話と問い 2-4（1枚の絵・番号）
+  topic: home
+  band: 2
+  family: ct-2-labeled-place
+  speakers: {M: male, W: female}
+  figures:
+    - id: f1
+      kind: labeled_scene
+      title: Picture
+      pictures:
+        - items:
+            - {kind: table, x: 50, y: 50, size: 200}
+            - {kind: laptop, x: 34, y: 40, state: "on"}
+            - {kind: lamp, x: 84, y: 34}
+            - {kind: envelope, x: 16, y: 44, mark: 1}
+            - {kind: envelope, x: 56, y: 42, mark: 2, shade: white}
+            - {kind: envelope, x: 70, y: 44, mark: 3, shade: dark}
+            - {kind: envelope, x: 46, y: 88, mark: 4, shade: white}
+  script:
+    - - "M: Have you seen the white envelope from the school?"
+      - "W: I put it next to your laptop this morning."
+      - "M: It's not there. Maybe it fell off the desk."
+      - "W: Oh, there it is, on the floor."
+      - "narrator: Where is the envelope?"
+  radio_desc: "A desk with a laptop on the left and a lamp on the right. Envelope 1 is at the left edge of the desk. Envelope 2, a white one, is next to the laptop. Envelope 3, a dark one, is near the lamp. Envelope 4, a white one, is on the floor under the desk."
+  questions:
+    - prompt: Where is the envelope?
+      skill: inference
+      figures: [f1]
+      choices: [Picture 1, Picture 2, Picture 3, Picture 4]
+      answer: 4
+      evidence: [3, 4, "f1:p1"]
+      answer_en: Number 4, the white envelope on the floor under the desk.
+      ja: パソコンの横にはなく、机から落ちて床にあったので4です。
+      wrong:
+        - 机の上の端にある封筒で、白い封筒の話とは別です。
+        - 朝に置いた場所ですが、今はそこにありません。
+        - ランプの近くの暗い色の封筒で、白くありません。

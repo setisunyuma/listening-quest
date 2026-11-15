@@ -177,4 +177,4 @@ main:has(.sticky-actions) { padding-bottom: calc(150px + env(safe-area-inset-bot
 .evidence .line { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; }
 .evidence .line p { margin: 4px 0; flex: 1; }
 .report textarea { width: 100%; }
-.picture-set { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 6px 0; } .picture-set .pic { margin: 0; } .picture-set svg { width: 100%; height: auto; display: block; } .picture-set .pic.hl svg rect:first-child { stroke: #6ee7b7; stroke-width: 3; }
+.picture-set { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 6px 0; } .picture-set.scene { grid-template-columns: minmax(0, 1fr); } .picture-set .pic { margin: 0; } .picture-set svg { width: 100%; height: auto; display: block; } .picture-set .pic.hl svg rect:first-child { stroke: #6ee7b7; stroke-width: 3; }

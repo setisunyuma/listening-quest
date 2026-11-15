@@ -164,6 +164,9 @@ def test_mock_result_names_the_arranged_questions_in_japanese(db, user):
     assert "絵を見比べて" in res["arranged_detail"][0]["note_ja"]
 
 
+_EXTRA = {"shade": "", "pattern": "", "shape": "", "count": 1, "state": "", "hair": "", "wear": [], "mark": 0}
+
+
 def test_generated_picture_sizes_are_normalised_and_identical_panels_fail():
     """Real-API check (2026-11-15): 3 of 4 generated picture sets gave size as percent of the panel (1-35) and were
     rejected whole. Size and position only change how an item is drawn, so they are normalised; the schema now
@@ -177,8 +180,8 @@ def test_generated_picture_sizes_are_normalised_and_identical_panels_fail():
     from lq.services.seed import expand_fixture
 
     raw = {"id": "f1", "kind": "picture_set", "title": "", "columns": [], "rows": [], "note": "", "pictures": [
-        {"id": "p1", "items": [{"kind": "person", "x": 50, "y": 50, "pose": "read", "label": "", "flip": False, "size": 20},
-                               {"kind": "bag", "x": 120, "y": -5, "pose": "", "label": "", "flip": False, "size": 1}]}]}  # fmt: skip
+        {"id": "p1", "items": [{**_EXTRA, "kind": "person", "x": 50, "y": 50, "pose": "read", "label": "", "flip": False, "size": 20},
+                               {**_EXTRA, "kind": "bag", "x": 120, "y": -5, "pose": "", "label": "", "flip": False, "size": 1}]}]}  # fmt: skip
     items = _figures([AFigure.model_validate(raw)])[0]["pictures"][0]["items"]
     assert [i["size"] for i in items] == [100, 100] and (items[1]["x"], items[1]["y"]) == (100, 0)
     size = authored_schema()["$defs"]["APicItem"]["properties"]["size"]
