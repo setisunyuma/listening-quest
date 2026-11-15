@@ -133,7 +133,12 @@ function ResultView({ result, onClose }: { result: Json; onClose: () => void }) 
     <>
       <section className="panel accent pop"><h2>{r.label}の結果</h2>
         <p style={{ fontSize: "1.6rem" }}><Score r={r} /></p>
-        {r.standard === false && <p className="chip demo">条件付きの結果（{(r.conditions as string[]).map((c) => ({ resume: "中断・再開", replay: "聞き直し", audio_error: "音声エラー", retry: "再試行" } as Record<string, string>)[c] ?? c).join("・")}あり）: 標準条件の結果とは区別します</p>}
+        {r.standard === false && <p className="chip demo">条件付きの結果（{(r.conditions as string[]).map((c) => ({ resume: "中断・再開", replay: "聞き直し", audio_error: "音声エラー", retry: "再試行", arranged_format: "形式調整版の設問" } as Record<string, string>)[c] ?? c).join("・")}あり）: 標準条件の結果とは区別します</p>}
+        {(r.arranged_detail as Json[] | undefined)?.length ? (
+          <div className="msg warn" data-testid="arranged-detail"><p><strong>本番と条件が異なる設問</strong></p>
+            {(r.arranged_detail as Json[]).map((d) => <p key={d.part}>{d.label_ja}: {d.note_ja}</p>)}
+            <p className="faint">これらの設問の点数は、本番の絵を見比べる条件での力を示しません。</p></div>
+        ) : null}
         <div className="table-wrap"><table className="list"><thead><tr><th scope="col">区分</th><th scope="col">正答数</th>{r.score_kind === "points" && <th scope="col">得点</th>}</tr></thead>
           <tbody>{Object.entries(r.by_section as Record<string, Json>).map(([k, v]) => <tr key={k}><th scope="row">{r.mode === "common_test" ? `第${k}問` : k}</th><td>{v.correct} / {v.total}</td>{r.score_kind === "points" && <td>{v.points} / {v.max_points}</td>}</tr>)}</tbody></table></div>
         <p className="faint">{r.kind === "app_check" ? "アプリ独自の構成による確認です。CEFRの認定や公式試験の結果を示すものではありません。" : r.score_kind === "count" ? "正答数のみを表示します。CSEスコアや合否への換算は行いません。" : "形式を参考にしたオリジナル問題での得点です。本試験の得点を保証するものではありません。"} 未回答は0点です。</p>

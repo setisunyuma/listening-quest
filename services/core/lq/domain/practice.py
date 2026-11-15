@@ -101,8 +101,9 @@ _NEG = re.compile(
 
 def _matches(accepted: str, text: str) -> bool:
     """The accepted content appears in the answer, and the answer adds no negation the accepted form lacks
-    ("not Friday" never matches "Friday")."""
-    if not accepted or accepted not in text:
+    ("not Friday" never matches "Friday"). "a + b" needs every part (e.g. who + by when)."""
+    parts = [x.strip() for x in accepted.split(" + ") if x.strip()]
+    if not parts or any(x not in text for x in parts):
         return False
     return bool(_NEG.search(accepted)) or not _NEG.search(text)
 
@@ -124,6 +125,15 @@ def _item_result(unit: UnitContent, it, ans: dict | None) -> dict:
         # the same content in Japanese, simple English or English with grammar slips is judged the same (V06)
         text = _norm(ans.get("text", ""))
         ok = bool(text) and any(_matches(_norm(a), text) for a in q.answer.accepted)
+        crit = (
+            next((k for pat, k in it.critical_texts.items() if _norm(pat) and _norm(pat) in text), None)
+            if text
+            else None
+        )
+        if ok and crit:  # both the right content and a critical one: never guessed - left for a check
+            return {"correct": False, "skipped": False, "critical": None, "pending": True}
+        if crit:  # e.g. a withdrawn proposal handed over as the decision
+            return {"correct": False, "skipped": False, "critical": crit, "pending": False}
         pending = (not ok) and it.pending_if_unmatched and bool(text)
         return {"correct": ok, "skipped": False, "critical": None, "pending": pending}
     ok = is_correct(q, ans)

@@ -401,3 +401,42 @@ def test_generated_exam_items_spread_the_answer_position():
         for q in u["questions"]:
             pos[[ch["id"] for ch in q["choices"]].index(q["answer"]["choice_id"]) + 1] += 1
     assert len(pos) == 4 and max(pos.values()) / sum(pos.values()) < 0.5, pos  # the model put every answer first
+
+
+# ---------------------------------------------------------------- 短答の引継ぎ (owner request 6)
+
+
+def test_short_answer_handover_scored_critical_pending_and_self_check_kept_apart(db, user):
+    u = unit(db, "pr-p3a-trip-handover")
+    db.commit()
+    c = UnitContent.model_validate(u.content)
+    q = {it.rubric: it.question_id for it in c.practice.items}
+    att = L.start_attempt(db, user, attempt_id=eid(), unit_id=u.id, now=T0)
+    for seg in c.segments:
+        L.record_play(db, user, att.id, event_id=eid(), segment_id=seg.id)
+    answers = {
+        q["decided"]: {"text": "京都に決まった"},  # scorable (Japanese)
+        q["undecided"]: {"text": "They will leave at eight, it was decided"},  # paraphrase: pending (not guessed)
+        q["owner"]: {"text": "Ken will check fares by Friday"},  # critical: wrong person
+        q["condition"]: {"text": "一人5,000円未満なら"},
+    }
+    att = L.submit_attempt(db, user, att.id, answers, now=T0 + days(0.01))
+    db.commit()
+    res = att.result["practice"]
+    assert res["items"][q["decided"]]["first"]["correct"] and res["items"][q["condition"]]["first"]["correct"]
+    assert res["items"][q["owner"]]["first"]["critical"] == "subject" and res["critical_first"] == ["subject"]
+    assert res["items"][q["undecided"]]["final"]["pending"] and q["undecided"] in res["pending"]
+    assert res["evidence_eligible"] is False and "判定保留の回答あり" in res["not_evidence_reasons"]
+    view = L.result_dto(db, att)
+    by = {x["id"]: x for x in view["questions"]}
+    assert by[q["decided"]]["correct"] and by[q["undecided"]]["pending"] and not by[q["undecided"]]["correct"]
+    before = dict(res)
+    out = L.self_check(db, user, att.id, q["undecided"], "same")
+    db.commit()
+    assert out["self_checks"][q["undecided"]]["verdict"] == "same"
+    after = db.get(m.Attempt, att.id).result["practice"]
+    assert (
+        after["first_understanding"] == before["first_understanding"] and after["evidence_eligible"] is False
+    )  # never merged
+    with pytest.raises(L.Invalid):
+        L.self_check(db, user, att.id, q["decided"], "same")  # only pending answers can be self-checked

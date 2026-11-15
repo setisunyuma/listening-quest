@@ -440,6 +440,7 @@ def submit(session, user: m.User, session_id: str, answers: dict, now: datetime 
         "standard": not conds,
         # R06: parts that are described in words (形式調整版) keep the set out of standard-condition results
         "arranged_parts": arranged,
+        "arranged_detail": _arranged_detail(session, sess, profile),
     }
     sess.status = "submitted"
     sess.submit_hash = h
@@ -458,6 +459,32 @@ def _set_arranged_parts(session, sess: m.LearningSession) -> list[str]:
         if kind != "official":
             parts.add(it["part"])
     return sorted(parts)
+
+
+def _arranged_detail(session, sess: m.LearningSession, profile: dict) -> list[dict]:
+    """Which questions of this set were not under the exam's conditions, in Japanese, by part and question number."""
+    labels = {p["part"]: p["label_ja"] for p in profile["parts"]}
+    by: dict[str, list[int]] = {}
+    for it in (sess.meta or {}).get("items", []):
+        kind = it.get("presentation")
+        if kind is None:
+            u = session.get(m.Unit, it["unit_id"])
+            kind = "official" if u is None or not _arranged(session, u) else "audio_arranged"
+        if kind != "official":
+            by.setdefault(it["part"], []).extend(int(v) for v in it["slots"].values())
+    out = []
+    for part, slots in sorted(by.items(), key=lambda kv: min(kv[1])):
+        slots = sorted(slots)
+        rng = (
+            f"問{slots[0]}"
+            if len(slots) == 1
+            else f"問{slots[0]}〜{slots[-1]}"
+            if slots == list(range(slots[0], slots[-1] + 1))
+            else "・".join(f"問{x}" for x in slots)
+        )
+        out.append({"part": part, "slots": slots, "label_ja": f"{labels.get(part, part)}（{rng}）",
+                    "note_ja": "絵を文章で示した形式調整版で解答しました。本番は絵を見比べて選びます。"})  # fmt: skip
+    return out
 
 
 def result_dto(session, user: m.User, session_id: str) -> dict:

@@ -124,3 +124,41 @@ def test_a_set_with_word_described_pictures_is_not_a_standard_result(db, user):
     sid = c.post("/api/assessments", json={"mock_set_id": ms.id}).json()["session_id"]
     res = c.post(f"/api/assessments/{sid}/submit", json={"answers": {}}).json()
     assert res["standard"] is False and "arranged_format" in res["conditions"] and res["arranged_parts"] == ["1B", "2"]
+
+
+def test_drawn_pictures_make_1b_and_part2_official_and_wrong_panel_counts_fail():
+    from pathlib import Path
+
+    import yaml as _y
+
+    from lq.domain.content import UnitContent
+    from lq.services.seed import expand_fixture
+
+    raws = {
+        r["id"]: r
+        for r in _y.safe_load(
+            (Path(__file__).resolve().parents[3] / "fixtures/units/common_test.yaml").read_text(encoding="utf-8")
+        )
+    }
+    for fid, part in (("ct-1b-pic-reading", "1B"), ("ct-2-pic-meeting-time", "2")):
+        u = UnitContent.model_validate(expand_fixture(raws[fid]))
+        assert u.presentation_profile.kind == "official" and lint_unit(u) == []
+        f = u.figures[0]
+        three = u.model_copy(update={"figures": [f.model_copy(update={"pictures": f.pictures[:3]})]})
+        assert any(
+            "audio_arranged" in e for e in contract_errors(three, part_spec(current_profile("common_test"), part))
+        )
+        bad = u.model_copy(update={"questions": [q.model_copy(update={"figure_ids": []}) for q in u.questions]})
+        assert any("audio_arranged" in e for e in contract_errors(bad, part_spec(current_profile("common_test"), part)))
+
+
+def test_mock_result_names_the_arranged_questions_in_japanese(db, user):
+    _reserve_full_set(db, "common_test")
+    ms = assessment.assemble(db, "demo", "common_test")
+    db.commit()
+    c = login()
+    sid = c.post("/api/assessments", json={"mock_set_id": ms.id}).json()["session_id"]
+    res = c.post(f"/api/assessments/{sid}/submit", json={"answers": {}}).json()
+    labels = [d["label_ja"] for d in res["arranged_detail"]]
+    assert labels == ["第1問B 場面と絵の対応（問5〜8）", "第2問 短い対話と問い（問9〜11）"]
+    assert "絵を見比べて" in res["arranged_detail"][0]["note_ja"]

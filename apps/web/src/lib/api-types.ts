@@ -648,6 +648,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/attempts/{attempt_id}/self-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Attempt Self Check
+         * @description The learner's own check of a pending short answer (kept apart from automatic scoring).
+         */
+        post: operations["attempt_self_check_api_attempts__attempt_id__self_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/attempts/{attempt_id}/submit": {
         parameters: {
             query?: never;
@@ -2353,6 +2373,11 @@ export interface components {
             id: string;
             /** Items */
             items: components["schemas"]["LearnerChoice"][];
+            /**
+             * Pending
+             * @default false
+             */
+            pending: boolean;
             /** Prompt En */
             prompt_en: string;
             /** Self Reason */
@@ -3927,6 +3952,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ResultOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attempt_self_check_api_attempts__attempt_id__self_check_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-csrf-token"?: string | null;
+            };
+            path: {
+                attempt_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */

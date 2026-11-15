@@ -62,6 +62,76 @@
         - テーブルの「上」ではなく「下」で、座っているのではなく寝ています。
         - テーブルがあるのはドアではなく窓のそばです。
 
+- id: ct-1b-pic-reading
+  mode: common_test
+  part: 1B
+  title: 場面と絵の対応 B-2（絵）
+  topic: park
+  band: 2
+  family: ct-1b-pose-negation
+  speakers: {W: female}
+  figures:
+    - id: f1
+      kind: picture_set
+      title: Pictures
+      pictures:
+        - items: [{kind: person, x: 45, y: 58, pose: stand}, {kind: umbrella, x: 56, y: 40}, {kind: tree, x: 85, y: 50}]
+        - items: [{kind: chair, x: 45, y: 72}, {kind: person, x: 45, y: 58, pose: read}, {kind: book, x: 60, y: 55}, {kind: umbrella, x: 15, y: 78, size: 80}, {kind: tree, x: 85, y: 50}]
+        - items: [{kind: chair, x: 45, y: 72}, {kind: person, x: 45, y: 58, pose: sit}, {kind: umbrella, x: 56, y: 40}, {kind: tree, x: 85, y: 50}]
+        - items: [{kind: person, x: 45, y: 58, pose: read}, {kind: book, x: 60, y: 55}, {kind: umbrella, x: 15, y: 78, size: 80}, {kind: tree, x: 85, y: 50}]
+  script:
+    - - "W: The girl isn't using her umbrella anymore. She's sitting down, reading a book."
+  radio_desc: "There are four pictures. Picture 1: a girl standing under an umbrella. Picture 2: a girl sitting and reading a book, with her umbrella on the ground. Picture 3: a girl sitting under an umbrella. Picture 4: a girl standing and reading a book, with her umbrella on the ground."
+  questions:
+    - prompt: Which picture matches what you hear?
+      skill: numbers_negation
+      figures: [f1]
+      choices: [Picture 1, Picture 2, Picture 3, Picture 4]
+      answer: 2
+      evidence: [1, "f1:p2"]
+      answer_en: Picture 2, a girl sitting and reading a book without using her umbrella.
+      ja: 「もう傘を使っていない」「座って本を読んでいる」の両方に合うのは2です。
+      wrong:
+        - 立って傘をさしています。
+        - 座っていますが、傘をさしたままで本も読んでいません。
+        - 本を読んでいますが、座らずに立っています。
+
+- id: ct-2-pic-meeting-time
+  mode: common_test
+  part: "2"
+  title: 短い対話と問い 2-2（絵）
+  topic: school
+  band: 2
+  family: ct-2-time-shift
+  speakers: {M: male, W: female}
+  figures:
+    - id: f1
+      kind: picture_set
+      title: Pictures
+      pictures:
+        - items: [{kind: clock, x: 50, y: 45, label: "9:15", size: 150}, {kind: sign, x: 50, y: 88, label: "LIBRARY"}]
+        - items: [{kind: clock, x: 50, y: 45, label: "9:30", size: 150}, {kind: sign, x: 50, y: 88, label: "LIBRARY"}]
+        - items: [{kind: clock, x: 50, y: 45, label: "9:45", size: 150}, {kind: sign, x: 50, y: 88, label: "LIBRARY"}]
+        - items: [{kind: clock, x: 50, y: 45, label: "10:00", size: 150}, {kind: sign, x: 50, y: 88, label: "LIBRARY"}]
+  script:
+    - - "M: Shall we meet at the library at nine fifteen?"
+      - "W: I have a lesson until nine thirty. Can we meet fifteen minutes after that?"
+      - "M: Sure. See you then."
+  radio_desc: "There are four clocks at the library. Picture 1 shows 9:15. Picture 2 shows 9:30. Picture 3 shows 9:45. Picture 4 shows 10:00."
+  questions:
+    - prompt: What time will they meet?
+      skill: numbers_negation
+      figures: [f1]
+      choices: [Picture 1, Picture 2, Picture 3, Picture 4]
+      answer: 3
+      evidence: [2, 3, "f1:p3"]
+      answer_en: They will meet at 9:45, fifteen minutes after her lesson ends at 9:30.
+      ja: 授業が9時30分まで、その15分後に会うので9時45分です。
+      wrong:
+        - 9時15分は最初の提案で、断られています。
+        - 9時30分は授業が終わる時刻です。
+        - 10時という時刻は出てきません。
+
 - id: ct-2-train-time
   mode: common_test
   part: "2"

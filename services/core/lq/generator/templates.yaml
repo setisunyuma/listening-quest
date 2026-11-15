@@ -43,8 +43,8 @@ review_rubric: |
 modes:
   common_test:
     1A: {words: [15, 30], guide: "One speaker says one or two short sentences. One question: choose the statement that best matches the meaning. Four choices shown on screen."}
-    1B: {words: [15, 30], guide: "One speaker describes a scene in one or two sentences. Provide a figure of kind scene_set with four rows describing four pictures in words; the four choices refer to those rows."}
-    "2": {words: [35, 70], guide: "Two speakers, 4-6 short turns about an everyday situation. The question is spoken after the dialogue (audio only). Four choices."}
+    1B: {words: [15, 30], guide: "One speaker describes a scene in one or two sentences. Provide ONE figure of kind picture_set with exactly four panels (pictures), in choice order; the choices are 'Picture 1'..'Picture 4' and the question lists that figure in figure_ids. Each panel is a list of drawn items (kind, x/y 0-100 position, pose, a short label only for a clock time or a sign). The panels must differ only in what the sentence decides (position, action, presence, number, time): the answer must need the audio. Rows, columns and title stay empty except a short title."}
+    "2": {words: [35, 70], guide: "Two speakers, 4-6 short turns about an everyday situation. The question is spoken after the dialogue (audio only). Provide ONE figure of kind picture_set with exactly four panels in choice order (choices 'Picture 1'..'Picture 4', the question lists the figure in figure_ids); the panels differ in what the dialogue decides (a time on a clock, a place, an object, an action)."}
     "3": {words: [50, 100], guide: "Two speakers, short dialogue. One question printed on screen. Four choices."}
     4A_order: {words: [70, 120], guide: "One speaker narrates four events. Four questions, one per position (1st-4th), each choosing among the SAME FIVE event descriptions (the four events in a shuffled order plus one that does not happen). All four must be right to score."}
     4A_match: {words: [80, 130], guide: "One speaker gives rules that assign four items to categories. Four questions (one per item) sharing six category choices."}

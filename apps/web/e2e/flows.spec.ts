@@ -461,3 +461,52 @@ test("today's tasks across two days: wrong answer, repair of a missed line, end 
     await setClock(page, 0);
   }
 });
+
+// Owner request 5: Common Test 1B / Part 2 pictures are drawn and readable at phone width.
+test("1B / Part 2: pictures are drawn from data and stay readable on a phone", async ({ page }) => {
+  await login(page);
+  await setMode(page, "共通テスト");
+  for (const title of [/場面と絵の対応 B-2（絵）/, /短い対話と問い 2-2（絵）/]) {
+    await page.goto("/library");
+    await page.getByRole("link", { name: title }).first().click();
+    const panels = page.getByTestId("picture-panel");
+    await expect(panels).toHaveCount(4);
+    for (let i = 0; i < 4; i++) {
+      const b = (await panels.nth(i).boundingBox())!;
+      expect(b.width).toBeGreaterThanOrEqual(140); // two per row on a phone, each wide enough to compare
+      await expect(panels.nth(i)).toHaveAttribute("aria-label", `絵 ${i + 1}`);
+    }
+    await expect(page.getByText("音声向けアレンジ")).toHaveCount(0); // drawn pictures: the official presentation
+    await checkTouchLayout(page);
+    await page.screenshot({ path: `test-results/pictures-${title.source.includes("B-2") ? "1b" : "2"}.png`, fullPage: false });
+  }
+  // a clock time the answer depends on is drawn as large, readable text
+  const nine45 = page.getByTestId("picture-panel").nth(2).locator("text", { hasText: "9:45" });
+  await expect(nine45).toBeVisible();
+  expect((await nine45.boundingBox())!.height).toBeGreaterThanOrEqual(11);
+});
+
+// Owner request 6: a C1 meeting hand-over written in the learner's own words (Japanese or English).
+test("practice short answers: written hand-over, pending paraphrase and the learner's own check", async ({ page }) => {
+  await login(page);
+  await setMode(page, "C1");
+  await page.goto("/library");
+  await page.getByRole("link", { name: /打ち合わせの引継ぎ（記述）/ }).first().click();
+  await page.getByRole("button", { name: /再生/ }).first().click();
+  await page.getByLabel("問1の解答").fill("京都に決まった");
+  await page.getByLabel("問2の解答").fill("いつ行くかはまだ話し合っている"); // a paraphrase the accepted wording does not cover
+  await page.getByLabel("問3の解答").fill("Ken will check the fares by Friday");
+  await page.getByLabel("問4の解答").fill("ひとり五千円未満であること");
+  await checkTouchLayout(page);
+  await page.getByRole("button", { name: "解答する" }).click();
+  const res = page.getByTestId("practice-result");
+  await expect(res.getByText(/重大な取り違え: 主体/)).toBeVisible();
+  await expect(page.getByText("○ 正解").first()).toBeVisible();
+  await expect(page.getByText("あなたの解答:").first()).toBeVisible();
+  await expect(page.getByText("？ 判定保留")).toHaveCount(1); // not guessed as right or wrong
+  await res.getByRole("button", { name: "同じ内容を書けた" }).first().click();
+  await expect(res.getByText(/本人確認「同じ内容」/).first()).toBeVisible();
+  await page.reload(); // the learner's check is stored apart from the automatic result
+  await expect(page.getByTestId("practice-result").getByText(/本人確認「同じ内容」/).first()).toBeVisible();
+  await setMode(page, "共通テスト");
+});

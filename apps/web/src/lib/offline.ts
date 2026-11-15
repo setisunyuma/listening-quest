@@ -8,7 +8,7 @@ export type PlayEvent = { event_id: string; segment_id: string; rate: number };
 export type PendingAnswer = {
   // attempt_id set: an online attempt whose submission could not be sent (R03); sent to /attempts/{id}/submit
   attempt_id?: string; play_events?: PlayEvent[];
-  event_id: string; unit_id: string; unit_revision: number; answers: Record<string, { choice_id: string } | null>; plays: Record<string, number>;
+  event_id: string; unit_id: string; unit_revision: number; answers: Record<string, { choice_id?: string; text?: string } | null>; plays: Record<string, number>;
   rates: Record<string, number>; plan_id?: string | null; slot_id?: string | null; assignment_version?: number | null; client_started_at: string; client_answered_at: string; title: string;
 };
 export type Pack = { slot_id: string; plan_id: string; idx: number; unit_id: string; unit_revision: number; assignment_version: number; reason_text: string; est_sec: number; card: Json; unit: Json; saved_at: string };

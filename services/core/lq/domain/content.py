@@ -93,15 +93,40 @@ class FigureRow(Strict):
     cells: list[FigureCell]
 
 
+PIC_KINDS = ("person", "cat", "dog", "table", "chair", "sofa", "bed", "shelf", "window", "door", "clock", "sign", "box",
+             "bag", "book", "phone", "umbrella", "cup", "tree", "car", "bike", "bus", "train")  # fmt: skip
+PIC_POSES = ("", "stand", "sit", "sleep", "walk", "run", "raise_hand", "hold", "read", "call")
+
+
+class PicItem(Strict):
+    """One drawn element of a picture. Only these kinds / poses exist: the client draws them as simple SVG pictograms,
+    so positions, actions, counts, times and short signs - what an answer may depend on - come from checked data."""
+
+    kind: Literal["person", "cat", "dog", "table", "chair", "sofa", "bed", "shelf", "window", "door", "clock", "sign", "box",
+                  "bag", "book", "phone", "umbrella", "cup", "tree", "car", "bike", "bus", "train"]  # fmt: skip
+    x: int = Field(ge=0, le=100)  # centre, % of the panel width
+    y: int = Field(ge=0, le=100)  # centre, % of the panel height (down)
+    pose: Literal["", "stand", "sit", "sleep", "walk", "run", "raise_hand", "hold", "read", "call"] = ""
+    label: str = Field(default="", max_length=12)  # a clock time ("9:30") or a short sign; plain text only
+    flip: bool = False  # facing left instead of right
+    size: int = Field(default=100, ge=50, le=200)  # % of the default size
+
+
+class PicturePanel(Strict):
+    id: _ID
+    items: list[PicItem] = Field(min_length=1, max_length=14)
+
+
 class Figure(Strict):
     """Structured figure rendered as safe HTML/SVG by the client. No raw HTML is accepted."""
 
     id: _ID
-    kind: Literal["table", "list", "worksheet", "scene_set", "chart_bar"]
+    kind: Literal["table", "list", "worksheet", "scene_set", "chart_bar", "picture_set"]
     title: str = ""
     columns: list[str] = []
     rows: list[FigureRow] = []
     note: str = ""
+    pictures: list[PicturePanel] = []  # picture_set: one panel per option, numbered in this order
 
 
 class Choice(Strict):
@@ -249,6 +274,10 @@ class PracticeItem(Strict):
     ] = {}
     accept_choice_ids: list[_ID] = []  # further acceptable answers (a set of reasonable actions)
     pending_if_unmatched: bool = False  # short answers: text that matches nothing is "判定保留", never wrong
+    # short answers: text that shows a critical misunderstanding (e.g. the withdrawn idea named as the decision)
+    critical_texts: dict[
+        str, Literal["subject", "conclusion", "negation", "number", "condition", "attribution", "certainty"]
+    ] = {}
 
 
 class Clarification(Strict):
@@ -340,6 +369,9 @@ class UnitContent(Strict):
             for r in f.rows:
                 elems.add(r.id)
                 elems.update(c.id for c in r.cells)
+            elems.update(pn.id for pn in f.pictures)
+            if f.kind == "picture_set" and len(f.pictures) < 2:
+                errs.append(f"figure {f.id}: a picture set needs at least two panels")
             fig_elems[f.id] = elems
         qids: set[str] = set()
         slots: set[int] = set()

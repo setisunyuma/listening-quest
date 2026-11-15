@@ -489,6 +489,16 @@ def admin_unit_notes(
     return out
 
 
+@app.post("/api/attempts/{attempt_id}/self-check")
+def attempt_self_check(
+    attempt_id: str, body: dict[str, Any], session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    """The learner's own check of a pending short answer (kept apart from automatic scoring)."""
+    out = L.self_check(session, user, attempt_id, str(body.get("question_id", "")), body.get("verdict"), now_utc())
+    session.commit()
+    return out
+
+
 @app.post("/api/attempts/{attempt_id}/clarify")
 def attempt_clarify(
     attempt_id: str, body: S.ClarifyIn, session: Session = Depends(db), user: m.User = Depends(current_user)

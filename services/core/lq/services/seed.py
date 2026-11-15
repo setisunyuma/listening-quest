@@ -71,7 +71,7 @@ def expand_fixture(raw: dict) -> dict:
     for f in raw.get("figures", []):
         rows = [
             {"id": f"r{ri}", "cells": [{"id": f"r{ri}c{ci}", "text": str(c)} for ci, c in enumerate(row, 1)]}
-            for ri, row in enumerate(f["rows"], 1)
+            for ri, row in enumerate(f.get("rows") or [], 1)
         ]
         figures.append(
             {
@@ -81,14 +81,15 @@ def expand_fixture(raw: dict) -> dict:
                 "columns": f.get("columns", []),
                 "rows": rows,
                 "note": f.get("note", ""),
+                "pictures": [{"id": f"p{pi}", "items": p["items"]} for pi, p in enumerate(f.get("pictures") or [], 1)],
             }
         )
     questions = []
     for qi, q in enumerate(raw["questions"], 1):
-        texts = q.get("choices") or raw["common_choices"]
+        texts = q.get("choices") or raw.get("common_choices") or []
         choices = [{"id": f"c{i}", "text": str(t)} for i, t in enumerate(texts, 1)]
-        wrong_ids = [c["id"] for c in choices if c["id"] != f"c{q['answer']}"]
-        if len(q["wrong"]) != len(wrong_ids):
+        wrong_ids = [c["id"] for c in choices if c["id"] != f"c{q.get('answer')}"]
+        if not q.get("accepted") and len(q["wrong"]) != len(wrong_ids):
             raise ValueError(f"{raw['id']} q{qi}: needs one reason per wrong choice")
         evidence = []
         for e in q["evidence"]:
@@ -101,8 +102,8 @@ def expand_fixture(raw: dict) -> dict:
         questions.append({
             "id": f"q{qi}", "slot": qi, "segment_ids": [f"s{i}" for i in q.get("segments", [])], "prompt_en": q["prompt"], "prompt_medium": part["question_medium"],
             "prompt_timing": part["question_timing"], "type": "single_choice", "choices": choices, "items": [], "figure_ids": q.get("figures", []),
-            "answer": {"type": "single_choice", "choice_id": f"c{q['answer']}"}, "skill_tags": skills, "evidence": evidence,
-            "feedback": {"answer_en": q["answer_en"], "explanation_ja": q["ja"], "hint_ja": q.get("hint", ""), "distractors": [{"choice_id": cid, "reason_ja": r} for cid, r in zip(wrong_ids, q["wrong"], strict=True)]},
+            "answer": {"type": "single_choice", "choice_id": f"c{q['answer']}"} if not q.get("accepted") else {"type": "blank", "accepted": [str(a) for a in q["accepted"]]}, "skill_tags": skills, "evidence": evidence,
+            "feedback": {"answer_en": q["answer_en"], "explanation_ja": q["ja"], "hint_ja": q.get("hint", ""), "distractors": [] if q.get("accepted") else [{"choice_id": cid, "reason_ja": r} for cid, r in zip(wrong_ids, q["wrong"], strict=True)]},
         })  # fmt: skip
     for q, rq in zip(questions, raw["questions"], strict=True):
         if rq.get("accepted"):  # short answer: the same content in Japanese or English (V06)
@@ -116,7 +117,7 @@ def expand_fixture(raw: dict) -> dict:
         "schema_version": 2, "source": "fixture", "content_id": raw["id"], "revision": raw.get("revision", 1), "mode": raw["mode"], "profile_version": profile["id"],
         "part": raw["part"], "template_type": part["template_type"], "title": raw["title"], "topic": raw["topic"], "skill_tags": skills, "primary_skill": primary,
         "provisional_difficulty_band": raw["band"], "calibration_status": "provisional", "family_id": raw["family"], "variant_of": raw.get("variant_of"),
-        "presentation_profile": _presentation(part) if practice is None else {"kind": "practice", "choices_read_aloud": False, "figure_verbalized": False, "notes": "生成した練習用の場面（実録音ではありません）"},
+        "presentation_profile": _presentation(part, figures) if practice is None else {"kind": "practice", "choices_read_aloud": False, "figure_verbalized": False, "notes": "生成した練習用の場面（実録音ではありません）"},
         "speakers": speakers,
         "pre_info": {"situation_en": raw["pre"], "read_seconds": part.get("pre_read_sec", 10)} if raw.get("pre") else None, "figures": figures, "segments": segments,
         "questions": questions, "scoring_groups": unit_scoring_groups(profile, raw["part"], [q["id"] for q in questions]),
@@ -141,6 +142,7 @@ def _practice_block(raw: dict, questions: list[dict]) -> dict:
             "critical_choices": {} if rq.get("accepted") else {f"c{k}": v for k, v in (rq.get("critical") or {}).items()},
             "accept_choice_ids": [] if rq.get("accepted") else [f"c{k}" for k in rq.get("accept") or []],
             "pending_if_unmatched": bool(rq.get("accepted")),
+            "critical_texts": {str(k): v for k, v in (rq.get("critical_text") or {}).items()},
         })  # fmt: skip
     return {
         "practice_kind": raw["part"], "curriculum_version": cur["version"], "purpose_ja": pr["purpose"], "listener_ja": pr.get("listener", ""),
@@ -151,9 +153,12 @@ def _practice_block(raw: dict, questions: list[dict]) -> dict:
     }  # fmt: skip
 
 
-def _presentation(part: dict) -> dict:
-    """R06: parts that choose between pictures are described in words in this app - an arranged presentation."""
-    if (part.get("contract") or {}).get("requires_pictures"):
+def _presentation(part: dict, figures: list[dict] | None = None) -> dict:
+    """R06: parts that choose between pictures are official only with drawn picture panels; material that describes
+    the pictures in words is an arranged presentation (形式調整版)."""
+    if (part.get("contract") or {}).get("requires_pictures") and not any(
+        f.get("kind") == "picture_set" for f in figures or []
+    ):
         return {
             "kind": "audio_arranged",
             "choices_read_aloud": False,

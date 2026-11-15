@@ -55,13 +55,30 @@ class ARow(_S):
     cells: list[ACell]
 
 
+class APicItem(_S):
+    kind: Literal["person", "cat", "dog", "table", "chair", "sofa", "bed", "shelf", "window", "door", "clock", "sign", "box",
+                  "bag", "book", "phone", "umbrella", "cup", "tree", "car", "bike", "bus", "train"]  # fmt: skip
+    x: int  # 0..100 centre
+    y: int  # 0..100 centre (down)
+    pose: Literal["", "stand", "sit", "sleep", "walk", "run", "raise_hand", "hold", "read", "call"]
+    label: str  # clock time or short sign (max 12 characters), "" otherwise
+    flip: bool
+    size: int  # 50..200, 100 = default
+
+
+class APanel(_S):
+    id: str
+    items: list[APicItem]
+
+
 class AFigure(_S):
     id: str
-    kind: Literal["table", "list", "worksheet", "scene_set", "chart_bar"]
+    kind: Literal["table", "list", "worksheet", "scene_set", "chart_bar", "picture_set"]
     title: str
     columns: list[str]
     rows: list[ARow]
     note: str
+    pictures: list[APanel]  # picture_set only: one panel per option, in option order; [] otherwise
 
 
 class AChoice(_S):
@@ -377,7 +394,7 @@ def authored_to_unit(raw: dict, spec: GenSpec) -> dict:
         "family_id": f"{spec.mode}:{spec.part}:{_slug(a.family_slug)}", "variant_of": None,
         # R06: parts that choose between pictures are described in words here - an arranged presentation, never official
         "presentation_profile": ({"kind": "audio_arranged", "choices_read_aloud": False, "figure_verbalized": True, "notes": "pictures described in words (形式調整版)"}
-                                 if (part.get("contract") or {}).get("requires_pictures")
+                                 if (part.get("contract") or {}).get("requires_pictures") and not any(f.kind == "picture_set" for f in a.figures)
                                  else {"kind": "official", "choices_read_aloud": False, "figure_verbalized": False, "notes": ""}),
         "speakers": speakers,
         "pre_info": {"situation_en": a.pre_info_situation, "read_seconds": part.get("pre_read_sec", 10)} if a.pre_info_situation else None,
@@ -593,10 +610,16 @@ def contract_errors(unit: UnitContent, part: dict) -> list[str]:
         if any(sorted(ch.text.strip().lower() for ch in q.choices) != first for q in qs[1:]):
             errs.append("every question of this part must share the same choices")
     if c.get("requires_pictures") and unit.presentation_profile.kind == "official":
-        errs.append(
-            "this part chooses between pictures in the official exam; material that describes them in words "
-            "must use the audio_arranged presentation (形式調整版), not official"
+        # official only when every question chooses between drawn panels (one per option), as in the exam
+        pics = {f.id: f for f in unit.figures if f.kind == "picture_set"}
+        ok = bool(pics) and all(
+            any(fid in pics and len(pics[fid].pictures) == len(q.choices) for fid in q.figure_ids) for q in qs
         )
+        if not ok:
+            errs.append(
+                "this part chooses between pictures in the official exam; material that describes them in words "
+                "must use the audio_arranged presentation (形式調整版), not official"
+            )
     need_fig = c.get("requires_figure")
     if need_fig and not any(f.kind == need_fig for f in unit.figures):
         errs.append(f"this part needs a {need_fig} figure")

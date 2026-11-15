@@ -18,7 +18,7 @@ export type PlanSlot = Loose<S["PlanSlotOut"]>;
 export type Home = Loose<S["HomeOut"]>;
 export type LibraryCard = Loose<S["LibraryCard"]>;
 export type Ack = Loose<S["AckOut"]>;
-export type Answer = { choice_id: string } | null;
+export type Answer = { choice_id?: string; text?: string } | null;
 
 export class ApiError extends Error {
   constructor(public status: number, public detail: string, public offline = false) {

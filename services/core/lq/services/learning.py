@@ -496,6 +496,32 @@ def request_aid(session, user: m.User, attempt_id: str, *, event_id: str, kind: 
     return {"kind": kind, "aids": att.aids, **data}
 
 
+def self_check(
+    session, user: m.User, attempt_id: str, question_id: str, verdict: str | None, now: datetime | None = None
+) -> dict:
+    """A pending short answer, checked by the learner against the model answer. Kept as the learner's own check:
+    it never changes the automatic result, the first-understanding score or unlock evidence."""
+    if verdict not in ("same", "different", None):
+        raise Invalid("verdict must be same, different or null")
+    att = session.execute(select(m.Attempt).where(m.Attempt.id == attempt_id).with_for_update()).scalar_one_or_none()
+    if att is None or att.user_id != user.id:
+        raise NotFound("attempt not found")
+    res = dict(att.result or {})
+    pr = dict(res.get("practice") or {})
+    item = (pr.get("items") or {}).get(question_id)
+    if att.status != "submitted" or item is None or not (item["final"].get("pending") or item["first"].get("pending")):
+        raise Invalid("only a pending short answer can be checked by the learner")
+    checks = dict(pr.get("self_checks") or {})
+    if verdict is None:
+        checks.pop(question_id, None)
+    else:
+        checks[question_id] = {"verdict": verdict, "at": (now or datetime.now(UTC)).isoformat()}
+    pr["self_checks"] = checks
+    att.result = {**res, "practice": pr}
+    session.flush()
+    return {"self_checks": checks}
+
+
 def request_clarification(
     session, user: m.User, attempt_id: str, *, event_id: str, clarification_id: str, initial_answers: dict | None = None
 ) -> dict:
@@ -778,6 +804,13 @@ def submit_attempt(
             prosody_ok=(not content.practice.prosody_required) or content.practice.prosody_confirmed,
         )  # fmt: skip
         practice_res.update(evidence_eligible=ok, not_evidence_reasons=why)
+        # short answers: the per-question result follows the practice judgement (accepted wording in Japanese or
+        # English, critical content, or pending) instead of an exact string match
+        for qid, item in practice_res["items"].items():
+            per_q[qid]["correct"] = bool(item["final"]["correct"])
+            per_q[qid]["pending"] = bool(item["final"]["pending"])
+        correct_n = sum(1 for v in per_q.values() if v["correct"])
+        att.result = {**att.result, "questions": per_q, "correct_count": correct_n}
         att.result = {**att.result, "practice": practice_res, "critical_errors": practice_res["critical_first"]}
     # observations: one per skill per unit (mean over that unit's questions), strict-first only
     if strict and practice_res is None:
@@ -873,7 +906,7 @@ def result_dto(session, att: m.Attempt) -> dict:
                 ev.append({"type": "figure", "figure_id": e.figure_id, "element_id": e.element_id})
         questions.append({
             "id": q.id, "slot": q.slot, "type": q.type, "prompt_en": q.prompt_en, "choices": [c.model_dump() for c in q.choices], "items": [i.model_dump() for i in q.items],
-            "your_answer": r["answer"], "skipped": r["skipped"], "correct": r["correct"], "correct_answer": q.answer.model_dump(), "answer_en": q.feedback.answer_en,
+            "your_answer": r["answer"], "skipped": r["skipped"], "correct": r["correct"], "pending": bool(r.get("pending")), "correct_answer": q.answer.model_dump(), "answer_en": q.feedback.answer_en,
             "explanation_ja": q.feedback.explanation_ja, "distractors": {d.choice_id: d.reason_ja for d in q.feedback.distractors}, "evidence": ev,
             "skill_tags": q.skill_tags, "system_guess": r.get("system_guess"), "system_guess_label": SKILL_LABELS_JA.get(r.get("system_guess") or "", None),
             "self_reason": (att.error_reasons or {}).get(q.id),
