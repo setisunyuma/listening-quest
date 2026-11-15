@@ -162,3 +162,39 @@ def test_mock_result_names_the_arranged_questions_in_japanese(db, user):
     labels = [d["label_ja"] for d in res["arranged_detail"]]
     assert labels == ["第1問B 場面と絵の対応（問5〜8）", "第2問 短い対話と問い（問9〜11）"]
     assert "絵を見比べて" in res["arranged_detail"][0]["note_ja"]
+
+
+def test_generated_picture_sizes_are_normalised_and_identical_panels_fail():
+    """Real-API check (2026-11-15): 3 of 4 generated picture sets gave size as percent of the panel (1-35) and were
+    rejected whole. Size and position only change how an item is drawn, so they are normalised; the schema now
+    explains the scale. Two panels that draw the same picture cannot be told apart and fail the contract."""
+    from pathlib import Path
+
+    import yaml as _y
+
+    from lq.domain.content import UnitContent
+    from lq.generator.authoring import AFigure, _figures, authored_schema
+    from lq.services.seed import expand_fixture
+
+    raw = {"id": "f1", "kind": "picture_set", "title": "", "columns": [], "rows": [], "note": "", "pictures": [
+        {"id": "p1", "items": [{"kind": "person", "x": 50, "y": 50, "pose": "read", "label": "", "flip": False, "size": 20},
+                               {"kind": "bag", "x": 120, "y": -5, "pose": "", "label": "", "flip": False, "size": 1}]}]}  # fmt: skip
+    items = _figures([AFigure.model_validate(raw)])[0]["pictures"][0]["items"]
+    assert [i["size"] for i in items] == [100, 100] and (items[1]["x"], items[1]["y"]) == (100, 0)
+    size = authored_schema()["$defs"]["APicItem"]["properties"]["size"]
+    assert "NORMAL size" in size["description"]
+
+    raws = {
+        r["id"]: r
+        for r in _y.safe_load(
+            (Path(__file__).resolve().parents[3] / "fixtures/units/common_test.yaml").read_text(encoding="utf-8")
+        )
+    }
+    u = UnitContent.model_validate(expand_fixture(raws["ct-1b-pic-reading"]))
+    f = u.figures[0]
+    same = f.pictures[1].model_copy(update={"items": f.pictures[0].items})
+    dup = u.model_copy(update={"figures": [f.model_copy(update={"pictures": [f.pictures[0], same, *f.pictures[2:]]})]})
+    assert any(
+        "draw the same picture" in e for e in contract_errors(dup, part_spec(current_profile("common_test"), "1B"))
+    )
+    assert contract_errors(u, part_spec(current_profile("common_test"), "1B")) == []

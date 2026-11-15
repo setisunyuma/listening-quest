@@ -27,8 +27,13 @@ function Person({ x, y, s, pose, flip, seated }: { x: number; y: number; s: numb
       : <polyline points={`${x - 5 * s},${y + 20 * s} ${x},${y + 2 * s} ${x + 5 * s},${y + 20 * s}`} fill="none" stroke={INK} strokeWidth={3} />;
   let arms: ReactElement;
   if (pose === "raise_hand") arms = <polyline points={`${x - 8 * s},${y - 4 * s} ${x},${y - 12 * s} ${x + 8 * d * s},${y - 30 * s}`} fill="none" stroke={INK} strokeWidth={2.5} />;
-  else if (pose === "read" || pose === "hold") arms = <polyline points={`${x},${y - 12 * s} ${x + 12 * d * s},${y - 6 * s}`} fill="none" stroke={INK} strokeWidth={2.5} />;
-  else if (pose === "call") arms = <polyline points={`${x},${y - 12 * s} ${x + 6 * d * s},${y - 18 * s} ${x + 4 * d * s},${y - 22 * s}`} fill="none" stroke={INK} strokeWidth={2.5} />;
+  else if (pose === "read") // an open book held in front: reading is visible, not only an arm angle
+    arms = <g><polyline points={`${x},${y - 12 * s} ${x + 12 * d * s},${y - 6 * s}`} fill="none" stroke={INK} strokeWidth={2.5} />
+      <path d={`M${x + 10 * d * s},${y - 12 * s} l${6 * d * s},${-3 * s} l${6 * d * s},${3 * s} v${8 * s} l${-6 * d * s},${-3 * s} l${-6 * d * s},${3 * s} z`} fill={ACC} stroke={INK} strokeWidth={1} data-testid="held-book" /></g>;
+  else if (pose === "hold") arms = <polyline points={`${x},${y - 12 * s} ${x + 12 * d * s},${y - 6 * s}`} fill="none" stroke={INK} strokeWidth={2.5} />;
+  else if (pose === "call") // a phone at the ear
+    arms = <g><polyline points={`${x},${y - 12 * s} ${x + 6 * d * s},${y - 18 * s} ${x + 4 * d * s},${y - 22 * s}`} fill="none" stroke={INK} strokeWidth={2.5} />
+      <rect x={x + (d > 0 ? 3 : -8) * s} y={y - 29 * s} width={5 * s} height={10 * s} rx={1.5} fill={ACC} stroke={INK} strokeWidth={1} data-testid="held-phone" /></g>;
   else arms = <polyline points={`${x - 8 * s},${y - 2 * s} ${x},${y - 12 * s} ${x + 8 * s},${y - 2 * s}`} fill="none" stroke={INK} strokeWidth={2.5} />;
   return <g>{head}{torso}{arms}{legs}</g>;
 }
