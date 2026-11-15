@@ -57,7 +57,14 @@ def _skill_ja(s: str) -> str:
     return SKILL_JA.get(s, s)
 
 
-def transition_readiness(mode: str, obs: Iterable[Obs], today: date, cfg: dict | None = None) -> dict:
+def transition_readiness(
+    mode: str,
+    obs: Iterable[Obs],
+    today: date,
+    cfg: dict | None = None,
+    practice: Iterable[TaskEvidence] | None = None,
+    practice_kinds: Iterable[str] = (),
+) -> dict:
     """P01: evidence for proposing the next stage as main goal. Only unaided first-exposure observations of the
     current goal count as "stable"; assisted, repeated, radio and self-reported results never replace them.
     Missing evidence is reported as "未確認", never as a lack of ability."""
@@ -145,8 +152,38 @@ def transition_readiness(mode: str, obs: Iterable[Obs], today: date, cfg: dict |
             f"次の段階の未見の短い確認（{len(tdays)}/{t['min_next_stage_trials']}件）",
             f"次の段階を{len(tdays)}件体験",
         )
+    # the stage's practice tasks: their own indicator (first understanding per kind), kept apart from exam accuracy
+    practice_out = {}
+    ev = [e for e in (practice or []) if e.eligible and start <= e.day <= today]
+    for k in practice_kinds:
+        fams: dict[str, float] = {}
+        for e in sorted((e for e in ev if e.kind == k), key=lambda e: e.day):
+            fams[e.family] = e.score
+        n = len(fams)
+        mean = sum(fams.values()) / n if n else None
+        if n < t.get("min_practice_per_kind", 2):
+            state = "unobserved"
+            missing.append(
+                {
+                    "code": f"practice_unobserved:{k}",
+                    "label_ja": f"実践課題 {k} の初見の実施が不足（{n}/{t.get('min_practice_per_kind', 2)}件・未確認）",
+                }
+            )
+        elif mean < t.get("practice_stable", 0.8):
+            state = "unstable"
+            missing.append(
+                {
+                    "code": f"practice_unstable:{k}",
+                    "label_ja": f"実践課題 {k} の最初の理解が安定していない（平均 {round(mean * 100)}%）",
+                }
+            )
+        else:
+            state = "stable"
+            met.append(f"実践課題 {k} が安定（{n}件・最初の理解の平均 {round(mean * 100)}%）")
+        practice_out[k] = {"n": n, "mean": None if mean is None else round(mean, 3), "status": state}
     return {
         "mode": mode, "next_mode": nxt, "ready": bool(nxt) and not missing, "met": met, "missing": missing, "skills": skills,
+        "practice": practice_out,
         "version": cfg["version"], "period": [start.isoformat(), today.isoformat()],
     }  # fmt: skip
 

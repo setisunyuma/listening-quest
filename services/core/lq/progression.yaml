@@ -17,6 +17,9 @@ transition:
   min_next_stage_trials: 2     # short unseen tries of the next stage, any support level (recorded as such)
   critical_lookback_days: 14   # recent critical misunderstandings block the proposal
   reevaluate_days: 7           # a deferred proposal is shown again at most weekly
+  # practice tasks of the current stage: a separate indicator, never merged with exam-format accuracy
+  min_practice_per_kind: 2     # eligible (unseen, unaided, gradable) tasks per kind of the stage
+  practice_stable: 0.8         # mean "first understanding" on the main rubric items, per kind
   # main skills per goal (the skills the stage's format depends on); unknown history stays "未確認"
   main_skills:
     common_test: [explicit_detail, numbers_negation, inference, main_idea]

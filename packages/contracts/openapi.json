@@ -2221,6 +2221,11 @@
       "title": "Items",
       "type": "array"
      },
+     "pending": {
+      "default": false,
+      "title": "Pending",
+      "type": "boolean"
+     },
      "prompt_en": {
       "title": "Prompt En",
       "type": "string"
@@ -5172,6 +5177,76 @@
      }
     },
     "summary": "Attempt Result"
+   }
+  },
+  "/api/attempts/{attempt_id}/self-check": {
+   "post": {
+    "description": "The learner's own check of a pending short answer (kept apart from automatic scoring).",
+    "operationId": "attempt_self_check_api_attempts__attempt_id__self_check_post",
+    "parameters": [
+     {
+      "in": "path",
+      "name": "attempt_id",
+      "required": true,
+      "schema": {
+       "title": "Attempt Id",
+       "type": "string"
+      }
+     },
+     {
+      "in": "header",
+      "name": "x-csrf-token",
+      "required": false,
+      "schema": {
+       "anyOf": [
+        {
+         "type": "string"
+        },
+        {
+         "type": "null"
+        }
+       ],
+       "title": "X-Csrf-Token"
+      }
+     }
+    ],
+    "requestBody": {
+     "content": {
+      "application/json": {
+       "schema": {
+        "additionalProperties": true,
+        "title": "Body",
+        "type": "object"
+       }
+      }
+     },
+     "required": true
+    },
+    "responses": {
+     "200": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "additionalProperties": true,
+         "title": "Response Attempt Self Check Api Attempts  Attempt Id  Self Check Post",
+         "type": "object"
+        }
+       }
+      },
+      "description": "Successful Response"
+     },
+     "422": {
+      "content": {
+       "application/json": {
+        "schema": {
+         "$ref": "#/components/schemas/HTTPValidationError"
+        }
+       }
+      },
+      "description": "Validation Error"
+     }
+    },
+    "summary": "Attempt Self Check"
    }
   },
   "/api/attempts/{attempt_id}/submit": {

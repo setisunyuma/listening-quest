@@ -122,7 +122,11 @@ def library(session, user: m.User, now: datetime, mode: str | None = None) -> di
     )
     if mode:
         q = q.where(U.mode == mode)
-    units = session.execute(q.order_by(U.mode, U.part, U.difficulty_band, U.created_at)).scalars().all()
+    # ordered in Python (code-point order), never by the database collation: "P3A" must not move behind
+    # "lecture" just because one PostgreSQL was initialised with en_US and another with C
+    units = sorted(
+        session.execute(q).scalars().all(), key=lambda u: (u.mode, u.part, u.difficulty_band, u.created_at, u.id)
+    )
     atts: dict[str, list[m.Attempt]] = {}
     for a in session.execute(
         select(m.Attempt)

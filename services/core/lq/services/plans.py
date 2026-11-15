@@ -289,6 +289,8 @@ def start_plan(session, user: m.User, now: datetime, kind: str = "quest", mode: 
         notes.insert(0, "同じ課題が3回以上持ち越されています。新しい問題を減らして、先に取り組めるようにしました")
     if held:
         notes.append(f"期限が来た他の段階の復習 {len(held)} 件は保留にしました（予定は消えず、次の日課で再選定します）")
+    for w in (plan.params or {}).get("practice_waiting", [])[:2]:
+        notes.append(f"実践課題「{w['title_ja']}」は{w['label_ja']}")
     plan.total_slots = len(carried) + len(draft.slots)
     plan.planned_sec = carried_sec + draft.planned_sec
     plan.params = {**plan.params, "notes": notes, "held_reviews": held[:30]}
@@ -363,9 +365,13 @@ def _practice_slot(
 
     if budget <= P.load_progression()["transition_period"]["short_day_sec"] or room_sec <= 0:
         return None
+    waiting = []
     for k in kinds or practice.available_kinds(session, user):
         u = practice.unseen_unit(session, user, k)
         if u is None:
+            waiting.append(
+                {"kind": k, "title_ja": task_def(k)["title_ja"], **practice.material_status(session, user, k)}
+            )
             continue
         est = int(u.estimated_duration_sec or 300)
         if est > room_sec:
@@ -376,6 +382,8 @@ def _practice_slot(
                           time_cap_sec=rec.slot_cap(est, rules.load_config()), kind="practice",
                           context="desk" if p.get("input_mode") == "desk" else "any", reason_code="practice",
                           reason_text=f"実践: {t['title_ja']}", reason_params={"practice_kind": k, "purpose_ja": p.get("purpose_ja", "")})  # fmt: skip
+    if waiting:  # shown on the home screen: waiting for material, not a lack of ability
+        plan.params = {**(plan.params or {}), "practice_waiting": waiting}
     return None
 
 

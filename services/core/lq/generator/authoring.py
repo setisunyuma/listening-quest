@@ -55,13 +55,30 @@ class ARow(_S):
     cells: list[ACell]
 
 
+class APicItem(_S):
+    kind: Literal["person", "cat", "dog", "table", "chair", "sofa", "bed", "shelf", "window", "door", "clock", "sign", "box",
+                  "bag", "book", "phone", "umbrella", "cup", "tree", "car", "bike", "bus", "train"]  # fmt: skip
+    x: int  # 0..100 centre
+    y: int  # 0..100 centre (down)
+    pose: Literal["", "stand", "sit", "sleep", "walk", "run", "raise_hand", "hold", "read", "call"]
+    label: str  # clock time or short sign (max 12 characters), "" otherwise
+    flip: bool
+    size: int  # 50..200, 100 = default
+
+
+class APanel(_S):
+    id: str
+    items: list[APicItem]
+
+
 class AFigure(_S):
     id: str
-    kind: Literal["table", "list", "worksheet", "scene_set", "chart_bar"]
+    kind: Literal["table", "list", "worksheet", "scene_set", "chart_bar", "picture_set"]
     title: str
     columns: list[str]
     rows: list[ARow]
     note: str
+    pictures: list[APanel]  # picture_set only: one panel per option, in option order; [] otherwise
 
 
 class AChoice(_S):
@@ -230,13 +247,15 @@ def build_practice_prompt(spec: GenSpec) -> tuple[str, str]:
     user = (
         f"Practice task {spec.practice_kind} for the {spec.mode} stage (an app practice task, NOT an official exam item).\n"
         f"Goal: {task['goal_ja']}. Example scene: {task['scene_ja']}. Cognitive demand: {task['demand_ja']}.\n"
-        f"Write a realistic scene with a clear purpose, a listener for any hand-over, and the conditions needed to act. Use only knowledge given "
+        + (f"Scene type for this task (required, set 'scene' to '{(spec.extra or {}).get('scene')}'): {(spec.extra or {}).get('scene_ja') or (spec.extra or {}).get('scene')}.\n" if (spec.extra or {}).get("scene") else "")
+        + "Write a realistic scene with a clear purpose, a listener for any hand-over, and the conditions needed to act. Use only knowledge given "
         f"in the audio (no outside facts, no culture-specific knowledge without context). Natural speed and length for the scene; do not make it "
         f"harder by speed, rare words, noise or extreme accents.\n"
         f"Questions: exactly {part['questions_per_unit']}, one per rubric item, in this order: {rub}. Single choice, 4 options.\n"
         f"For each question list the choices that are critical misunderstandings with their kind (one of {', '.join(task['critical'])}). "
         f"Include an option such as 'need to check' / 'cannot be decided from this audio' and make it the answer whenever the audio lacks the "
-        f"needed information. Options must not be solvable by matching the same word.\n"
+        f"needed information. Options must not be solvable by matching the same word, by length or by caution: keep all "
+        f"four options similar in length and specificity, and give some wrong options cautious wording too.\n"
         f"Speakers: at least {part['min_speakers']}. Give each segment a short label. "
         + (f"Permitted checks: at most {clar.get('max', 0)}; for each give the question the learner may ask and the pre-written reply. " if clar.get("max") else "No permitted checks: return an empty list. ")
         + "In audio_dependency_en state which condition in the audio decides the answer and how the answer would change if it changed.\n"
@@ -375,7 +394,7 @@ def authored_to_unit(raw: dict, spec: GenSpec) -> dict:
         "family_id": f"{spec.mode}:{spec.part}:{_slug(a.family_slug)}", "variant_of": None,
         # R06: parts that choose between pictures are described in words here - an arranged presentation, never official
         "presentation_profile": ({"kind": "audio_arranged", "choices_read_aloud": False, "figure_verbalized": True, "notes": "pictures described in words (形式調整版)"}
-                                 if (part.get("contract") or {}).get("requires_pictures")
+                                 if (part.get("contract") or {}).get("requires_pictures") and not any(f.kind == "picture_set" for f in a.figures)
                                  else {"kind": "official", "choices_read_aloud": False, "figure_verbalized": False, "notes": ""}),
         "speakers": speakers,
         "pre_info": {"situation_en": a.pre_info_situation, "read_seconds": part.get("pre_read_sec", 10)} if a.pre_info_situation else None,
@@ -446,7 +465,7 @@ def _practice_to_unit(raw: dict, spec: GenSpec) -> dict:
         "practice": {
             "practice_kind": spec.practice_kind, "curriculum_version": cur["version"], "purpose_ja": a.purpose_ja[:300] or task["goal_ja"],
             "listener_ja": a.listener_ja[:200], "success_ja": a.success_ja[:300] or task["goal_ja"], "support_level": 1,
-            "input_mode": (task.get("input_modes") or ["voice_first"])[0], "scene": _slug(a.scene)[:48] or "scene", "items": items,
+            "input_mode": (task.get("input_modes") or ["voice_first"])[0], "scene": ((spec.extra or {}).get("scene") or _slug(a.scene))[:48] or "scene", "items": items,
             "clarifications": [c.model_dump() for c in a.clarifications][:max_c], "max_clarifications": min(max_c, len(a.clarifications)),
             "prosody_required": bool(task.get("prosody_required")), "prosody_confirmed": False,
             # Q01 / V15: the author's statement is recorded; the blind review still has to solve it from the audio
@@ -591,10 +610,16 @@ def contract_errors(unit: UnitContent, part: dict) -> list[str]:
         if any(sorted(ch.text.strip().lower() for ch in q.choices) != first for q in qs[1:]):
             errs.append("every question of this part must share the same choices")
     if c.get("requires_pictures") and unit.presentation_profile.kind == "official":
-        errs.append(
-            "this part chooses between pictures in the official exam; material that describes them in words "
-            "must use the audio_arranged presentation (形式調整版), not official"
+        # official only when every question chooses between drawn panels (one per option), as in the exam
+        pics = {f.id: f for f in unit.figures if f.kind == "picture_set"}
+        ok = bool(pics) and all(
+            any(fid in pics and len(pics[fid].pictures) == len(q.choices) for fid in q.figure_ids) for q in qs
         )
+        if not ok:
+            errs.append(
+                "this part chooses between pictures in the official exam; material that describes them in words "
+                "must use the audio_arranged presentation (形式調整版), not official"
+            )
     need_fig = c.get("requires_figure")
     if need_fig and not any(f.kind == need_fig for f in unit.figures):
         errs.append(f"this part needs a {need_fig} figure")

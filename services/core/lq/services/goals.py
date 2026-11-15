@@ -153,7 +153,14 @@ def readiness(session, user: m.User, now: datetime) -> dict:
     cur = L.user_settings(user)["active_mode"]
     nxt = P.next_stage(cur, cfg)
     modes = tuple(x for x in (cur, nxt) if x)
-    res = P.transition_readiness(cur, observations(session, user, modes), today, cfg)
+    from lq.domain.practice import load_curriculum
+    from lq.services import practice
+
+    kinds = [k for k, t in load_curriculum()["tasks"].items() if t["stage"] == cur]
+    pev = practice._evidence(session, user, set(kinds), set()) if kinds else []
+    res = P.transition_readiness(
+        cur, observations(session, user, modes), today, cfg, practice=pev, practice_kinds=kinds
+    )
     with session.begin_nested():
         session.execute(
             pg_insert(m.ReadinessSnapshot).values(id=m.new_id(), user_id=user.id, mode=cur, computed_day=today, version=cfg["version"], result=res, created_at=now)
@@ -203,6 +210,9 @@ def decide(
         else:
             g.transition_from, g.transition_started_day = cur.mode, today
         L.update_user_settings(user, {"active_mode": to_mode})
+        from lq.services import practice
+
+        practice.note_goal_opened(session, user, now)  # the goal's tasks join the day (recorded apart from criteria)
         if replan:
             _replan_unstarted(session, user, to_mode, now)
     elif decision == "trial" and to_mode not in (cur.mode,):

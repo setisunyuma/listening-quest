@@ -174,6 +174,7 @@ class ResultQuestion(BaseModel):
     your_answer: dict[str, Any] | None
     skipped: bool
     correct: bool
+    pending: bool = False  # short answer that could not be judged automatically
     correct_answer: dict[str, Any]
     answer_en: str
     explanation_ja: str

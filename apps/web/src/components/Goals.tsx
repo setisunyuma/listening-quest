@@ -54,6 +54,9 @@ export function GoalPanel({ full = false }: { full?: boolean }) {
       ) : g.next_mode && (full || p.state === "deferred") ? (
         <p className="note">{g.next_label}への見通し: {p.state === "deferred" ? `保留中（${p.deferred_until} ごろ再確認）` : `不足している証拠 ${missing.length} 件`}</p>
       ) : null}
+      {full && p.readiness.practice && Object.keys(p.readiness.practice).length > 0 && (
+        <p className="note" aria-label="実践課題の指標">実践課題（試験形式の正答率とは別の指標）: {Object.entries(p.readiness.practice as Record<string, Json>).map(([k, v]) => `${k} ${v.n}件${v.mean != null ? `・最初の理解 ${Math.round(v.mean * 100)}%` : ""}`).join(" / ")}</p>
+      )}
       {full && g.next_mode && missing.length > 0 && (
         <ul className="note" aria-label="不足している証拠">{missing.map((x) => <li key={x.code}>{x.label_ja}</li>)}</ul>
       )}

@@ -91,6 +91,15 @@ def unseen_unit(session, user: m.User, kind: str) -> m.Unit | None:
     return None
 
 
+def unseen_count(session, user: m.User, kind: str) -> int:
+    E = m.ExposureEvent
+    fps = set(session.execute(select(E.stimulus_fingerprint).where(E.user_id == user.id)).scalars())
+    fams = set(session.execute(select(E.family_id).where(E.user_id == user.id)).scalars())
+    return sum(
+        1 for u in _ready_units(session, user, kind) if u.stimulus_fingerprint not in fps and u.family_id not in fams
+    )
+
+
 def judge(session, user: m.User, kind: str) -> dict:
     t = PR.task_def(kind)
     prereq = set(t.get("prerequisites", [])) | set(t.get("prereq_from_kinds", []))
@@ -99,6 +108,17 @@ def judge(session, user: m.User, kind: str) -> dict:
     if not prereq:  # entry task: per-skill means of exam evidence, each on its own scale
         ev = [e for e in ev if e.kind.startswith("exam:")]
     return P.practice_unlock(kind, (prereq or {f"exam:{s}" for s in skills}), ev)
+
+
+def _state(session, user: m.User, kind: str, now: datetime) -> m.PracticeState:
+    """The learner's record for a task kind, created when first needed (status 'preview' = not opened yet)."""
+    st = _states(session, user).get(kind)
+    if st is None:
+        st = m.PracticeState(user_id=user.id, practice_kind=kind, curriculum_version=PR.load_curriculum()["version"], status="preview",
+                             evidence=[], rule_version=P.load_progression()["version"], manual_started=False, recommendation={}, updated_at=now)  # fmt: skip
+        session.add(st)
+        session.flush()
+    return st
 
 
 def _unlock(session, user: m.User, kind: str, reason: str, rec: dict, now: datetime) -> m.PracticeState:
@@ -123,21 +143,28 @@ def _unlock(session, user: m.User, kind: str, reason: str, rec: dict, now: datet
 
 
 def after_submit(session, user: m.User, att: m.Attempt, now: datetime) -> list[str]:
-    """Re-judge the kinds that build on the one just practised. Unlocking is recorded once with its evidence and
-    rule version; nothing is ever locked again."""
+    """Keep three records apart: (1) the kind was tried before it was open to this learner, (2) the unlock criteria of
+    the kinds that build on it are met - recorded once with the evidence and rule version, even if the kind was already
+    open by the main goal or a wish - and (3) the kind was opened (by those criteria). Nothing is ever locked again."""
     kind = ((att.result or {}).get("practice") or {}).get("practice_kind")
     opened = []
-    states = _states(session, user)
+    if kind and not is_open(session, user, kind):
+        st = _state(session, user, kind, now)
+        st.tried_at = st.tried_at or now  # tried first (a preview): no evidence of mastery is granted
     for k, t in PR.load_curriculum()["tasks"].items():
         if kind not in set(t.get("prerequisites", [])) | set(t.get("prereq_from_kinds", [])):
             continue
-        if k in states and states[k].status == "unlocked":
+        st = _states(session, user).get(k)
+        if st is not None and st.criteria_met_at is not None:
             continue
         res = judge(session, user, k)
         if res["status"] == "recommend":
-            st = _unlock(session, user, k, "recommended", res, now)
-            st.evidence = [att.id]
-            opened.append(k)
+            st = _state(session, user, k, now)
+            st.criteria_met_at, st.criteria = now, {**res, "attempt_id": att.id}
+            if st.status != "unlocked":
+                st = _unlock(session, user, k, "recommended", res, now)
+                st.evidence = [att.id]
+                opened.append(k)
     return opened
 
 
@@ -154,17 +181,73 @@ def manual_start(session, user: m.User, kind: str, now: datetime) -> dict:
 
 
 def _stage_open(user: m.User, kind: str) -> bool:
-    """The current main goal's own entry tasks (no practice prerequisites) are part of its daily work."""
-    t = PR.task_def(kind)
-    return t["stage"] == L.user_settings(user)["active_mode"] and not t.get("prerequisites")
+    """Every practice task of the learner's chosen main goal is part of its daily work (the choice is the learner's;
+    the unlock criteria are recorded apart)."""
+    return PR.task_def(kind)["stage"] == L.user_settings(user)["active_mode"]
+
+
+def is_open(session, user: m.User, kind: str) -> bool:
+    st = _states(session, user).get(kind)
+    return (st is not None and st.status == "unlocked") or _stage_open(user, kind)
+
+
+def note_goal_opened(session, user: m.User, now: datetime) -> None:
+    """Record when the main goal opened its stage's tasks (a separate record from criteria and wishes)."""
+    for k in PR.load_curriculum()["tasks"]:
+        if _stage_open(user, k):
+            st = _state(session, user, k, now)
+            st.goal_opened_at = st.goal_opened_at or now
+
+
+def recent_counts(session, user: m.User, last: int = 20) -> dict[str, int]:
+    """How often each kind was practised among the learner's latest practice tasks (no wall clock involved)."""
+    out: dict[str, int] = {}
+    for att, _u in _practice_attempts(session, user)[-last:]:
+        k = ((att.result or {}).get("practice") or {}).get("practice_kind")
+        out[k] = out.get(k, 0) + 1
+    return out
 
 
 def available_kinds(session, user: m.User) -> list[str]:
-    st = _states(session, user)
+    """Open kinds in the order the day should offer them. The main goal's own kinds lead, least practised first, so no
+    kind starves; a kind opened outside the main goal (by criteria or a wish) is brought in when neither of the last two
+    practice tasks was such a kind - about one day in three - so it is introduced without displacing the goal's work."""
     cur = L.user_settings(user)["active_mode"]
-    out = [k for k in PR.load_curriculum()["tasks"] if (k in st and st[k].status == "unlocked") or _stage_open(user, k)]
-    # the main goal's own tasks first; a common-test focus gets only what the learner opened themselves
-    return sorted(out, key=lambda k: (PR.task_def(k)["stage"] != cur, k))
+    open_ = [k for k in PR.load_curriculum()["tasks"] if is_open(session, user, k)]
+    n = recent_counts(session, user)
+    goal = sorted((k for k in open_ if PR.task_def(k)["stage"] == cur), key=lambda k: (n.get(k, 0), k))
+    other = sorted((k for k in open_ if PR.task_def(k)["stage"] != cur), key=lambda k: (n.get(k, 0), k))
+    last2 = [
+        ((a.result or {}).get("practice") or {}).get("practice_kind")
+        for a, _u in _practice_attempts(session, user)[-2:]
+    ]
+    if other and goal and set(last2) & set(other):
+        return goal + other
+    return other + goal if other else goal
+
+
+def material_status(session, user: m.User, kind: str) -> dict:
+    """Why a task has no unseen material right now - shown as 'waiting for material', never as a lack of ability."""
+    if unseen_unit(session, user, kind) is not None:
+        return {"state": "ready", "label_ja": None}
+    from lq.generator import budget
+
+    J = m.GenerationJob
+    jobs = session.execute(
+        select(J).where(J.realm == user.realm, J.status.in_(("QUEUED", "RUNNING", "RETRY_WAIT", "BLOCKED")))
+    ).scalars().all()  # fmt: skip
+    mine = [j for j in jobs if (j.params or {}).get("practice_kind") == kind]
+    cfg = budget.get_system(session, user.realm)
+    if any(j.status == "BLOCKED" and j.blocked_reason in ("budget", "monthly_budget") for j in mine):
+        return {
+            "state": "budget",
+            "label_ja": "教材待ち: 予算の上限に達したため生成を止めています（日本時間の午前4時以降に再開）",
+        }
+    if mine:
+        return {"state": "preparing", "label_ja": "教材待ち: いま生成しています"}
+    if user.realm != "demo" and not (cfg.get("paid_enabled") and cfg.get("auto_replenish")):
+        return {"state": "off", "label_ja": "教材待ち: 有料生成または自動補充がオフのため、新しい教材が作られません"}
+    return {"state": "waiting", "label_ja": "教材待ち: 次の自動補充で用意します（能力不足ではありません）"}
 
 
 def can_do(session, user: m.User) -> dict[str, list[dict]]:
@@ -195,7 +278,7 @@ def overview(session, user: m.User, now: datetime) -> dict:
     for k, t in cur["tasks"].items():
         s = st.get(k)
         mine = [(a, u) for a, u in attempts if ((a.result or {}).get("practice") or {}).get("practice_kind") == k]
-        if (s and s.status == "unlocked") or _stage_open(user, k):
+        if is_open(session, user, k):
             later = {
                 a.learning_day for a, _ in mine if ((a.result or {}).get("practice") or {}).get("evidence_eligible")
             }
@@ -205,15 +288,20 @@ def overview(session, user: m.User, now: datetime) -> dict:
             res = judge(session, user, k)
             status = "next" if res["status"] == "recommend" else ("preview" if mine else "locked")
             missing = res["missing"]
-        has_unit = unseen_unit(session, user, k) is not None
+        mat = material_status(session, user, k)
         rows.append({
             "kind": k, "stage": t["stage"], "title_ja": t["title_ja"], "goal_ja": t["goal_ja"], "scene_ja": t["scene_ja"],
             "minutes": t["minutes"], "status": status, "status_ja": STATUS_JA[status],
-            "reason_ja": ("本人の希望で開始" if s and s.unlock_reason == "manual" else "前提の証拠がそろった" if s and s.unlock_reason == "recommended"
-                          else "現在の主目標の練習" if _stage_open(user, k) else None),
+            "reason_ja": ("現在の主目標の練習" if _stage_open(user, k) else "本人の希望で開始" if s and s.unlock_reason == "manual"
+                          else "前提の証拠がそろった" if s and s.unlock_reason == "recommended" else None),
             "missing": missing, "prerequisites": t.get("prerequisites", []),
             # material shortage is not a lack of ability
-            "material_ja": None if has_unit else "未見の教材がまだありません（教材の準備待ち。能力不足ではありません）",
+            "material_ja": mat["label_ja"], "material_state": mat["state"],
+            # three separate records: tried first / unlock criteria met / opened by the chosen main goal
+            "records": {"tried_at": s.tried_at.isoformat() if s and s.tried_at else None,
+                        "criteria_met_at": s.criteria_met_at.isoformat() if s and s.criteria_met_at else None,
+                        "goal_opened_at": s.goal_opened_at.isoformat() if s and s.goal_opened_at else None,
+                        "manual": bool(s and s.manual_started)},
             "attempts": len(mine), "can_do": done.get(k, []),
         })  # fmt: skip
     return {

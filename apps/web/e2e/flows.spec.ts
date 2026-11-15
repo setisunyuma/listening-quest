@@ -380,3 +380,133 @@ test("practice: staged update task, a permitted check, results kept apart from e
   await expect(page.getByText("現在の主目標: 英検1級")).toBeVisible();
   await setMode(page, "共通テスト");
 });
+
+// Owner request 4: one learning day and the next, through the home screen only (common test, 30 minutes).
+async function setClock(page: Page, offsetHours: number) {
+  const ok = await page.evaluate(async (h) => {
+    const t = decodeURIComponent((document.cookie.match(/(?:^|; )lq_csrf=([^;]+)/) || [])[1] || "");
+    const r = await fetch("/api/test/clock", { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": t }, body: JSON.stringify({ offset_hours: h }) });
+    return r.ok;
+  }, offsetHours);
+  expect(ok).toBe(true);
+}
+
+test("today's tasks across two days: wrong answer, repair of a missed line, end early, resume the next day", async ({ page }) => {
+  await login(page);
+  await setMode(page, "共通テスト");
+  await setClock(page, 24 * 3); // a fresh learning day for this test (earlier tests used "today")
+  try {
+    await page.goto("/");
+    await page.getByRole("button", { name: "今日の学習を始める" }).click();
+    await expect(page.getByRole("img", { name: /今日の進捗 0 \/ \d+/ })).toBeVisible();
+    await page.getByRole("link", { name: /今日の学習を始める|続ける/ }).first().click();
+    await expect(page).toHaveURL(/\/play\?/);
+    // answer (the last option everywhere), then mark a line that was not caught
+    await page.getByRole("button", { name: /再生/ }).first().click();
+    const groups = page.getByRole("group", { name: /問\d+の選択肢/ });
+    await expect(groups.first()).toBeVisible();
+    for (let i = 0; i < await groups.count(); i++) await groups.nth(i).getByRole("button").last().click();
+    await page.getByRole("button", { name: "解答する" }).click();
+    await expect(page.getByRole("heading", { name: /結果/ })).toBeVisible();
+    await page.getByRole("button", { name: "聞き取れなかった" }).first().click();
+    await expect(page.getByRole("button", { name: "✓ 聞き取れなかった" }).first()).toBeVisible();
+    await page.getByRole("button", { name: "解説を確認した" }).click();
+    // the repair task of today: practise the lines, final check, finish (they go to a later-day check)
+    await page.getByRole("link", { name: "短い修復へ進む" }).click();
+    await expect(page.getByRole("heading", { name: /短い修復/ })).toBeVisible();
+    for (const box of await page.locator(".qbox").all()) {
+      await box.getByRole("button", { name: "最後の確認へ（通常速度・英文なし）" }).click();
+      await box.getByRole("button", { name: "分かった" }).click();
+    }
+    await page.getByRole("button", { name: "この課題を終える" }).click();
+    await expect(page.getByRole("heading", { name: "修復を実施しました" })).toBeVisible();
+    // end the day with tasks left
+    await page.goto("/");
+    page.once("dialog", (d) => d.accept());
+    await page.getByRole("button", { name: "今日は終了" }).click();
+    await expect(page.getByText(/今日はここまで/)).toBeVisible();
+    await expect(page.getByText("✓ 今日の予定を完了")).toHaveCount(0);
+
+    // the next learning day
+    await setClock(page, 24 * 4);
+    await page.goto("/");
+    await page.getByRole("button", { name: "今日の学習を始める" }).click();
+    await expect(page.getByText(/前回から持ち越した課題が \d+ 件あります/)).toBeVisible();
+    await page.getByText(/今日の計画の詳細/).click();
+    await expect(page.getByText("後日の確認").first()).toBeVisible(); // the lines repaired yesterday, checked today
+    await expect(page.getByText(/短い修復/)).toHaveCount(0); // yesterday's finished repair is not done again
+    // "続ける" leads through the carried tasks and the later-day check
+    let sawCarried = false, sawRecall = false;
+    for (let i = 0; i < 6 && !(sawCarried && sawRecall); i++) {
+      await page.goto("/");
+      await page.getByRole("link", { name: /今日の学習を始める|続ける/ }).first().click();
+      await page.waitForURL(/\/(task|play)\?/);
+      if (/\/task\?/.test(page.url())) {
+        await expect(page.getByRole("heading", { name: /後日の確認/ })).toBeVisible();
+        sawRecall = true;
+        for (const box of await page.locator(".qbox").all()) await box.getByRole("button", { name: "分かった" }).click();
+        await page.getByRole("button", { name: "この課題を終える" }).click();
+        await expect(page.getByRole("heading", { name: "後日の確認を実施しました" })).toBeVisible();
+      } else {
+        await expect(page).toHaveURL(/\/play\?/);
+        sawCarried = true;
+        await expect(groups.first()).toBeVisible();
+        for (let j = 0; j < await groups.count(); j++) await groups.nth(j).getByRole("button").first().click();
+        await page.getByRole("button", { name: "解答する" }).click();
+        await page.getByRole("button", { name: "解説を確認した" }).click();
+      }
+    }
+    expect(sawCarried && sawRecall).toBe(true);
+  } finally {
+    await setClock(page, 0);
+  }
+});
+
+// Owner request 5: Common Test 1B / Part 2 pictures are drawn and readable at phone width.
+test("1B / Part 2: pictures are drawn from data and stay readable on a phone", async ({ page }) => {
+  await login(page);
+  await setMode(page, "共通テスト");
+  for (const title of [/場面と絵の対応 B-2（絵）/, /短い対話と問い 2-2（絵）/]) {
+    await page.goto("/library");
+    await page.getByRole("link", { name: title }).first().click();
+    const panels = page.getByTestId("picture-panel");
+    await expect(panels).toHaveCount(4);
+    for (let i = 0; i < 4; i++) {
+      const b = (await panels.nth(i).boundingBox())!;
+      expect(b.width).toBeGreaterThanOrEqual(140); // two per row on a phone, each wide enough to compare
+      await expect(panels.nth(i)).toHaveAttribute("aria-label", `絵 ${i + 1}`);
+    }
+    await expect(page.getByText("音声向けアレンジ")).toHaveCount(0); // drawn pictures: the official presentation
+    await checkTouchLayout(page);
+    await page.screenshot({ path: `test-results/pictures-${title.source.includes("B-2") ? "1b" : "2"}.png`, fullPage: false });
+  }
+  // a clock time the answer depends on is drawn as large, readable text
+  const nine45 = page.getByTestId("picture-panel").nth(2).locator("text", { hasText: "9:45" });
+  await expect(nine45).toBeVisible();
+  expect((await nine45.boundingBox())!.height).toBeGreaterThanOrEqual(11);
+});
+
+// Owner request 6: a C1 meeting hand-over written in the learner's own words (Japanese or English).
+test("practice short answers: written hand-over, pending paraphrase and the learner's own check", async ({ page }) => {
+  await login(page);
+  await setMode(page, "C1");
+  await page.goto("/library");
+  await page.getByRole("link", { name: /打ち合わせの引継ぎ（記述）/ }).first().click();
+  await page.getByRole("button", { name: /再生/ }).first().click();
+  await page.getByLabel("問1の解答").fill("京都に決まった");
+  await page.getByLabel("問2の解答").fill("いつ行くかはまだ話し合っている"); // a paraphrase the accepted wording does not cover
+  await page.getByLabel("問3の解答").fill("Ken will check the fares by Friday");
+  await page.getByLabel("問4の解答").fill("ひとり五千円未満であること");
+  await checkTouchLayout(page);
+  await page.getByRole("button", { name: "解答する" }).click();
+  const res = page.getByTestId("practice-result");
+  await expect(res.getByText(/重大な取り違え: 主体/)).toBeVisible();
+  await expect(page.getByText("○ 正解").first()).toBeVisible();
+  await expect(page.getByText("あなたの解答:").first()).toBeVisible();
+  await expect(page.getByText("？ 判定保留")).toHaveCount(1); // not guessed as right or wrong
+  await res.getByRole("button", { name: "同じ内容を書けた" }).first().click();
+  await expect(res.getByText(/本人確認「同じ内容」/).first()).toBeVisible();
+  await page.reload(); // the learner's check is stored apart from the automatic result
+  await expect(page.getByTestId("practice-result").getByText(/本人確認「同じ内容」/).first()).toBeVisible();
+  await setMode(page, "共通テスト");
+});

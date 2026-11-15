@@ -865,3 +865,61 @@
     - 「sure」だけでは承諾と断定できません。
     - 繰り返しだけでは働きは決まりません。
   revision: 2
+
+# ---------------------------------------------------------------- P3A short-answer hand-over (owner request 6)
+- id: pr-p3a-trip-handover
+  mode: cefr_c1
+  part: P3A
+  title: 打ち合わせの引継ぎ（記述）
+  topic: school-trip
+  band: 3
+  family: pr-p3a-trip
+  speakers: {Maya: female, Ken: male, Lisa: female}
+  practice:
+    purpose: 校外学習の打ち合わせを聞き、欠席したメンバーへ決定事項・未決定・担当と期限・条件を自分の言葉で引き継ぐ。
+    listener: 打ち合わせを欠席したメンバー
+    success: 日本語でも英語でもよいので、決まったこと・まだ決まっていないこと・誰がいつまでに何をするかを書ける。
+    scene: project-meeting
+    support: 1
+    input_mode: desk
+  script:
+    - - "Maya: Let's settle the class trip. Ken suggested Nara last time."
+      - "Ken: I'd actually like to drop Nara. Most of us went there in middle school."
+      - "Lisa: Then how about Kyoto? The museums there fit our project."
+      - "Ken: Kyoto is fine with me, as long as the cost stays under five thousand yen each."
+      - "Maya: Agreed, Kyoto it is. I'll check the train fares and report back by Friday."
+      - "Lisa: What time should we leave? Eight or nine?"
+      - "Maya: Let's wait until we know the train times."
+  questions:
+    - prompt: What did the group decide? Write it in Japanese or English.
+      skill: discourse_structure
+      rubric: decided
+      accepted: ["京都", "kyoto", "きょうと"]
+      critical_text: {"奈良": subject, "nara": subject}
+      evidence: [3, 5]
+      answer_en: They decided on Kyoto (Nara was dropped).
+      ja: 奈良は提案者自身が取り下げ、京都に決まりました。奈良を決定として伝えるのは重大な取り違えです。
+    - prompt: What is still undecided?
+      skill: discourse_structure
+      rubric: undecided
+      accepted: ["出発", "departure", "what time to leave", "when to leave", "leaving time", "何時に出る", "何時に行く"]
+      critical_text: {"8時に決": certainty, "9時に決": certainty, "decided to leave at": certainty}
+      evidence: [6, 7]
+      answer_en: The departure time is still undecided.
+      ja: 出発時刻（8時か9時か）は、電車の時刻が分かるまで決めないことになりました。
+    - prompt: Who will do what, and by when?
+      skill: speaker_attitude
+      rubric: owner
+      accepted: ["マヤ + 金曜", "maya + friday", "マヤ + 金", "maya + fri"]
+      critical_text: {"ケン": subject, "ken": subject, "リサ": subject, "lisa": subject}
+      evidence: [5]
+      answer_en: Maya will check the train fares and report back by Friday.
+      ja: 運賃を調べて金曜までに報告するのはマヤです。
+    - prompt: Under what condition did Ken agree?
+      skill: speaker_attitude
+      rubric: condition
+      accepted: ["5000", "5,000", "五千", "five thousand", "5千"]
+      critical_text: {"10000": number, "1万": number, "ten thousand": number}
+      evidence: [4]
+      answer_en: As long as the cost stays under 5,000 yen each.
+      ja: 一人5,000円未満に収まることが条件です。

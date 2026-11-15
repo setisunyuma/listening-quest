@@ -254,6 +254,12 @@ function AnswerView({ unit, attempt, pack, onResult }: { unit: LearnerUnit; atte
             <h3>問 {x.slot}{u.questions.length > 1 ? ` / ${u.questions.length}` : ""}{itemOf(x.id) && <small> {itemOf(x.id)!.label_ja}{itemOf(x.id)!.stage === "initial" ? "（暫定）" : ""}</small>}</h3>
             {x.prompt_en ? <p className="en">{x.prompt_en}</p> : <p className="note">問いは音声で流れます。</p>}
             {hints[x.id] && <p className="msg warn">ヒント: {hints[x.id]}</p>}
+            {x.type === "blank" ? (
+              <label className="field">短く書いてください（日本語・英語のどちらでも）
+                <textarea rows={2} maxLength={300} value={answers[x.id]?.text ?? ""} aria-label={`問${x.slot}の解答`}
+                  onChange={(e) => setAnswers({ ...answers, [x.id]: e.target.value.trim() ? { text: e.target.value } : undefined })} />
+              </label>
+            ) : (
             <div className="choices" role="group" aria-label={`問${x.slot}の選択肢`}>
               {x.choices.map((c, i) => (
                 <button key={c.id} className="choice" aria-pressed={answers[x.id]?.choice_id === c.id} disabled={lockedInitial(x)} onClick={() => setAnswers({ ...answers, [x.id]: { choice_id: c.id } })}>
@@ -261,6 +267,7 @@ function AnswerView({ unit, attempt, pack, onResult }: { unit: LearnerUnit; atte
                 </button>
               ))}
             </div>
+            )}
             {!offline && answers[x.id] && (
               <div className="row" role="group" aria-label={`問${x.slot}の確信度（任意）`}>
                 <small>確信度（任意）:</small>
@@ -389,15 +396,16 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
           </div>
         )}
       </section>
-      {result.practice && <PracticeResult p={result.practice} />}
+      {result.practice && <PracticeResult p={result.practice} attemptId={result.attempt_id} />}
       {result.figures.length > 0 && <section className="panel">{result.figures.map((f: Json) => <Figure key={f.id} fig={f} highlight={result.questions.flatMap((x) => x.evidence.filter((e) => e.type === "figure").map((e) => e.element_id))} />)}</section>}
       <section className="panel" aria-label="設問ごとの解説">
         {result.questions.map((x) => {
           const mine = x.your_answer?.choice_id, right = x.correct_answer.choice_id;
           return (
             <div className="qbox" key={x.id}>
-              <h3>問 {x.slot} <span className={`verdict ${x.correct ? "ok" : x.skipped ? "skip" : "ng"}`}>{x.correct ? "○ 正解" : x.skipped ? "－ スキップ" : "× 不正解"}</span></h3>
+              <h3>問 {x.slot} <span className={`verdict ${x.correct ? "ok" : x.skipped || x.pending ? "skip" : "ng"}`}>{x.correct ? "○ 正解" : x.skipped ? "－ スキップ" : x.pending ? "？ 判定保留" : "× 不正解"}</span></h3>
               <p className="en">{x.prompt_en}</p>
+              {x.type === "blank" && <p>あなたの解答: <strong>{x.your_answer?.text ?? "（未回答）"}</strong></p>}
               <div className="choices">
                 {x.choices.map((c, i) => (
                   <div key={c.id} className={`choice btn ${c.id === right ? "is-correct" : c.id === mine ? "is-wrong" : ""}`} style={{ cursor: "default" }}>
@@ -482,8 +490,13 @@ function ResultView({ result, onRetry, canRetry }: { result: Result; onRetry: ()
 
 const REPORT_KINDS: [string, string][] = [["unclear", "意味・解説が分かりにくい"], ["wrong", "答え・解説がおかしい"], ["audio", "音声がおかしい"], ["other", "その他"]];
 
-function PracticeResult({ p }: { p: Json }) {
+function PracticeResult({ p, attemptId }: { p: Json; attemptId: string }) {
   const items = Object.entries(p.items as Record<string, Json>);
+  const [checks, setChecks] = useState<Record<string, Json>>(p.self_checks ?? {});
+  const selfCheck = async (qid: string, verdict: string | null) => {
+    try { const r = await api<Json>(`/attempts/${attemptId}/self-check`, { body: { question_id: qid, verdict } }); setChecks(r.self_checks); } catch {}
+  };
+  const pendingIds = items.filter(([, it]) => it.final.pending || it.first.pending).map(([qid]) => qid);
   const pct = (v: number | null) => (v === null || v === undefined ? "判定保留" : `${Math.round(v * 100)}%`);
   const checked = p.clarifications.length > 0;
   return (
@@ -502,6 +515,19 @@ function PracticeResult({ p }: { p: Json }) {
             {checked && <td>{it.final.pending ? "判定保留" : it.final.correct ? "◯" : "×"}</td>}</tr>
         ))}</tbody>
       </table></div>
+      {pendingIds.length > 0 && (
+        <div className="qbox" aria-label="本人確認">
+          <h3>判定保留の解答 <small>（自動では判定できなかった言い換え）</small></h3>
+          <p className="note">下の設問の「Answer」と見比べて、同じ内容を書けたかを自分で確認してください。本人確認は自動採点の成績や次の課題の解放には入れず、別に記録します。</p>
+          {pendingIds.map((qid) => (
+            <div key={qid} className="row" role="group" aria-label={`${p.rubric_labels[p.items[qid].rubric] ?? qid}の本人確認`}>
+              <span style={{ flex: 1 }}>{p.rubric_labels[p.items[qid].rubric] ?? qid}{checks[qid] ? `：本人確認「${checks[qid].verdict === "same" ? "同じ内容" : "違った"}」` : ""}</span>
+              <button className="small" aria-pressed={checks[qid]?.verdict === "same"} onClick={() => selfCheck(qid, checks[qid]?.verdict === "same" ? null : "same")}>同じ内容を書けた</button>
+              <button className="small ghost" aria-pressed={checks[qid]?.verdict === "different"} onClick={() => selfCheck(qid, checks[qid]?.verdict === "different" ? null : "different")}>違った</button>
+            </div>
+          ))}
+        </div>
+      )}
       {p.critical_first.length > 0 && <Msg kind="warn">重大な取り違え: {p.critical_first.map((k: string) => p.critical_labels[k] ?? k).join("・")}。ほかの項目が正しくても、この点は短い確認で見直します。</Msg>}
       {p.clarification_replies.map((c: Json) => <p key={c.id} className="note">確認「{c.label_ja}」への返答: <span className="en">{c.reply_en}</span></p>)}
       <p className="faint">{p.evidence_eligible ? "次の課題に進むための証拠として記録しました。" : `証拠には数えません（${p.not_evidence_reasons.join("・")}）。練習としては記録されています。`} {p.generated_note_ja}</p>

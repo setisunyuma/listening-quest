@@ -1,4 +1,5 @@
 "use client";
+import { PictureSet } from "@/components/Pictures";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ApiError, type Json } from "@/lib/api";
 
@@ -69,6 +70,7 @@ function BarChart({ fig, highlight }: { fig: Json; highlight: string[] }) {
 }
 
 export function Figure({ fig, highlight = [] }: { fig: Json; highlight?: string[] }) {
+  if (fig.kind === "picture_set") return <figure style={{ margin: "10px 0" }}>{fig.title && <figcaption className="note">{fig.title}</figcaption>}<PictureSet fig={fig} highlight={highlight} /></figure>;
   // Rendered from structured data. No HTML from material is ever injected. Bar charts are drawn (R06); the labels
   // stay in the table below so nothing depends on reading the bars alone.
   const chart = fig.kind === "chart_bar" ? <BarChart fig={fig} highlight={highlight} /> : null;

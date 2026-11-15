@@ -46,8 +46,11 @@ _UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 _ID = re.compile(r"^[A-Za-z0-9_\-]{8,64}$")
 
 
+_TEST_CLOCK_OFFSET = timedelta(0)  # moved only through /api/test/clock, which exists only when LQ_ENV=test
+
+
 def now_utc() -> datetime:
-    return datetime.now(UTC)
+    return datetime.now(UTC) + _TEST_CLOCK_OFFSET
 
 
 def db() -> Session:
@@ -312,6 +315,19 @@ def goals_decision(
     return out
 
 
+@app.post("/api/test/clock", include_in_schema=False)
+def test_clock(body: dict[str, Any], user: m.User = Depends(current_user)) -> dict[str, Any]:
+    """Browser tests only (LQ_ENV=test): move this API's clock forward to see the next learning day. Refused elsewhere."""
+    global _TEST_CLOCK_OFFSET
+    if get_settings().env != "test":
+        raise HTTPException(404, "not found")
+    hours = float(body.get("offset_hours", 0))
+    if not (0 <= hours <= 24 * 30):
+        raise L.Invalid("offset_hours must be 0..720")
+    _TEST_CLOCK_OFFSET = timedelta(hours=hours)  # an absolute offset from the real clock; 0 resets it
+    return {"now": now_utc().isoformat()}
+
+
 @app.get("/api/meta")
 def meta(user: m.User = Depends(current_user)) -> dict[str, Any]:
     profs = []
@@ -469,6 +485,16 @@ def admin_unit_notes(
         out = C.update_notes(session, unit, body, actor=user.username)
     except ValueError as e:
         raise L.Invalid(str(e)[:300]) from e
+    session.commit()
+    return out
+
+
+@app.post("/api/attempts/{attempt_id}/self-check")
+def attempt_self_check(
+    attempt_id: str, body: dict[str, Any], session: Session = Depends(db), user: m.User = Depends(current_user)
+) -> dict[str, Any]:
+    """The learner's own check of a pending short answer (kept apart from automatic scoring)."""
+    out = L.self_check(session, user, attempt_id, str(body.get("question_id", "")), body.get("verdict"), now_utc())
     session.commit()
     return out
 

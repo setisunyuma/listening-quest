@@ -210,7 +210,8 @@
       "list",
       "worksheet",
       "scene_set",
-      "chart_bar"
+      "chart_bar",
+      "picture_set"
      ],
      "title": "Kind",
      "type": "string"
@@ -219,6 +220,14 @@
      "default": "",
      "title": "Note",
      "type": "string"
+    },
+    "pictures": {
+     "default": [],
+     "items": {
+      "$ref": "#/$defs/PicturePanel"
+     },
+     "title": "Pictures",
+     "type": "array"
     },
     "rows": {
      "default": [],
@@ -423,6 +432,120 @@
    "title": "OrderingAnswer",
    "type": "object"
   },
+  "PicItem": {
+   "additionalProperties": false,
+   "description": "One drawn element of a picture. Only these kinds / poses exist: the client draws them as simple SVG pictograms,\nso positions, actions, counts, times and short signs - what an answer may depend on - come from checked data.",
+   "properties": {
+    "flip": {
+     "default": false,
+     "title": "Flip",
+     "type": "boolean"
+    },
+    "kind": {
+     "enum": [
+      "person",
+      "cat",
+      "dog",
+      "table",
+      "chair",
+      "sofa",
+      "bed",
+      "shelf",
+      "window",
+      "door",
+      "clock",
+      "sign",
+      "box",
+      "bag",
+      "book",
+      "phone",
+      "umbrella",
+      "cup",
+      "tree",
+      "car",
+      "bike",
+      "bus",
+      "train"
+     ],
+     "title": "Kind",
+     "type": "string"
+    },
+    "label": {
+     "default": "",
+     "maxLength": 12,
+     "title": "Label",
+     "type": "string"
+    },
+    "pose": {
+     "default": "",
+     "enum": [
+      "",
+      "stand",
+      "sit",
+      "sleep",
+      "walk",
+      "run",
+      "raise_hand",
+      "hold",
+      "read",
+      "call"
+     ],
+     "title": "Pose",
+     "type": "string"
+    },
+    "size": {
+     "default": 100,
+     "maximum": 200,
+     "minimum": 50,
+     "title": "Size",
+     "type": "integer"
+    },
+    "x": {
+     "maximum": 100,
+     "minimum": 0,
+     "title": "X",
+     "type": "integer"
+    },
+    "y": {
+     "maximum": 100,
+     "minimum": 0,
+     "title": "Y",
+     "type": "integer"
+    }
+   },
+   "required": [
+    "kind",
+    "x",
+    "y"
+   ],
+   "title": "PicItem",
+   "type": "object"
+  },
+  "PicturePanel": {
+   "additionalProperties": false,
+   "properties": {
+    "id": {
+     "pattern": "^[A-Za-z0-9_.\\-]{1,64}$",
+     "title": "Id",
+     "type": "string"
+    },
+    "items": {
+     "items": {
+      "$ref": "#/$defs/PicItem"
+     },
+     "maxItems": 14,
+     "minItems": 1,
+     "title": "Items",
+     "type": "array"
+    }
+   },
+   "required": [
+    "id",
+    "items"
+   ],
+   "title": "PicturePanel",
+   "type": "object"
+  },
   "PracticeBlock": {
    "additionalProperties": false,
    "properties": {
@@ -566,6 +689,23 @@
      },
      "default": {},
      "title": "Critical Choices",
+     "type": "object"
+    },
+    "critical_texts": {
+     "additionalProperties": {
+      "enum": [
+       "subject",
+       "conclusion",
+       "negation",
+       "number",
+       "condition",
+       "attribution",
+       "certainty"
+      ],
+      "type": "string"
+     },
+     "default": {},
+     "title": "Critical Texts",
      "type": "object"
     },
     "main": {
