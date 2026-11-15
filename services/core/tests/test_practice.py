@@ -40,7 +40,12 @@ def choose(u: m.Unit, picks: dict[int, int]) -> dict:
     c = UnitContent.model_validate(u.content)
     out = {}
     for i, q in enumerate(c.sorted_questions(), 1):
-        out[q.id] = {"choice_id": f"c{picks[i]}"} if i in picks else q.answer.model_dump(exclude={"type"})
+        if i in picks:
+            out[q.id] = {"choice_id": f"c{picks[i]}"}
+        elif q.answer.type == "blank":  # a written answer: the first accepted wording
+            out[q.id] = {"text": q.answer.accepted[0]}
+        else:
+            out[q.id] = q.answer.model_dump(exclude={"type"})
     return out
 
 
