@@ -362,6 +362,8 @@ def authored_to_unit(raw: dict, spec: GenSpec) -> dict:
             "answer": answer, "skill_tags": [s for s in q.skill_tags if s in SKILLS], "evidence": ev,
             "feedback": {"answer_en": q.answer_en, "explanation_ja": q.explanation_ja, "hint_ja": q.hint_ja, "distractors": [d.model_dump() for d in q.distractors]},
         })  # fmt: skip
+    if not (part.get("contract") or {}).get("shared_choices"):
+        _spread_answers(questions, spec.seed)
     skills = sorted({s for q in questions for s in q["skill_tags"]})
     primary = spec.primary_skill if spec.primary_skill in skills else skills[0]
     seed_slug = _slug(spec.seed)
@@ -387,6 +389,19 @@ def authored_to_unit(raw: dict, spec: GenSpec) -> dict:
             {u.id for seg in a.segments for u in seg.utterances},
         ),
     }  # fmt: skip
+
+
+def _spread_answers(questions: list[dict], seed: str) -> None:
+    """Models tend to put the answer first. Single-choice options are reordered (deterministically, ids kept) so the
+    answer position carries no information; every later step (audio numbers, review) uses this final order."""
+    import hashlib
+
+    for q in questions:
+        if q["type"] != "single_choice" or len(q["choices"]) < 2:
+            continue
+        by = {c["id"]: c for c in q["choices"]}
+        order = sorted(by, key=lambda cid: hashlib.sha256(f"{seed}:{q['id']}:{cid}".encode()).hexdigest())
+        q["choices"] = [by[c] for c in order]
 
 
 def _practice_to_unit(raw: dict, spec: GenSpec) -> dict:
