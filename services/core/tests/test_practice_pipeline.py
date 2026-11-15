@@ -132,3 +132,15 @@ def test_the_proposal_uses_practice_as_its_own_indicator(db, user):
     assert "skills" in res and not set(res["skills"]) & set(res["practice"])  # kept apart from exam-format skills
     with pytest.raises(StopIteration):
         next(c for c in codes if c.startswith("practice_") and "exam" in c)
+
+
+def test_library_order_does_not_depend_on_the_database_collation(db, user):
+    """C1 practice tasks (part "P3A") come first under any PostgreSQL locale: an en_US database used to sort them
+    behind "lecture", where the page shows the group collapsed (found by the e2e run in CI)."""
+    from lq.services import stats
+
+    ready_unit(db, content=make_content(mode="cefr_c1", part="lecture", skill="discourse_structure", seed="col-l"))
+    unit(db, "pr-p3a-festival")
+    db.commit()
+    parts = [u["part"] for u in stats.library(db, user, T0, "cefr_c1")["units"]]
+    assert parts == sorted(parts) and parts.index("P3A") < parts.index("lecture")
