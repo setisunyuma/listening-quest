@@ -67,7 +67,21 @@ def lint_practice(unit: UnitContent) -> list[str]:
         errs.append(f"{p.practice_kind} allows at most {allowed} clarification(s)")
     if t.get("prosody_required") and not p.prosody_required:
         errs.append(f"{p.practice_kind} depends on tone: prosody_required must be set")
-    # an item about missing information needs a "cannot tell / need to check" choice that can be correct (V04)
+    # Q01: strong cues that work without listening (only the answer is clearly longer / the only cautious option)
+    from lq.domain.cue_audit import question_cues
+
+    for q in unit.sorted_questions():
+        if q.type == "single_choice":
+            ids = [c.id for c in q.choices]
+            cues = [
+                c
+                for c in question_cues(q.prompt_en, [c.text for c in q.choices], ids.index(q.answer.choice_id))
+                if c in ("longest", "hedge_only")
+            ]
+            if cues:
+                errs.append(
+                    f"question {q.id}: the answer can be guessed without listening ({', '.join(cues)}); make the options alike"
+                )
     return errs
 
 

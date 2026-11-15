@@ -44,6 +44,15 @@ def choose(u: m.Unit, picks: dict[int, int]) -> dict:
     return out
 
 
+def crit(u: m.Unit, qnum: int, kind: str) -> int:
+    """The choice number of a critical misunderstanding of `kind` in question `qnum` (authored order)."""
+    c = UnitContent.model_validate(u.content)
+    q = c.sorted_questions()[qnum - 1]
+    it = next(i for i in c.practice.items if i.question_id == q.id)
+    cid = next(k for k, v in it.critical_choices.items() if v == kind)
+    return [x.id for x in q.choices].index(cid) + 1
+
+
 def submit(db, user, u: m.Unit, answers: dict, now=T0, slot_id=None) -> m.Attempt:
     att = L.start_attempt(db, user, attempt_id=eid(), unit_id=u.id, slot_id=slot_id, now=now)
     for seg in UnitContent.model_validate(u.content).segments:
@@ -95,7 +104,7 @@ def test_v04_changing_the_key_condition_changes_the_correct_action():
     miss = content("pr-p1a-hall-missing")
     q = miss.sorted_questions()[0]
     right = next(c.text for c in q.choices if c.id == q.answer.choice_id)
-    assert "check" in right.lower()  # information missing from the audio: "need to check" is the answer
+    assert "deadline" in right.lower() and "not" in right.lower()  # missing from the audio: "not decided yet" is right
 
 
 # ---------------------------------------------------------------- V05 critical errors are never offset
@@ -103,7 +112,7 @@ def test_v04_changing_the_key_condition_changes_the_correct_action():
 
 def test_v05_critical_misunderstanding_is_reported_even_with_good_details(db, user):
     u = unit(db, "pr-p2a-sleep")
-    att = submit(db, user, u, choose(u, {4: 2}))  # everything right except certainty: "sure phones never matter"
+    att = submit(db, user, u, choose(u, {4: crit(u, 4, "certainty")}))  # all right except a certainty mix-up
     res = att.result["practice"]
     assert res["critical_first"] == ["certainty"] and res["first_understanding"] == 0.75
     assert att.result["critical_errors"] == ["certainty"]
@@ -138,7 +147,9 @@ def test_v07_a_permitted_check_is_not_first_understanding_and_is_not_a_failure(d
     att = L.start_attempt(db, user, attempt_id=eid(), unit_id=u.id, now=T0)
     for seg in UnitContent.model_validate(u.content).segments:
         L.record_play(db, user, att.id, event_id=eid(), segment_id=seg.id)
-    first = choose(u, {4: 2})  # before the check: books Room B without knowing its capacity (certainty error)
+    first = choose(
+        u, {4: crit(u, 4, "certainty")}
+    )  # before the check: books Room B without knowing its capacity (certainty error)
     ev = eid()
     rep = L.request_clarification(db, user, att.id, event_id=ev, clarification_id="c1", initial_answers=first)
     assert "thirty" in rep["reply_en"] and rep["used"] == 1
@@ -299,7 +310,94 @@ def test_m01_growth_keeps_practice_apart_from_exam_figures(db, user):
     from lq.services import stats
 
     u = unit(db, "pr-p1a-studio-a")
-    submit(db, user, u, choose(u, {1: 1}))  # online booking for two hours: a condition mix-up
+    submit(db, user, u, choose(u, {1: crit(u, 1, "condition")}))  # online booking for two hours: a condition mix-up
     g = stats.growth(db, user, T0 + days(1), "eiken_pre1")
     assert g["first_official"]["units"] == 0 and g["first_arranged"]["units"] == 0 and g["review"]["units"] == 0
     assert g["practice"]["tasks"] == 1 and g["practice"]["critical"] == 1 and g["practice"]["first_mean"] == 0.5
+
+
+# ---------------------------------------------------------------- 選択肢の位置と手掛かり (option order and cues)
+
+
+def test_bundled_tasks_have_no_position_or_wording_cues():
+    from lq.domain.cue_audit import audit_units
+
+    r = audit_units([content(f) for f in RAW])
+    assert r["questions"] == 32 and r["max_position_share"] <= 0.3, r["answer_positions"]
+    assert r["flagged"] == []
+
+
+def test_choices_are_shown_in_a_fixed_per_attempt_order_and_graded_by_id(db, user):
+    from lq.services import learning as L2
+
+    orders, u = set(), unit(db, "pr-p3a-festival")
+    db.commit()
+    att = L.start_attempt(db, user, attempt_id=eid(), unit_id=u.id, now=T0)
+    db.commit()
+    first = L2.attempt_dto(db, att)["unit"]["questions"]
+    again = L2.attempt_dto(db, db.get(m.Attempt, att.id))["unit"]["questions"]  # reload / resume
+    assert [[c["id"] for c in q["choices"]] for q in first] == [[c["id"] for c in q["choices"]] for q in again]
+    for i in range(6):  # other attempts get other orders
+        orders.add(
+            tuple(
+                c["id"]
+                for c in L2.attempt_dto(db, m.Attempt(id=f"x{i}" * 8, unit_id=u.id, plays={}, aids={}))["unit"][
+                    "questions"
+                ][0]["choices"]
+            )
+        )
+    assert len(orders) > 1
+    c = UnitContent.model_validate(u.content)
+    shown = {q["id"]: [ch["id"] for ch in q["choices"]] for q in first}
+    authored = {q.id: [ch.id for ch in q.choices] for q in c.questions}
+    assert any(shown[q] != authored[q] for q in shown)  # the shown order differs from the authored one
+    for seg in c.segments:
+        L.record_play(db, user, att.id, event_id=eid(), segment_id=seg.id)
+    att = L.submit_attempt(db, user, att.id, choose(u, {}), now=T0 + days(0.01))  # answers are choice ids
+    db.commit()
+    assert att.result["correct_count"] == att.result["total"]
+    res = L.result_dto(db, att)
+    assert [[ch["id"] for ch in q["choices"]] for q in res["questions"]] == [shown[q["id"]] for q in res["questions"]]
+    for q in res["questions"]:  # each wrong-choice reason stays on its own option
+        assert set(q["distractors"]) == {ch["id"] for ch in q["choices"]} - {q["correct_answer"]["choice_id"]}
+
+
+def test_practice_answer_audio_names_no_option_number():
+    from lq.audio import render as R
+
+    clips = R.plan_clips(content("pr-p3a-festival"))
+    assert all("number" not in s.text for k, s in clips.items() if k.startswith("answer:"))
+
+
+def test_generated_exam_items_spread_the_answer_position():
+    from collections import Counter
+
+    from helpers import make_content
+
+    from lq.generator import authoring
+    from lq.generator.providers import GenSpec
+
+    pos = Counter()
+    for i in range(24):
+        c = make_content(part="3", seed=f"spread{i}")
+        raw = {"title": c.title, "topic": c.topic, "family_slug": "f", "pre_info_situation": "", "figures": [], "radio_figure_description_en": "", "glossary": [], "translations_ja": [],
+               "speakers": [s.model_dump() for s in c.speakers if s.role != "narrator"],
+               "segments": [{"id": s.id, "label": s.label, "utterances": [{"id": x.id, "speaker_id": x.speaker_id, "text": x.text} for x in s.utterances]} for s in c.segments],
+               "questions": [{"id": q.id, "slot": q.slot, "segment_ids": q.segment_ids, "prompt_en": q.prompt_en, "type": "single_choice",
+                              "choices": [ch.model_dump() for ch in q.choices], "items": [], "figure_ids": [], "answer_choice_ids": [q.choices[0].id], "answer_pairs": [],
+                              "answer_texts": [], "skill_tags": q.skill_tags, "evidence": [{"utterance_id": e.utterance_id or "", "figure_id": "", "element_id": ""} for e in q.evidence],
+                              "answer_en": "x", "explanation_ja": "説明。", "hint_ja": "", "distractors": []} for q in c.questions]}  # fmt: skip
+        u = authoring.authored_to_unit(
+            raw,
+            GenSpec(
+                mode="common_test",
+                part="3",
+                template_type="short_dialogue",
+                primary_skill="explicit_detail",
+                band=3,
+                seed=f"spread{i}",
+            ),
+        )
+        for q in u["questions"]:
+            pos[[ch["id"] for ch in q["choices"]].index(q["answer"]["choice_id"]) + 1] += 1
+    assert len(pos) == 4 and max(pos.values()) / sum(pos.values()) < 0.5, pos  # the model put every answer first

@@ -381,6 +381,10 @@ def attempt_dto(session, att: m.Attempt, *, show_audio_prompts: bool | None = No
     if show_audio_prompts is None:
         show_audio_prompts = bool(att.aids.get("prompt_text"))
     view = learner_view(content, show_audio_prompts=show_audio_prompts)
+    if content.practice is not None:  # practice tasks: choices shown in a fixed per-attempt order (no position cue)
+        from lq.domain.content import shuffle_view_choices
+
+        shuffle_view_choices(view["questions"], att.id)
     for seg in view["segments"]:
         a = assets.get(f"stimulus:{seg['id']}")
         seg["audio"] = {"url": audio_url(a), "duration_ms": a.duration_ms, "bytes": a.bytes} if a else None
@@ -874,6 +878,10 @@ def result_dto(session, att: m.Attempt) -> dict:
             "skill_tags": q.skill_tags, "system_guess": r.get("system_guess"), "system_guess_label": SKILL_LABELS_JA.get(r.get("system_guess") or "", None),
             "self_reason": (att.error_reasons or {}).get(q.id),
         })  # fmt: skip
+    if content.practice is not None:  # the result lists the choices in the order they were shown
+        from lq.domain.content import shuffle_view_choices
+
+        shuffle_view_choices(questions, att.id)
     fb = assets.get("feedback")
     ja = {t.utterance_id: t.ja for t in content.study_notes.translations}
     return {

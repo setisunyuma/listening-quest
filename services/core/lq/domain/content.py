@@ -525,6 +525,19 @@ def estimate_duration_sec(unit: UnitContent, segment_ms: dict[str, int] | None =
 # ---------------------------------------------------------------- views
 
 
+def display_order(ids: list[str], seed: str) -> list[str]:
+    """A fixed, per-attempt order for showing choices (practice tasks): the same attempt always gets the same order
+    (resume, reload, results), different attempts get different orders, and answers stay keyed by choice id."""
+    return sorted(ids, key=lambda cid: sha256_hex(f"{seed}:{cid}"))
+
+
+def shuffle_view_choices(view_questions: list[dict], seed: str) -> None:
+    for q in view_questions:
+        if q.get("type") == "single_choice" and len(q.get("choices") or []) > 1:
+            by = {c["id"]: c for c in q["choices"]}
+            q["choices"] = [by[i] for i in display_order(list(by), f"{seed}:{q['id']}")]
+
+
 def _rubric_label(kind: str, rubric: str) -> str:
     from lq.domain.practice import task_def
 
