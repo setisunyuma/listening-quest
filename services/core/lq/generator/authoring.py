@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Literal
 
 import yaml
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from lq.domain.content import SKILLS, UnitContent, is_correct, normalize_answer
 from lq.domain.profiles import current_profile, get_profile, part_spec, slot_layout
@@ -58,12 +58,17 @@ class ARow(_S):
 class APicItem(_S):
     kind: Literal["person", "cat", "dog", "table", "chair", "sofa", "bed", "shelf", "window", "door", "clock", "sign", "box",
                   "bag", "book", "phone", "umbrella", "cup", "tree", "car", "bike", "bus", "train"]  # fmt: skip
-    x: int  # 0..100 centre
-    y: int  # 0..100 centre (down)
-    pose: Literal["", "stand", "sit", "sleep", "walk", "run", "raise_hand", "hold", "read", "call"]
-    label: str  # clock time or short sign (max 12 characters), "" otherwise
+    x: int = Field(description="centre, percent of the panel width (0-100)")
+    y: int = Field(description="centre, percent of the panel height from the top (0-100)")
+    pose: Literal["", "stand", "sit", "sleep", "walk", "run", "raise_hand", "hold", "read", "call"] = Field(
+        description="people only; 'read' draws a book and 'call' a phone in the hand, so the action is visible"
+    )
+    label: str = Field(description="a clock time or a short sign (max 12 characters); empty otherwise")
     flip: bool
-    size: int  # 50..200, 100 = default
+    size: int = Field(
+        description="drawing scale in percent of the item's NORMAL size, not of the panel: 100 = normal, "
+        "allowed 50-200; use 100 unless the size matters"
+    )
 
 
 class APanel(_S):
@@ -351,6 +356,22 @@ def study_notes(glossary: list[dict], translations: list[dict], utterance_ids: s
     }
 
 
+def _figures(figs) -> list[dict]:
+    """Figures as UnitContent dicts. A drawn item's size / position is only how it is drawn (never what an answer
+    depends on), so an out-of-range value - e.g. a size given as percent of the panel - is normalised instead of
+    rejecting the whole paid unit: size -> 100 (normal), positions clamped into the panel."""
+    out = []
+    for f in figs:
+        d = f.model_dump()
+        for p in d.get("pictures") or []:
+            for it in p["items"]:
+                if not 50 <= it["size"] <= 200:
+                    it["size"] = 100
+                it["x"], it["y"] = min(max(it["x"], 0), 100), min(max(it["y"], 0), 100)
+        out.append(d)
+    return out
+
+
 def authored_to_unit(raw: dict, spec: GenSpec) -> dict:
     """Convert model output to a UnitContent dict. Format-level fields come from the profile, not the model."""
     if spec.practice_kind:
@@ -398,7 +419,7 @@ def authored_to_unit(raw: dict, spec: GenSpec) -> dict:
                                  else {"kind": "official", "choices_read_aloud": False, "figure_verbalized": False, "notes": ""}),
         "speakers": speakers,
         "pre_info": {"situation_en": a.pre_info_situation, "read_seconds": part.get("pre_read_sec", 10)} if a.pre_info_situation else None,
-        "figures": [f.model_dump() for f in a.figures],
+        "figures": _figures(a.figures),
         "segments": [{"id": s.id, "label": s.label, "plays": part["plays"], "utterances": [{**u.model_dump(), "lang": "en"} for u in s.utterances]} for s in a.segments],
         "questions": questions,
         "scoring_groups": unit_scoring_groups(profile, spec.part, [q["id"] for q in questions]),
@@ -457,7 +478,7 @@ def _practice_to_unit(raw: dict, spec: GenSpec) -> dict:
         "title": a.title[:120], "topic": _slug(a.topic), "skill_tags": skills, "primary_skill": spec.primary_skill if spec.primary_skill in skills else (skills or ["main_idea"])[0],
         "provisional_difficulty_band": spec.band, "calibration_status": "provisional", "family_id": f"{spec.mode}:{spec.practice_kind}:{_slug(a.family_slug)}", "variant_of": None,
         "presentation_profile": {"kind": "practice", "choices_read_aloud": False, "figure_verbalized": False, "notes": "生成した練習用の場面（実録音ではありません）"},
-        "speakers": speakers, "pre_info": None, "figures": [f.model_dump() for f in a.figures],
+        "speakers": speakers, "pre_info": None, "figures": _figures(a.figures),
         "segments": [{"id": s.id, "label": s.label, "plays": part["plays"], "utterances": [{**u.model_dump(), "lang": "en"} for u in s.utterances]} for s in a.segments],
         "questions": questions, "scoring_groups": [],
         "radio": {"supported": False, "reason": "実践課題はラジオでは扱いません", "figure_description_en": ""},
@@ -620,6 +641,13 @@ def contract_errors(unit: UnitContent, part: dict) -> list[str]:
                 "this part chooses between pictures in the official exam; material that describes them in words "
                 "must use the audio_arranged presentation (形式調整版), not official"
             )
+        for f in pics.values():  # every option must be a different picture, or the answer cannot be told apart
+            seen: dict[tuple, str] = {}
+            for p in f.pictures:
+                key = tuple(sorted((it.kind, it.x, it.y, it.pose, it.label, it.flip) for it in p.items))
+                if key in seen:
+                    errs.append(f"figure {f.id}: panels {seen[key]} and {p.id} draw the same picture")
+                seen.setdefault(key, p.id)
     need_fig = c.get("requires_figure")
     if need_fig and not any(f.kind == need_fig for f in unit.figures):
         errs.append(f"this part needs a {need_fig} figure")
