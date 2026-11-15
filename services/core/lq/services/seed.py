@@ -157,7 +157,7 @@ def _presentation(part: dict, figures: list[dict] | None = None) -> dict:
     """R06: parts that choose between pictures are official only with drawn picture panels; material that describes
     the pictures in words is an arranged presentation (形式調整版)."""
     if (part.get("contract") or {}).get("requires_pictures") and not any(
-        f.get("kind") == "picture_set" for f in figures or []
+        f.get("kind") in ("picture_set", "labeled_scene") for f in figures or []
     ):
         return {
             "kind": "audio_arranged",

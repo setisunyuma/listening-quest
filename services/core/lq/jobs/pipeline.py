@@ -16,8 +16,9 @@ from lq.audio import render as R
 from lq.audio.pcm import AudioError, decode_to_pcm, duration_ms, encode_mp3, wav_bytes
 from lq.db import models as m
 from lq.db.base import new_id, session_factory
+from lq.domain import pictures as PIC
 from lq.domain.content import UnitContent, canonical_json, reviewer_view, sha256_hex
-from lq.domain.profiles import get_profile, part_spec
+from lq.domain.profiles import current_profile, get_profile, part_spec
 from lq.generator import authoring
 from lq.generator.budget import BudgetBlocked
 from lq.generator.factory import assign_voices, get_providers, speaker_gender, voice_config_problems
@@ -139,12 +140,74 @@ def execute(lease: Lease) -> str:
 # ---------------------------------------------------------------- content
 
 
+def _picture_stock(s, realm: str, mode: str, part: str, exclude: str | None = None, limit: int = 40) -> list:
+    """(unit id, content id, picture figure) of the most recent picture items of this part in this data area."""
+    U = m.Unit
+    rows = (
+        s.execute(
+            select(U)
+            .where(
+                U.realm == realm,
+                U.mode == mode,
+                U.part == part,
+                U.invalidated_at.is_(None),
+                U.status.not_in(("FAILED",)),
+                U.id != (exclude or ""),
+            )  # fmt: skip
+            .order_by(U.created_at.desc())
+            .limit(limit)
+        )
+        .scalars()
+        .all()
+    )
+    out = []
+    for u in rows:
+        try:
+            fig = PIC.picture_figure(C.load_content(u).figures)
+        except Exception:  # noqa: BLE001 - an unreadable old unit is simply not compared
+            continue
+        if fig is not None:
+            out.append((u.id, u.content_id, fig))
+    return out
+
+
+def picture_contrast_for(s, realm: str, spec: GenSpec) -> str | None:
+    """The difference axis this picture item should use: the one least generated so far for the part."""
+    part = part_spec(current_profile(spec.mode), spec.part) or {}
+    if spec.practice_kind or not (part.get("contract") or {}).get("requires_pictures"):
+        return None
+    used: dict[str, int] = {}
+    for _, _, fig in _picture_stock(s, realm, spec.mode, spec.part):
+        for a in PIC.contrast_axes(fig):
+            used[a] = used.get(a, 0) + 1
+    return PIC.least_used_axis(used, spec.seed)
+
+
+def similar_picture_item(s, unit: m.Unit, content: UnitContent, window: int = 20) -> str | None:
+    """A reason when a recent item of the same part shows the same kinds of things differing in the same way."""
+    fig = PIC.picture_figure(content.figures)
+    if fig is None or content.presentation_profile.kind != "official":
+        return None
+    key = PIC.composition_key(content.part, fig)
+    for _, cid, other in _picture_stock(s, unit.realm, content.mode, content.part, exclude=unit.id, limit=window):
+        if PIC.composition_key(content.part, other) == key:
+            axes = "・".join(PIC.AXES[a] for a in key[3]) or "なし"
+            return (f"similar pictures: {cid} already shows {', '.join(key[2])} differing in {', '.join(key[3])} "
+                    f"(似た構図: 同じ部品で同じ違い〔{axes}〕) - draw other things or make them differ in another way")  # fmt: skip
+    return None
+
+
 def step_content(lease: Lease, prov, meter, realm: str, params: dict) -> str:
     if prov.content is None:
         raise Blocked("no_provider", "no content provider configured (set OPENAI_API_KEY, or import material)")
     spec = GenSpec(
         **{k: (tuple(v) if k == "avoid_topics" else v) for k, v in params.items() if k in GenSpec.__dataclass_fields__}
     )
+    if "picture_contrast" not in (spec.extra or {}):
+        with session_factory()() as s:
+            axis = picture_contrast_for(s, realm, spec)
+        if axis:
+            spec = dataclasses.replace(spec, extra={**(spec.extra or {}), "picture_contrast": axis})
     last_err = ""
     content = None
     lint_fixes: list[str] = []
@@ -222,6 +285,11 @@ def step_review(lease: Lease, prov, meter, unit_id: str) -> None:
         if content.legacy_radio_only
         else authoring.lint_unit(content, require_distractors=content.source != "legacy-radio")
     )
+    if not lint and not content.legacy_radio_only:
+        with session_factory()() as s:  # free, before the paid review and audio
+            similar = similar_picture_item(s, s.get(m.Unit, unit_id), content)
+        if similar:
+            lint = [similar]
     if lint:
         _commit_step(
             lease, lambda s, job: C.quarantine(s, s.get(m.Unit, unit_id), "format check failed: " + "; ".join(lint))

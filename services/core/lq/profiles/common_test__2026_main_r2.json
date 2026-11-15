@@ -58,7 +58,10 @@
       "pre_read_sec": 0,
       "contract": {
         "choices": 4,
-        "requires_pictures": true
+        "requires_pictures": true,
+        "picture_forms": [
+          "picture_set"
+        ]
       }
     },
     {
@@ -76,7 +79,11 @@
       "pre_read_sec": 0,
       "contract": {
         "choices": 4,
-        "requires_pictures": true
+        "requires_pictures": true,
+        "picture_forms": [
+          "picture_set",
+          "labeled_scene"
+        ]
       }
     },
     {

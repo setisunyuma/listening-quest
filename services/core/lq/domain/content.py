@@ -94,39 +94,70 @@ class FigureRow(Strict):
 
 
 PIC_KINDS = ("person", "cat", "dog", "table", "chair", "sofa", "bed", "shelf", "window", "door", "clock", "sign", "box",
-             "bag", "book", "phone", "umbrella", "cup", "tree", "car", "bike", "bus", "train")  # fmt: skip
-PIC_POSES = ("", "stand", "sit", "sleep", "walk", "run", "raise_hand", "hold", "read", "call")
+             "bag", "book", "phone", "umbrella", "cup", "tree", "car", "bike", "bus", "train",
+             # added after checking the 2024/2025 Common Test pictures (watch / phone screen / fan / bottle / desk ...)
+             "watch", "fan", "bottle", "tv", "laptop", "lamp", "envelope", "ball", "bear", "fish", "apple", "leaf",
+             "flower", "snowman", "cushion", "bowl", "plate", "cake", "sun", "cloud", "rain", "snow", "building",
+             "bench", "ticket", "guitar", "hat", "shirt", "shoe", "cooler")  # fmt: skip
+PIC_POSES = ("", "stand", "sit", "sleep", "walk", "run", "raise_hand", "hold", "read", "call", "wave", "scared", "lie",
+             "play_game", "pull")  # fmt: skip
+PicKind = Literal[PIC_KINDS]  # type: ignore[valid-type]
+PicPose = Literal[PIC_POSES]  # type: ignore[valid-type]
+PicShade = Literal["", "white", "light", "dark"]
+PicPattern = Literal["", "stripes", "dots", "check", "diamond"]
+PicShape = Literal["", "round", "square"]
+PicState = Literal["", "on", "off", "open", "closed", "full", "empty", "bare", "leaves", "fruit"]
+PicHair = Literal["", "short", "long", "ponytail", "braid"]
+WEAR_KINDS = ("hat", "cap", "glasses", "scarf", "gloves", "ribbon", "backpack")
+
+
+class PicWear(Strict):
+    """Something a person wears or carries on the body; pattern / shade let two scarves differ (2025 1B)."""
+
+    kind: Literal[WEAR_KINDS]  # type: ignore[valid-type]
+    pattern: PicPattern = ""
+    shade: PicShade = ""
 
 
 class PicItem(Strict):
-    """One drawn element of a picture. Only these kinds / poses exist: the client draws them as simple SVG pictograms,
-    so positions, actions, counts, times and short signs - what an answer may depend on - come from checked data."""
+    """One drawn element of a picture. Only these kinds / poses / attributes exist: the client draws them as simple
+    SVG pictograms, so what an answer may depend on - position, action, presence, number, time, shade, pattern,
+    shape, state, what a person wears - comes from checked data, never from free-form drawing."""
 
-    kind: Literal["person", "cat", "dog", "table", "chair", "sofa", "bed", "shelf", "window", "door", "clock", "sign", "box",
-                  "bag", "book", "phone", "umbrella", "cup", "tree", "car", "bike", "bus", "train"]  # fmt: skip
+    kind: PicKind
     x: int = Field(ge=0, le=100)  # centre, % of the panel width
     y: int = Field(ge=0, le=100)  # centre, % of the panel height (down)
-    pose: Literal["", "stand", "sit", "sleep", "walk", "run", "raise_hand", "hold", "read", "call"] = ""
+    pose: PicPose = ""
     label: str = Field(default="", max_length=12)  # a clock time ("9:30") or a short sign; plain text only
     flip: bool = False  # facing left instead of right
     size: int = Field(default=100, ge=50, le=200)  # % of the default size
+    shade: PicShade = ""  # fill: white / light grey / dark
+    pattern: PicPattern = ""
+    shape: PicShape = ""  # round / square (watch, clock, box, sign, lamp ...)
+    count: int = Field(default=1, ge=1, le=12)  # how many of this item (fish in a cooler, apples, icons)
+    state: PicState = ""  # tv / laptop / lamp on-off, box / cooler open-closed / full-empty, tree bare / leaves / fruit
+    hair: PicHair = ""  # people only
+    wear: list[PicWear] = Field(default=[], max_length=4)  # people only
+    mark: int = Field(default=0, ge=0, le=4)  # labeled_scene: the option number drawn next to this item (1-4)
 
 
 class PicturePanel(Strict):
     id: _ID
-    items: list[PicItem] = Field(min_length=1, max_length=14)
+    items: list[PicItem] = Field(min_length=1, max_length=16)
 
 
 class Figure(Strict):
     """Structured figure rendered as safe HTML/SVG by the client. No raw HTML is accepted."""
 
     id: _ID
-    kind: Literal["table", "list", "worksheet", "scene_set", "chart_bar", "picture_set"]
+    kind: Literal["table", "list", "worksheet", "scene_set", "chart_bar", "picture_set", "labeled_scene"]
     title: str = ""
     columns: list[str] = []
     rows: list[FigureRow] = []
     note: str = ""
-    pictures: list[PicturePanel] = []  # picture_set: one panel per option, numbered in this order
+    # picture_set: one panel per option, numbered in this order; labeled_scene: ONE panel whose items carry the option
+    # numbers 1-4 (2024 Part 2: four envelopes on and under a desk, four children in one picture)
+    pictures: list[PicturePanel] = []
 
 
 class Choice(Strict):

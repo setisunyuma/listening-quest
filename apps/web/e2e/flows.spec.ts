@@ -510,3 +510,25 @@ test("practice short answers: written hand-over, pending paraphrase and the lear
   await expect(page.getByTestId("practice-result").getByText(/本人確認「同じ内容」/).first()).toBeVisible();
   await setMode(page, "共通テスト");
 });
+
+// Picture variety (checked against the 2024 / 2025 Common Test): attributes, worn things and one numbered scene.
+test("pictures: worn things, shapes and a numbered scene are drawn and readable on a phone", async ({ page }) => {
+  await login(page);
+  await setMode(page, "共通テスト");
+  await page.goto("/library");
+  await page.getByRole("link", { name: /短い対話と問い 2-4（1枚の絵・番号）/ }).first().click();
+  const scene = page.getByTestId("picture-panel");
+  await expect(scene).toHaveCount(1); // one picture, the options are the things marked 1-4
+  expect((await scene.boundingBox())!.width).toBeGreaterThanOrEqual(300);
+  await expect(page.getByTestId("scene-mark")).toHaveCount(4);
+  for (const n of ["1", "2", "3", "4"]) await expect(page.getByTestId("scene-mark").filter({ hasText: n })).toHaveCount(1);
+  await expect(page.getByText("音声向けアレンジ")).toHaveCount(0);
+  await checkTouchLayout(page);
+  await page.screenshot({ path: "test-results/pictures-scene.png", fullPage: false });
+  await page.goto("/library");
+  await page.getByRole("link", { name: /場面と絵の対応 B-4（絵・身に着けている物）/ }).first().click();
+  await expect(page.getByTestId("picture-panel")).toHaveCount(4);
+  await expect(page.getByTestId("picture-panel").nth(1).getByTestId("wear-scarf")).toHaveCount(1); // only the girl
+  await expect(page.getByTestId("picture-panel").nth(1).getByTestId("wear-gloves")).toHaveCount(1);
+  await expect(page.getByTestId("picture-panel").nth(3).getByTestId("wear-scarf")).toHaveCount(1); // only the boy
+});

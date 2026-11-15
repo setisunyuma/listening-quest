@@ -211,7 +211,8 @@
       "worksheet",
       "scene_set",
       "chart_bar",
-      "picture_set"
+      "picture_set",
+      "labeled_scene"
      ],
      "title": "Kind",
      "type": "string"
@@ -434,12 +435,31 @@
   },
   "PicItem": {
    "additionalProperties": false,
-   "description": "One drawn element of a picture. Only these kinds / poses exist: the client draws them as simple SVG pictograms,\nso positions, actions, counts, times and short signs - what an answer may depend on - come from checked data.",
+   "description": "One drawn element of a picture. Only these kinds / poses / attributes exist: the client draws them as simple\nSVG pictograms, so what an answer may depend on - position, action, presence, number, time, shade, pattern,\nshape, state, what a person wears - comes from checked data, never from free-form drawing.",
    "properties": {
+    "count": {
+     "default": 1,
+     "maximum": 12,
+     "minimum": 1,
+     "title": "Count",
+     "type": "integer"
+    },
     "flip": {
      "default": false,
      "title": "Flip",
      "type": "boolean"
+    },
+    "hair": {
+     "default": "",
+     "enum": [
+      "",
+      "short",
+      "long",
+      "ponytail",
+      "braid"
+     ],
+     "title": "Hair",
+     "type": "string"
     },
     "kind": {
      "enum": [
@@ -465,7 +485,37 @@
       "car",
       "bike",
       "bus",
-      "train"
+      "train",
+      "watch",
+      "fan",
+      "bottle",
+      "tv",
+      "laptop",
+      "lamp",
+      "envelope",
+      "ball",
+      "bear",
+      "fish",
+      "apple",
+      "leaf",
+      "flower",
+      "snowman",
+      "cushion",
+      "bowl",
+      "plate",
+      "cake",
+      "sun",
+      "cloud",
+      "rain",
+      "snow",
+      "building",
+      "bench",
+      "ticket",
+      "guitar",
+      "hat",
+      "shirt",
+      "shoe",
+      "cooler"
      ],
      "title": "Kind",
      "type": "string"
@@ -474,6 +524,25 @@
      "default": "",
      "maxLength": 12,
      "title": "Label",
+     "type": "string"
+    },
+    "mark": {
+     "default": 0,
+     "maximum": 4,
+     "minimum": 0,
+     "title": "Mark",
+     "type": "integer"
+    },
+    "pattern": {
+     "default": "",
+     "enum": [
+      "",
+      "stripes",
+      "dots",
+      "check",
+      "diamond"
+     ],
+     "title": "Pattern",
      "type": "string"
     },
     "pose": {
@@ -488,9 +557,35 @@
       "raise_hand",
       "hold",
       "read",
-      "call"
+      "call",
+      "wave",
+      "scared",
+      "lie",
+      "play_game",
+      "pull"
      ],
      "title": "Pose",
+     "type": "string"
+    },
+    "shade": {
+     "default": "",
+     "enum": [
+      "",
+      "white",
+      "light",
+      "dark"
+     ],
+     "title": "Shade",
+     "type": "string"
+    },
+    "shape": {
+     "default": "",
+     "enum": [
+      "",
+      "round",
+      "square"
+     ],
+     "title": "Shape",
      "type": "string"
     },
     "size": {
@@ -499,6 +594,32 @@
      "minimum": 50,
      "title": "Size",
      "type": "integer"
+    },
+    "state": {
+     "default": "",
+     "enum": [
+      "",
+      "on",
+      "off",
+      "open",
+      "closed",
+      "full",
+      "empty",
+      "bare",
+      "leaves",
+      "fruit"
+     ],
+     "title": "State",
+     "type": "string"
+    },
+    "wear": {
+     "default": [],
+     "items": {
+      "$ref": "#/$defs/PicWear"
+     },
+     "maxItems": 4,
+     "title": "Wear",
+     "type": "array"
     },
     "x": {
      "maximum": 100,
@@ -521,6 +642,53 @@
    "title": "PicItem",
    "type": "object"
   },
+  "PicWear": {
+   "additionalProperties": false,
+   "description": "Something a person wears or carries on the body; pattern / shade let two scarves differ (2025 1B).",
+   "properties": {
+    "kind": {
+     "enum": [
+      "hat",
+      "cap",
+      "glasses",
+      "scarf",
+      "gloves",
+      "ribbon",
+      "backpack"
+     ],
+     "title": "Kind",
+     "type": "string"
+    },
+    "pattern": {
+     "default": "",
+     "enum": [
+      "",
+      "stripes",
+      "dots",
+      "check",
+      "diamond"
+     ],
+     "title": "Pattern",
+     "type": "string"
+    },
+    "shade": {
+     "default": "",
+     "enum": [
+      "",
+      "white",
+      "light",
+      "dark"
+     ],
+     "title": "Shade",
+     "type": "string"
+    }
+   },
+   "required": [
+    "kind"
+   ],
+   "title": "PicWear",
+   "type": "object"
+  },
   "PicturePanel": {
    "additionalProperties": false,
    "properties": {
@@ -533,7 +701,7 @@
      "items": {
       "$ref": "#/$defs/PicItem"
      },
-     "maxItems": 14,
+     "maxItems": 16,
      "minItems": 1,
      "title": "Items",
      "type": "array"
