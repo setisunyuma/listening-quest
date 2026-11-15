@@ -61,6 +61,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 input, select, textarea { color: var(--fg); background: rgba(5, 10, 22, .7); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; max-width: 100%; min-height: 44px; }
 input[type=checkbox] { min-height: 0; width: 22px; height: 22px; accent-color: var(--cyan); }
 label.field { display: grid; gap: 4px; color: var(--muted); font-size: .9rem; margin: 8px 0; }
+label.field > input, label.field > select, label.field > textarea { min-width: 0; } input[type=file] { width: 100%; overflow: hidden; text-overflow: ellipsis; }
 label.check { display: flex; gap: 10px; align-items: center; min-height: 44px; }
 .row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .row.end { justify-content: flex-end; }

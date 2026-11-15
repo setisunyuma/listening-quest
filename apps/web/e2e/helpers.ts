@@ -21,8 +21,17 @@ export async function checkTouchLayout(page: Page) {
       const b = (el as HTMLElement).getBoundingClientRect();
       if (b.width > 0 && b.height > 0 && b.height < 43.5) small.push(`${el.tagName}:${(el.textContent || "").trim().slice(0, 20)}:${Math.round(b.height)}`);
     }
-    return { overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, small };
+    // form controls never stick out of the panel they are in (a file input's own width once did on iPhone)
+    const outside: string[] = [];
+    for (const el of Array.from(document.querySelectorAll("input, select, textarea"))) {
+      const b = (el as HTMLElement).getBoundingClientRect();
+      const box = (el as HTMLElement).closest(".panel");
+      if (!box || b.width === 0) continue;
+      if (b.right > box.getBoundingClientRect().right - 1) outside.push(`${el.tagName}:${(el as HTMLInputElement).type}:${Math.round(b.right - box.getBoundingClientRect().right)}px`);
+    }
+    return { overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth, small, outside };
   });
+  expect(r.outside, "form controls outside their panel").toEqual([]);
   expect(r.overflow, "page must not scroll sideways").toBeLessThanOrEqual(1);
   expect(r.small, "tap targets under 44px").toEqual([]);
 }
