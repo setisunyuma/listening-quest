@@ -135,17 +135,26 @@ def cost_report(session, realm: str, today=None, days: int = 31) -> dict:
     (quarantined / failed). Figures are this app's own accounting; the provider's billing page is authoritative."""
     from datetime import timedelta
 
-    today = today or datetime.now(UTC).date()
+    today = today or budget.budget_day()
     since = today - timedelta(days=days - 1)
     E, J, U = m.CostEntry, m.GenerationJob, m.Unit
     rows = (
-        session.execute(select(E).where(E.realm == realm, E.budget_day >= since, E.budget_day <= today)).scalars().all()
+        session.execute(
+            select(E).where(
+                E.realm == realm,
+                E.created_at >= budget.day_window(since)[0],
+                E.created_at < budget.day_window(today)[1],
+            )
+        )
+        .scalars()
+        .all()
     )
     daily: dict[str, float] = {}
     by_job: dict[str, float] = {}
     for e in rows:
         c = budget._counted(e)
-        daily[e.budget_day.isoformat()] = daily.get(e.budget_day.isoformat(), 0.0) + c
+        d = budget.budget_day(e.created_at).isoformat()  # Japan time, 04:00 boundary
+        daily[d] = daily.get(d, 0.0) + c
         if e.job_id:
             by_job[e.job_id] = by_job.get(e.job_id, 0.0) + c
     jobs = (
