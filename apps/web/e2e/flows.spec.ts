@@ -380,3 +380,84 @@ test("practice: staged update task, a permitted check, results kept apart from e
   await expect(page.getByText("現在の主目標: 英検1級")).toBeVisible();
   await setMode(page, "共通テスト");
 });
+
+// Owner request 4: one learning day and the next, through the home screen only (common test, 30 minutes).
+async function setClock(page: Page, offsetHours: number) {
+  const ok = await page.evaluate(async (h) => {
+    const t = decodeURIComponent((document.cookie.match(/(?:^|; )lq_csrf=([^;]+)/) || [])[1] || "");
+    const r = await fetch("/api/test/clock", { method: "POST", headers: { "Content-Type": "application/json", "X-CSRF-Token": t }, body: JSON.stringify({ offset_hours: h }) });
+    return r.ok;
+  }, offsetHours);
+  expect(ok).toBe(true);
+}
+
+test("today's tasks across two days: wrong answer, repair of a missed line, end early, resume the next day", async ({ page }) => {
+  await login(page);
+  await setMode(page, "共通テスト");
+  await setClock(page, 24 * 3); // a fresh learning day for this test (earlier tests used "today")
+  try {
+    await page.goto("/");
+    await page.getByRole("button", { name: "今日の学習を始める" }).click();
+    await expect(page.getByRole("img", { name: /今日の進捗 0 \/ \d+/ })).toBeVisible();
+    await page.getByRole("link", { name: /今日の学習を始める|続ける/ }).first().click();
+    await expect(page).toHaveURL(/\/play\?/);
+    // answer (the last option everywhere), then mark a line that was not caught
+    await page.getByRole("button", { name: /再生/ }).first().click();
+    const groups = page.getByRole("group", { name: /問\d+の選択肢/ });
+    await expect(groups.first()).toBeVisible();
+    for (let i = 0; i < await groups.count(); i++) await groups.nth(i).getByRole("button").last().click();
+    await page.getByRole("button", { name: "解答する" }).click();
+    await expect(page.getByRole("heading", { name: /結果/ })).toBeVisible();
+    await page.getByRole("button", { name: "聞き取れなかった" }).first().click();
+    await expect(page.getByRole("button", { name: "✓ 聞き取れなかった" }).first()).toBeVisible();
+    await page.getByRole("button", { name: "解説を確認した" }).click();
+    // the repair task of today: practise the lines, final check, finish (they go to a later-day check)
+    await page.getByRole("link", { name: "短い修復へ進む" }).click();
+    await expect(page.getByRole("heading", { name: /短い修復/ })).toBeVisible();
+    for (const box of await page.locator(".qbox").all()) {
+      await box.getByRole("button", { name: "最後の確認へ（通常速度・英文なし）" }).click();
+      await box.getByRole("button", { name: "分かった" }).click();
+    }
+    await page.getByRole("button", { name: "この課題を終える" }).click();
+    await expect(page.getByRole("heading", { name: "修復を実施しました" })).toBeVisible();
+    // end the day with tasks left
+    await page.goto("/");
+    page.once("dialog", (d) => d.accept());
+    await page.getByRole("button", { name: "今日は終了" }).click();
+    await expect(page.getByText(/今日はここまで/)).toBeVisible();
+    await expect(page.getByText("✓ 今日の予定を完了")).toHaveCount(0);
+
+    // the next learning day
+    await setClock(page, 24 * 4);
+    await page.goto("/");
+    await page.getByRole("button", { name: "今日の学習を始める" }).click();
+    await expect(page.getByText(/前回から持ち越した課題が \d+ 件あります/)).toBeVisible();
+    await page.getByText(/今日の計画の詳細/).click();
+    await expect(page.getByText("後日の確認").first()).toBeVisible(); // the lines repaired yesterday, checked today
+    await expect(page.getByText(/短い修復/)).toHaveCount(0); // yesterday's finished repair is not done again
+    // "続ける" leads through the carried tasks and the later-day check
+    let sawCarried = false, sawRecall = false;
+    for (let i = 0; i < 6 && !(sawCarried && sawRecall); i++) {
+      await page.goto("/");
+      await page.getByRole("link", { name: /今日の学習を始める|続ける/ }).first().click();
+      await page.waitForURL(/\/(task|play)\?/);
+      if (/\/task\?/.test(page.url())) {
+        await expect(page.getByRole("heading", { name: /後日の確認/ })).toBeVisible();
+        sawRecall = true;
+        for (const box of await page.locator(".qbox").all()) await box.getByRole("button", { name: "分かった" }).click();
+        await page.getByRole("button", { name: "この課題を終える" }).click();
+        await expect(page.getByRole("heading", { name: "後日の確認を実施しました" })).toBeVisible();
+      } else {
+        await expect(page).toHaveURL(/\/play\?/);
+        sawCarried = true;
+        await expect(groups.first()).toBeVisible();
+        for (let j = 0; j < await groups.count(); j++) await groups.nth(j).getByRole("button").first().click();
+        await page.getByRole("button", { name: "解答する" }).click();
+        await page.getByRole("button", { name: "解説を確認した" }).click();
+      }
+    }
+    expect(sawCarried && sawRecall).toBe(true);
+  } finally {
+    await setClock(page, 0);
+  }
+});

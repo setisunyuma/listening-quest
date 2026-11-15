@@ -46,8 +46,11 @@ _UNSAFE = {"POST", "PUT", "PATCH", "DELETE"}
 _ID = re.compile(r"^[A-Za-z0-9_\-]{8,64}$")
 
 
+_TEST_CLOCK_OFFSET = timedelta(0)  # moved only through /api/test/clock, which exists only when LQ_ENV=test
+
+
 def now_utc() -> datetime:
-    return datetime.now(UTC)
+    return datetime.now(UTC) + _TEST_CLOCK_OFFSET
 
 
 def db() -> Session:
@@ -310,6 +313,19 @@ def goals_decision(
     out = goals.decide(session, user, body.event_id, body.decision, body.to_mode, now_utc())
     session.commit()
     return out
+
+
+@app.post("/api/test/clock", include_in_schema=False)
+def test_clock(body: dict[str, Any], user: m.User = Depends(current_user)) -> dict[str, Any]:
+    """Browser tests only (LQ_ENV=test): move this API's clock forward to see the next learning day. Refused elsewhere."""
+    global _TEST_CLOCK_OFFSET
+    if get_settings().env != "test":
+        raise HTTPException(404, "not found")
+    hours = float(body.get("offset_hours", 0))
+    if not (0 <= hours <= 24 * 30):
+        raise L.Invalid("offset_hours must be 0..720")
+    _TEST_CLOCK_OFFSET = timedelta(hours=hours)  # an absolute offset from the real clock; 0 resets it
+    return {"now": now_utc().isoformat()}
 
 
 @app.get("/api/meta")
