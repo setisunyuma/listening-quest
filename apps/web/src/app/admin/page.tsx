@@ -42,7 +42,7 @@ export default function AdminPage() {
           {app.me.realm === "demo" ? <p className="note">デモ領域では無料のデモ用プロバイダーを使います（音声は動作確認用のトーン）。有料APIは呼びません。</p> : (
             <>
               <p className="note">APIキー: {over.data.api_key_present ? "サーバーに設定済み" : "未設定（取り込みと手動承認は利用できます）"}。キーがあるだけでは有料処理は始まりません。</p>
-              <dl className="kv"><dt>本日の利用（UTC）</dt><dd>確定 ${over.data.spend_today.settled_usd.toFixed(4)}・実行中の予約 ${over.data.spend_today.reserved_usd.toFixed(4)}・確定できない分 ${over.data.spend_today.unknown_usd.toFixed(4)}</dd>
+              <dl className="kv"><dt>本日の利用（日本時間 午前4時区切り）</dt><dd>確定 ${over.data.spend_today.settled_usd.toFixed(4)}・実行中の予約 ${over.data.spend_today.reserved_usd.toFixed(4)}・確定できない分 ${over.data.spend_today.unknown_usd.toFixed(4)}</dd>
                 {over.data.spend_month && <><dt>今月の利用（{over.data.spend_month.month}）</dt><dd>計上 ${over.data.spend_month.counted_usd.toFixed(4)}{over.data.settings.monthly_budget_usd != null && <> / 月の予算 ${over.data.settings.monthly_budget_usd}</>}</dd></>}
                 <dt>モデル</dt><dd>{over.data.providers.content_model} / {over.data.providers.tts_model} / {over.data.providers.asr_model}</dd><dt>単価の出典</dt><dd>{over.data.prices.source}（確認日 {over.data.prices.checked_at}）</dd></dl>
             </>
@@ -265,7 +265,7 @@ function Costs() {
       </dl>
       <details><summary className="btn ghost small">日ごとの利用（直近14日）</summary>
         <div className="table-wrap"><table className="list">
-          <thead><tr><th scope="col">日付（UTC）</th><th scope="col">計上</th></tr></thead>
+          <thead><tr><th scope="col">日付（日本時間 午前4時区切り）</th><th scope="col">計上</th></tr></thead>
           <tbody>{days.map((d) => <tr key={d.day}><td>{d.day}</td><td>${d.counted_usd.toFixed(4)}</td></tr>)}</tbody>
         </table></div>
       </details>

@@ -251,7 +251,7 @@ class CostEntry(Base):
     provider: Mapped[str] = mapped_column(String(32))
     model: Mapped[str] = mapped_column(String(64))
     state: Mapped[str] = mapped_column(String(16))
-    budget_day: Mapped[date] = mapped_column(Date, index=True)  # UTC day
+    budget_day: Mapped[date] = mapped_column(Date, index=True)  # budget day (Japan time, 04:00); older rows: UTC day
     estimated_usd: Mapped[float] = mapped_column(Float)
     actual_usd: Mapped[float | None] = mapped_column(Float, nullable=True)
     usage: Mapped[dict] = mapped_column(JSONB, default=dict)

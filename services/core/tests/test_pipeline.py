@@ -1096,12 +1096,13 @@ def test_monthly_budget_stops_new_requests_across_days(db, live_user):
     from datetime import timedelta
 
     fake = paid(db, 0.10, paid_enabled=True, daily_budget_usd=5, monthly_budget_usd=0.35, per_job_cap_usd=5)
-    today = datetime.now(UTC).date()
+    today = budget.budget_day()  # Japan time, 04:00 boundary
     earlier = today.replace(day=1) if today.day > 1 else today
-    db.add(m.CostEntry(realm="live", job_id=None, step="content", provider="x", model="m", state="settled",
+    at = lambda d: budget.day_window(d)[0] + timedelta(hours=1)  # noqa: E731 - spend is counted by when it happened
+    db.add(m.CostEntry(realm="live", job_id=None, step="content", provider="x", model="m", state="settled", created_at=at(earlier),
                        budget_day=earlier, estimated_usd=0.2, actual_usd=0.2, price_source="t", price_checked_at="t"))  # fmt: skip
     if today.day > 1:  # last month's spend does not count
-        db.add(m.CostEntry(realm="live", job_id=None, step="content", provider="x", model="m", state="settled",
+        db.add(m.CostEntry(realm="live", job_id=None, step="content", provider="x", model="m", state="settled", created_at=at(earlier - timedelta(days=1)),
                            budget_day=earlier - timedelta(days=1), estimated_usd=9, actual_usd=9, price_source="t", price_checked_at="t"))  # fmt: skip
     db.commit()
     jid = enqueue(db, realm="live")

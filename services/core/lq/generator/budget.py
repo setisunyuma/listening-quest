@@ -19,7 +19,7 @@ from lq.db.base import session_factory
 DEFAULT_SYSTEM = {
     "paid_enabled": False,
     "daily_budget_usd": 1.0,
-    "monthly_budget_usd": 15.0,  # calendar month (UTC); a second ceiling above the daily one
+    "monthly_budget_usd": 15.0,  # month of budget days (Japan time, 04:00); a second ceiling above the daily one
     "per_job_cap_usd": 0.5,
     "max_concurrent_jobs": 1,
     "auto_replenish": False,
@@ -78,13 +78,33 @@ def _counted(e: m.CostEntry) -> float:
     return e.estimated_usd  # reserved / unknown: assume it was spent
 
 
+# The budget day follows the app's learning day: Japan time, switching at 04:00 (not the UTC calendar day).
+# Spend is counted by the time each request was made, so entries recorded under the earlier UTC day boundary are
+# counted in the right window too. The provider bills by its own (UTC) days; this is the app's own accounting.
+BUDGET_TZ = "Asia/Tokyo"
+BUDGET_CUTOFF_HOUR = 4
+
+
+def budget_day(now: datetime | None = None):
+    from lq.domain.rules import learning_day
+
+    return learning_day(now or datetime.now(UTC), BUDGET_TZ, BUDGET_CUTOFF_HOUR)
+
+
+def day_window(day) -> tuple[datetime, datetime]:
+    """[start, end) of a budget day as UTC instants."""
+    from datetime import time, timedelta
+    from zoneinfo import ZoneInfo
+
+    start = datetime.combine(day, time(BUDGET_CUTOFF_HOUR), ZoneInfo(BUDGET_TZ))
+    return start.astimezone(UTC), (start + timedelta(days=1)).astimezone(UTC)
+
+
 def spent_today(session, realm: str, day=None) -> dict:
-    day = day or datetime.now(UTC).date()
-    rows = (
-        session.execute(select(m.CostEntry).where(m.CostEntry.realm == realm, m.CostEntry.budget_day == day))
-        .scalars()
-        .all()
-    )
+    day = day or budget_day()
+    start, end = day_window(day)
+    E = m.CostEntry
+    rows = session.execute(select(E).where(E.realm == realm, E.created_at >= start, E.created_at < end)).scalars().all()
     out = {"settled_usd": 0.0, "reserved_usd": 0.0, "unknown_usd": 0.0, "counted_usd": 0.0, "day": day.isoformat()}
     for e in rows:
         out["counted_usd"] += _counted(e)
@@ -98,18 +118,12 @@ def spent_today(session, realm: str, day=None) -> dict:
 
 
 def spent_month(session, realm: str, day=None) -> dict:
-    """Spend counted in the calendar month (UTC) that contains `day`, in the same terms as spent_today."""
-    day = day or datetime.now(UTC).date()
+    """Spend counted in the month (budget days, Japan time from 04:00) that contains `day`, as in spent_today."""
+    day = day or budget_day()
     first = day.replace(day=1)
-    rows = (
-        session.execute(
-            select(m.CostEntry).where(
-                m.CostEntry.realm == realm, m.CostEntry.budget_day >= first, m.CostEntry.budget_day <= day
-            )
-        )
-        .scalars()
-        .all()
-    )
+    E = m.CostEntry
+    start, end = day_window(first)[0], day_window(day)[1]
+    rows = session.execute(select(E).where(E.realm == realm, E.created_at >= start, E.created_at < end)).scalars().all()
     out = {"settled_usd": 0.0, "reserved_usd": 0.0, "unknown_usd": 0.0, "counted_usd": 0.0}
     for e in rows:
         out["counted_usd"] += _counted(e)
@@ -147,14 +161,14 @@ class BudgetMeter:
                         "verification_cap",
                         f"verification cap {ver['cap_usd']} USD would be exceeded (used {job_used:.4f}, need {estimated_usd:.4f})",
                     )
-                e = m.CostEntry(realm=self.realm, job_id=self.job_id, step=step, provider=provider, model=model, state="reserved", budget_day=datetime.now(UTC).date(),
+                e = m.CostEntry(realm=self.realm, job_id=self.job_id, step=step, provider=provider, model=model, state="reserved", budget_day=budget_day(),
                                 estimated_usd=float(estimated_usd), price_source=table["source"], price_checked_at=table["checked_at"])  # fmt: skip
                 s.add(e)
                 s.commit()
                 return e.id
             if not cfg["paid_enabled"]:
                 raise BudgetBlocked("paid_disabled", "paid generation is turned off in settings")
-            day = datetime.now(UTC).date()
+            day = budget_day()
             used = spent_today(s, self.realm, day)["counted_usd"]
             if used + estimated_usd > float(cfg["daily_budget_usd"]) + 1e-9:
                 raise BudgetBlocked(

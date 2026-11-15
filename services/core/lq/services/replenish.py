@@ -135,7 +135,7 @@ def run_for_user(session, user: m.User, now: datetime | None = None) -> int:
     if user.realm != "demo" and not cfg_sys["paid_enabled"]:
         return 0  # an API key alone never starts paid work
     cfg = rules.load_config()
-    day = now.date().isoformat()
+    day = budget.budget_day(now).isoformat()  # the same day as the budget: Japan time, 04:00
     J = m.GenerationJob
     made_today = session.execute(
         select(func.count())
